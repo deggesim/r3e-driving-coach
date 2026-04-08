@@ -7,7 +7,7 @@
 
 import { EventEmitter } from 'events';
 import { ANTI_SPAM, BRAKE_TEMP } from '../../shared/alert-types';
-import type { Alert, AlertType, AlertPriority, Deviation, R3EFrame } from '../../shared/types';
+import type { Alert, AlertType, Deviation, R3EFrame } from '../../shared/types';
 import type { AdaptiveBaseline } from './adaptive-baseline';
 
 // --- AlertDispatcher ---
@@ -155,7 +155,7 @@ export class RuleEngine {
     this.dispatcher.resetLap();
   }
 
-  private checkBrakeTemp(frame: R3EFrame, zone: number, location: string): void {
+  private checkBrakeTemp(frame: R3EFrame, zone: number, _location: string): void {
     const temps = [
       { label: 'anteriore sinistro', value: frame.brakeTempFL },
       { label: 'anteriore destro', value: frame.brakeTempFR },

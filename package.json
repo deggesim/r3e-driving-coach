@@ -2,6 +2,7 @@
   "name": "r3e-driving-coach",
   "version": "0.1.0",
   "description": "R3E Voice Coach — real-time driving coach for RaceRoom Racing Experience",
+  "type": "module",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",

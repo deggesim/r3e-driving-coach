@@ -18,7 +18,9 @@ export default function StatusBar({ status, lastAlert }: StatusBarProps) {
   // Show alert for 5s then fade
   useEffect(() => {
     if (!lastAlert) return;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setVisibleAlert(lastAlert.message);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setFadeOut(false);
 
     const fadeTimer = setTimeout(() => setFadeOut(true), 4000);

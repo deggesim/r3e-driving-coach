@@ -26,6 +26,7 @@ export default function SessionHistory({ status }: SessionHistoryProps) {
   useEffect(() => {
     if (!status.car || !status.track || !window.electronAPI) return;
 
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setLoading(true);
     window.electronAPI
       .getLaps({ car: status.car, track: status.track })

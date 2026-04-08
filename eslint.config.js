@@ -26,11 +26,19 @@ export default defineConfig([
       parser: tseslint.parser,
       parserOptions: {
         // Enable project service for better TypeScript integration
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ['vite.config.ts'],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
       ecmaVersion: 2024,
       globals: globals.browser,
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
 ]);

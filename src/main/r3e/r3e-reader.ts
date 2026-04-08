@@ -13,7 +13,6 @@
 
 import { EventEmitter } from 'events';
 import {
-  OFFSETS,
   STRUCT_SIZE_KNOWN,
   SHM_NAME,
   VERSION_MAJOR,

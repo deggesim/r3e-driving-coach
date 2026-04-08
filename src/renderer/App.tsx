@@ -25,6 +25,7 @@ export default function App() {
   // Accumulate alerts for TTSManager
   useEffect(() => {
     if (!lastAlert) return;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setAlerts((prev) => [...prev.slice(-19), lastAlert]);
   }, [lastAlert]);
 

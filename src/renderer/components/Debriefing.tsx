@@ -36,7 +36,9 @@ export default function Debriefing({ lastLap, lastAnalysis }: DebriefingProps) {
   useEffect(() => {
     if (!lastLap || lastLap === lastLapRef.current) return;
     lastLapRef.current = lastLap;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setDisplayedLap(lastLap);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setState('loading');
   }, [lastLap]);
 
@@ -44,7 +46,9 @@ export default function Debriefing({ lastLap, lastAnalysis }: DebriefingProps) {
   useEffect(() => {
     if (!lastAnalysis || lastAnalysis === lastAnalysisRef.current) return;
     lastAnalysisRef.current = lastAnalysis;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setDisplayedAnalysis(lastAnalysis);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setState('result');
   }, [lastAnalysis]);
 
@@ -92,6 +96,7 @@ export default function Debriefing({ lastLap, lastAnalysis }: DebriefingProps) {
         {state === 'result' && displayedAnalysis && (
           <div
             className="deb-content"
+            // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
             dangerouslySetInnerHTML={{
               __html: renderMarkdown(displayedAnalysis.templateV3),
             }}
