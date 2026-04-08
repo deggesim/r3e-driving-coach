@@ -29,12 +29,12 @@ type R3EReaderOptions = {
   mock?: boolean;
 };
 
-// Windows kernel32 types (loaded dynamically via ffi-napi)
+// Windows kernel32 types (loaded dynamically via koffi)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type NativePointer = any; // ref-napi pointer type with .isNull(), .deref(), etc.
+type NativePointer = any; // koffi opaque pointer
 
 type Kernel32 = {
-  OpenFileMappingA: (access: number, inherit: boolean, name: string) => NativePointer;
+  OpenFileMappingA: (access: number, inherit: number, name: string) => NativePointer;
   MapViewOfFile: (handle: NativePointer, access: number, offsetHigh: number, offsetLow: number, bytes: number) => NativePointer;
   UnmapViewOfFile: (addr: NativePointer) => boolean;
   CloseHandle: (handle: NativePointer) => boolean;
@@ -92,28 +92,27 @@ export class R3EReader extends EventEmitter {
 
     try {
       if (!this.kernel32) {
-        // Dynamic import of ffi-napi (native module)
+        // Dynamic import of koffi (N-API module, no recompilation needed)
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const ffi = require('ffi-napi');
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const ref = require('ref-napi');
+        const koffi = require('koffi');
+        const lib = koffi.load('kernel32.dll');
 
-        this.kernel32 = ffi.Library('kernel32', {
-          OpenFileMappingA: [ref.types.void_ptr, ['uint32', 'bool', 'string']],
-          MapViewOfFile: [ref.types.void_ptr, [ref.types.void_ptr, 'uint32', 'uint32', 'uint32', 'size_t']],
-          UnmapViewOfFile: ['bool', [ref.types.void_ptr]],
-          CloseHandle: ['bool', [ref.types.void_ptr]],
-        }) as Kernel32;
+        this.kernel32 = {
+          OpenFileMappingA: lib.func('void* __stdcall OpenFileMappingA(uint32 dwDesiredAccess, int bInheritHandle, const char* lpName)'),
+          MapViewOfFile: lib.func('void* __stdcall MapViewOfFile(void* hFileMappingObject, uint32 dwDesiredAccess, uint32 dwFileOffsetHigh, uint32 dwFileOffsetLow, size_t dwNumberOfBytesToMap)'),
+          UnmapViewOfFile: lib.func('bool __stdcall UnmapViewOfFile(const void* lpBaseAddress)'),
+          CloseHandle: lib.func('bool __stdcall CloseHandle(void* hObject)'),
+        } as Kernel32;
       }
 
-      const handle = this.kernel32.OpenFileMappingA(FILE_MAP_READ, false, SHM_NAME);
-      if (handle.isNull()) {
+      const handle = this.kernel32.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
+      if (!handle) {
         this.scheduleReconnect();
         return;
       }
 
       const view = this.kernel32.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, BUFFER_SIZE);
-      if (view.isNull()) {
+      if (!view) {
         this.kernel32.CloseHandle(handle);
         this.scheduleReconnect();
         return;
@@ -153,10 +152,11 @@ export class R3EReader extends EventEmitter {
     if (this.stopped || !this.viewPtr) return;
 
     try {
-      // Read shared memory into a Buffer
+      // Read shared memory into a Buffer via koffi
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const ref = require('ref-napi');
-      const buf: Buffer = ref.reinterpret(this.viewPtr, STRUCT_SIZE_KNOWN, 0);
+      const koffi = require('koffi');
+      const raw: Uint8Array = koffi.decode(this.viewPtr, koffi.array('uint8_t', STRUCT_SIZE_KNOWN));
+      const buf: Buffer = Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength);
 
       const versionMajor = readInt32(buf, 'VersionMajor');
       if (versionMajor !== VERSION_MAJOR) {

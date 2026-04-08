@@ -2,36 +2,32 @@
   "name": "r3e-driving-coach",
   "version": "0.1.0",
   "description": "R3E Voice Coach — real-time driving coach for RaceRoom Racing Experience",
-  "type": "module",
   "main": "dist/main/main.js",
   "scripts": {
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev": "tsc -p tsconfig.node.json && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "dev:vite": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc -p tsconfig.node.json && vite build",
     "build:electron": "npm run build && electron-builder",
     "lint": "eslint .",
     "test:reader": "ts-node src/main/r3e/r3e-reader.ts",
     "start": "electron .",
     "typecheck": "tsc --noEmit",
-    "rebuild:native": "electron-rebuild -f -w ffi-napi,ref-napi,better-sqlite3"
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.85.0",
     "better-sqlite3": "^12.8.0",
     "electron-store": "^11.0.2",
-    "ffi-napi": "^4.0.3",
     "jspdf": "^4.2.1",
-    "marked": "^18.0.0",
-    "ref-napi": "^3.0.3"
+    "koffi": "^2.15.6",
+    "marked": "^18.0.0"
   },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^4.2.3",
     "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^7.6.12",
-    "@types/ffi-napi": "^4.0.10",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/ref-napi": "^3.0.12",
     "@vitejs/plugin-react": "^6.0.1",
     "concurrently": "^9.1.0",
     "electron": "^41.2.0",
