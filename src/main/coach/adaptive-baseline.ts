@@ -25,8 +25,8 @@ type BaselineZone = {
 };
 
 export class AdaptiveBaseline {
-  private car: string;
-  private track: string;
+  readonly car: string;
+  readonly track: string;
   private db: Database.Database | null;
   private zones = new Map<number, BaselineZone>();
   private tcZones = new Set<number>();
