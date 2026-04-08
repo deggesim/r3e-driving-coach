@@ -5,10 +5,10 @@
  * Emits the Template v3 analysis via the onAnalysis callback.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
-import type Database from 'better-sqlite3';
-import { SYSTEM_PROMPT, buildPrompt } from './prompt-builder';
-import type { LapRecord, Deviation, LapAnalysis } from '../../shared/types';
+import Anthropic from "@anthropic-ai/sdk";
+import type Database from "better-sqlite3";
+import { SYSTEM_PROMPT, buildPrompt } from "./prompt-builder";
+import type { LapRecord, Deviation, LapAnalysis } from "../../shared/types";
 
 type CoachEngineOptions = {
   db: Database.Database;
@@ -27,7 +27,7 @@ export class CoachEngine {
   constructor(options: CoachEngineOptions) {
     this.db = options.db;
     this.onAnalysis = options.onAnalysis;
-    this.model = options.model ?? 'claude-sonnet-4-6';
+    this.model = options.model ?? "claude-sonnet-4-6";
     this.client = new Anthropic({
       apiKey: options.apiKey ?? process.env.ANTHROPIC_API_KEY,
     });
@@ -41,10 +41,13 @@ export class CoachEngine {
     this.client = new Anthropic({ apiKey });
   }
 
-  async analyzeLap(lap: LapRecord, deviations: Deviation[] | null): Promise<void> {
+  async analyzeLap(
+    lap: LapRecord,
+    deviations: Deviation[] | null,
+  ): Promise<void> {
     const prompt = buildPrompt(lap, deviations, this.cornerNames);
 
-    let fullText = '';
+    let fullText = "";
 
     try {
       // Use streaming — lap analysis can be long (4000+ tokens)
@@ -52,13 +55,13 @@ export class CoachEngine {
         model: this.model,
         max_tokens: 4000,
         system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{ role: "user", content: prompt }],
       });
 
       for await (const event of stream) {
         if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
+          event.type === "content_block_delta" &&
+          event.delta.type === "text_delta"
         ) {
           fullText += event.delta.text;
         }
@@ -66,7 +69,7 @@ export class CoachEngine {
 
       await stream.finalMessage();
     } catch (err) {
-      console.error('[CoachEngine] Claude API error:', err);
+      console.error("[CoachEngine] Claude API error:", err);
       return;
     }
 
@@ -96,65 +99,88 @@ export class CoachEngine {
 
   private saveAnalysis(lap: LapRecord, analysis: LapAnalysis): void {
     try {
-      this.db.prepare(`
+      this.db
+        .prepare(
+          `
         UPDATE laps SET analysis_json = ?
         WHERE session_id = (
           SELECT id FROM sessions
           WHERE car = ? AND track = ? AND layout = ?
           ORDER BY started_at DESC LIMIT 1
         ) AND lap_number = ?
-      `).run(
-        JSON.stringify(analysis),
-        lap.car,
-        lap.track,
-        lap.layout,
-        lap.lapNumber,
-      );
+      `,
+        )
+        .run(
+          JSON.stringify(analysis),
+          lap.car,
+          lap.track,
+          lap.layout,
+          lap.lapNumber,
+        );
     } catch (err) {
-      console.error('[CoachEngine] DB save error:', err);
+      console.error("[CoachEngine] DB save error:", err);
     }
   }
 
   private updatePdfPath(lap: LapRecord, pdfPath: string): void {
     try {
-      this.db.prepare(`
+      this.db
+        .prepare(
+          `
         UPDATE laps SET pdf_path = ?
         WHERE session_id = (
           SELECT id FROM sessions
           WHERE car = ? AND track = ? AND layout = ?
           ORDER BY started_at DESC LIMIT 1
         ) AND lap_number = ?
-      `).run(pdfPath, lap.car, lap.track, lap.layout, lap.lapNumber);
+      `,
+        )
+        .run(pdfPath, lap.car, lap.track, lap.layout, lap.lapNumber);
     } catch {
       // Non-critical
     }
   }
 
-  private async generatePdf(lap: LapRecord, analysis: LapAnalysis): Promise<string | null> {
+  private async generatePdf(
+    lap: LapRecord,
+    analysis: LapAnalysis,
+  ): Promise<string | null> {
     try {
       // Dynamic import to avoid loading jsPDF in main process startup
-      const { jsPDF } = await import('jspdf');
-      const path = await import('path');
-      const fs = await import('fs');
+      const { jsPDF } = await import("jspdf");
+      const path = await import("path");
+      const fs = await import("fs");
 
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
       const pageWidth = doc.internal.pageSize.getWidth();
       const margin = 15;
       const contentWidth = pageWidth - margin * 2;
       let y = 20;
 
       // Title
-      doc.setFont('helvetica', 'bold');
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(16);
-      doc.text(`R3E Coach — Analisi Giro ${lap.lapNumber}`, margin, y);
+      doc.text(`R3E Driving Coach — Analisi Giro ${lap.lapNumber}`, margin, y);
       y += 8;
 
       // Subtitle
-      doc.setFont('helvetica', 'normal');
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(11);
-      doc.text(`${lap.car} | ${lap.track} ${lap.layout} | ${formatLapTime(lap.lapTime)}`, margin, y);
+      doc.text(
+        `${lap.car} | ${lap.track} ${lap.layout} | ${formatLapTime(lap.lapTime)}`,
+        margin,
+        y,
+      );
       y += 6;
-      doc.text(`Generato: ${new Date(analysis.generatedAt).toLocaleString('it-IT')}`, margin, y);
+      doc.text(
+        `Generato: ${new Date(analysis.generatedAt).toLocaleString("it-IT")}`,
+        margin,
+        y,
+      );
       y += 10;
 
       // Separator
@@ -172,25 +198,29 @@ export class CoachEngine {
         }
         // Bold section headers
         const isHeader = /^\[(\d)\]/.test(line);
-        doc.setFont('helvetica', isHeader ? 'bold' : 'normal');
+        doc.setFont("helvetica", isHeader ? "bold" : "normal");
         doc.text(line, margin, y);
         y += isHeader ? 7 : 5;
       }
 
       // Save to user data dir
-      const outputDir = path.join(process.env.APPDATA ?? '.', 'r3e-coach', 'reports');
+      const outputDir = path.join(
+        process.env.APPDATA ?? ".",
+        "r3e-coach",
+        "reports",
+      );
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
       }
 
-      const filename = `lap${lap.lapNumber}_${lap.car.replace(/\s+/g, '_')}_${Date.now()}.pdf`;
+      const filename = `lap${lap.lapNumber}_${lap.car.replace(/\s+/g, "_")}_${Date.now()}.pdf`;
       const outputPath = path.join(outputDir, filename);
-      const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+      const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
       fs.writeFileSync(outputPath, pdfBuffer);
 
       return outputPath;
     } catch (err) {
-      console.error('[CoachEngine] PDF generation error:', err);
+      console.error("[CoachEngine] PDF generation error:", err);
       return null;
     }
   }
@@ -201,19 +231,19 @@ export class CoachEngine {
  */
 function extractSection5(text: string): string {
   const match = text.match(/\[5\][^\n]*\n([\s\S]*?)(?:\[6\]|$)/);
-  if (!match) return '';
+  if (!match) return "";
 
   const raw = match[1].trim();
   // Keep first 5 sentences maximum
   const sentences = raw.match(/[^.!?]+[.!?]+/g) ?? [];
-  return sentences.slice(0, 5).join(' ').trim();
+  return sentences.slice(0, 5).join(" ").trim();
 }
 
 function formatLapTime(seconds: number): string {
-  if (seconds <= 0 || !isFinite(seconds)) return '--:--';
+  if (seconds <= 0 || !isFinite(seconds)) return "--:--";
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return mins > 0
-    ? `${mins}:${secs.toFixed(3).padStart(6, '0')}`
+    ? `${mins}:${secs.toFixed(3).padStart(6, "0")}`
     : `${secs.toFixed(3)}s`;
 }

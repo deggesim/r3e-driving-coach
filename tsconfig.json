@@ -15,6 +15,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "jsx": "react-jsx",
+    "strictNullChecks": true, // Recommended for better type inference
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },

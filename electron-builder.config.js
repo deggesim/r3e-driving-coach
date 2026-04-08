@@ -1,19 +1,16 @@
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
-  appId: 'com.r3ecoach.app',
-  productName: 'R3E Coach',
+  appId: "com.r3e-driving-coach.app",
+  productName: "R3E Driving Coach",
   directories: {
-    output: 'release',
+    output: "release",
   },
   win: {
-    target: 'nsis',
+    target: "nsis",
   },
   nsis: {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
   },
-  files: [
-    'dist/**/*',
-    'node_modules/**/*',
-  ],
+  files: ["dist/**/*", "node_modules/**/*"],
 };

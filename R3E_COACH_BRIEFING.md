@@ -144,8 +144,8 @@ r3e-driving-coach/
     "react-dom": "^18.2.0"
   },
   "build": {
-    "appId": "com.r3ecoach.app",
-    "productName": "R3E Coach",
+    "appId": "com.r3e-driving-coach.app",
+    "productName": "R3E Driving Coach",
     "win": { "target": "nsis" },
     "nsis": {
       "oneClick": false,
