@@ -24,70 +24,37 @@ type BaselineZone = {
   throttlePickupDist: number | null;
 };
 
-export class AdaptiveBaseline {
+export type AdaptiveBaseline = {
   readonly car: string;
   readonly track: string;
-  private db: Database.Database | null;
-  private zones = new Map<number, BaselineZone>();
-  private tcZones = new Set<number>();
-  private absZones = new Set<number>();
-  private ready = false;
-
-  constructor(car: string, track: string, db?: Database.Database) {
-    this.car = car;
-    this.track = track;
-    this.db = db ?? null;
-
-    if (this.db) {
-      this.loadFromDb();
-    }
-  }
-
-  get isReady(): boolean {
-    return this.ready;
-  }
-
-  /**
-   * Ingest a lap's zone data into the baseline.
-   * Returns deviations if baseline is ready, null during calibration.
-   */
-  ingestLap(zones: ZoneData[], _lapNumber: number, isCalibrating: boolean): Deviation[] | null {
-    for (const zone of zones) {
-      this.updateZone(zone);
-    }
-
-    if (this.db) {
-      this.persistToDb();
-    }
-
-    if (isCalibrating) {
-      this.ready = true; // Mark ready after first ingest
-      return null;
-    }
-
-    return this.detectDeviations(zones);
-  }
-
-  /**
-   * Check a zone in real-time for TC/ABS anomalies (P2 alerts).
-   */
-  checkZoneRealtime(zoneData: { zone: number; tcActive: boolean; absActive: boolean }): {
+  isReady: () => boolean;
+  ingestLap: (zones: ZoneData[], lapNumber: number, isCalibrating: boolean) => Deviation[] | null;
+  checkZoneRealtime: (zoneData: { zone: number; tcActive: boolean; absActive: boolean }) => {
     tcAnomaly: boolean;
     absAnomaly: boolean;
-  } {
-    return {
-      tcAnomaly: zoneData.tcActive && !this.tcZones.has(zoneData.zone),
-      absAnomaly: zoneData.absActive && !this.absZones.has(zoneData.zone),
-    };
-  }
+  };
+};
 
-  private updateZone(zone: ZoneData): void {
+const ema = (prev: number, current: number, alpha: number): number =>
+  alpha * current + (1 - alpha) * prev;
+
+const makeDeviation = (type: DeviationType, zone: ZoneData, delta: number, message: string): Deviation => ({
+  type, zone: zone.zone, dist: zone.dist, delta, message,
+});
+
+export const createAdaptiveBaseline = (car: string, track: string, db?: Database.Database): AdaptiveBaseline => {
+  const zones = new Map<number, BaselineZone>();
+  const tcZones = new Set<number>();
+  const absZones = new Set<number>();
+  let ready = false;
+  const dbRef = db ?? null;
+
+  const updateZone = (zone: ZoneData): void => {
     const alpha = BASELINE_EMA_ALPHA;
-    const existing = this.zones.get(zone.zone);
+    const existing = zones.get(zone.zone);
 
     if (!existing) {
-      // First observation — set directly
-      this.zones.set(zone.zone, {
+      zones.set(zone.zone, {
         avgSpeedKmh: zone.avgSpeedKmh,
         minSpeedKmh: zone.minSpeedKmh,
         maxBrakePct: zone.maxBrakePct,
@@ -102,7 +69,6 @@ export class AdaptiveBaseline {
         throttlePickupDist: zone.throttlePickupDist,
       });
     } else {
-      // EMA update
       existing.avgSpeedKmh = ema(existing.avgSpeedKmh, zone.avgSpeedKmh, alpha);
       existing.minSpeedKmh = ema(existing.minSpeedKmh, zone.minSpeedKmh, alpha);
       existing.maxBrakePct = ema(existing.maxBrakePct, zone.maxBrakePct, alpha);
@@ -132,17 +98,16 @@ export class AdaptiveBaseline {
       }
     }
 
-    // Update TC/ABS zone profiles
-    if (zone.tcActivations > 0) this.tcZones.add(zone.zone);
-    if (zone.absActivations > 0) this.absZones.add(zone.zone);
-  }
+    if (zone.tcActivations > 0) tcZones.add(zone.zone);
+    if (zone.absActivations > 0) absZones.add(zone.zone);
+  };
 
-  private detectDeviations(zones: ZoneData[]): Deviation[] {
+  const detectDeviations = (zoneList: ZoneData[]): Deviation[] => {
     const deviations: Deviation[] = [];
     const t = DEVIATION_THRESHOLDS;
 
-    for (const zone of zones) {
-      const base = this.zones.get(zone.zone);
+    for (const zone of zoneList) {
+      const base = zones.get(zone.zone);
       if (!base) continue;
 
       // LATE_BRAKE: brake started 15m+ later than baseline
@@ -152,7 +117,7 @@ export class AdaptiveBaseline {
         zone.brakeStartDist - base.brakeStartDist > t.lateBrakeMeters
       ) {
         const delta = zone.brakeStartDist - base.brakeStartDist;
-        deviations.push(deviation('LATE_BRAKE', zone, delta, `frenato ${delta.toFixed(0)} metri dopo il riferimento`));
+        deviations.push(makeDeviation('LATE_BRAKE', zone, delta, `frenato ${delta.toFixed(0)} metri dopo il riferimento`));
       }
 
       // SLOW_THROTTLE: throttle pickup 12m+ later than baseline
@@ -162,99 +127,101 @@ export class AdaptiveBaseline {
         zone.throttlePickupDist - base.throttlePickupDist > t.slowThrottleMeters
       ) {
         const delta = zone.throttlePickupDist - base.throttlePickupDist;
-        deviations.push(deviation('SLOW_THROTTLE', zone, delta, `gas ripreso ${delta.toFixed(0)} metri in ritardo`));
+        deviations.push(makeDeviation('SLOW_THROTTLE', zone, delta, `gas ripreso ${delta.toFixed(0)} metri in ritardo`));
       }
 
       // TRAIL_BRAKING: steer during brake increased by 0.08+ vs baseline
-      if (
-        zone.steerDuringBrake - base.steerDuringBrake > t.trailBrakingSteerDelta
-      ) {
+      if (zone.steerDuringBrake - base.steerDuringBrake > t.trailBrakingSteerDelta) {
         const delta = zone.steerDuringBrake - base.steerDuringBrake;
-        deviations.push(deviation('TRAIL_BRAKING', zone, delta, `sterzata in frenata anomala, delta ${(delta * 100).toFixed(0)}%`));
+        deviations.push(makeDeviation('TRAIL_BRAKING', zone, delta, `sterzata in frenata anomala, delta ${(delta * 100).toFixed(0)}%`));
       }
 
       // COASTING: 8+ extra coast frames vs baseline
       if (zone.coastFrames - base.coastFrames > t.coastingExtraFrames) {
         const delta = zone.coastFrames - base.coastFrames;
-        deviations.push(deviation('COASTING', zone, delta, `${delta.toFixed(0)} frame di coasting in più del riferimento`));
+        deviations.push(makeDeviation('COASTING', zone, delta, `${delta.toFixed(0)} frame di coasting in più del riferimento`));
       }
 
       // BRAKE_THROTTLE_OVERLAP: 5+ extra overlap frames vs baseline
       if (zone.overlapFrames - base.overlapFrames > t.overlapExtraFrames) {
         const delta = zone.overlapFrames - base.overlapFrames;
-        deviations.push(deviation('BRAKE_THROTTLE_OVERLAP', zone, delta, `${delta.toFixed(0)} frame di overlap freno-gas in più`));
+        deviations.push(makeDeviation('BRAKE_THROTTLE_OVERLAP', zone, delta, `${delta.toFixed(0)} frame di overlap freno-gas in più`));
       }
     }
 
     return deviations;
-  }
+  };
 
-  // --- SQLite persistence ---
+  const loadFromDb = (): void => {
+    if (!dbRef) return;
 
-  private loadFromDb(): void {
-    if (!this.db) return;
-
-    const rows = this.db.prepare(
+    const rows = dbRef.prepare(
       'SELECT zone_id, data FROM baseline WHERE car = ? AND track = ?',
-    ).all(this.car, this.track) as Array<{ zone_id: number; data: string }>;
+    ).all(car, track) as Array<{ zone_id: number; data: string }>;
+    for (const row of rows) zones.set(row.zone_id, JSON.parse(row.data));
 
-    for (const row of rows) {
-      this.zones.set(row.zone_id, JSON.parse(row.data));
-    }
-
-    const tcRows = this.db.prepare(
+    const tcRows = dbRef.prepare(
       'SELECT zone_id FROM baseline_tc_zones WHERE car = ? AND track = ?',
-    ).all(this.car, this.track) as Array<{ zone_id: number }>;
-    for (const row of tcRows) this.tcZones.add(row.zone_id);
+    ).all(car, track) as Array<{ zone_id: number }>;
+    for (const row of tcRows) tcZones.add(row.zone_id);
 
-    const absRows = this.db.prepare(
+    const absRows = dbRef.prepare(
       'SELECT zone_id FROM baseline_abs_zones WHERE car = ? AND track = ?',
-    ).all(this.car, this.track) as Array<{ zone_id: number }>;
-    for (const row of absRows) this.absZones.add(row.zone_id);
+    ).all(car, track) as Array<{ zone_id: number }>;
+    for (const row of absRows) absZones.add(row.zone_id);
 
-    if (this.zones.size > 0) {
-      this.ready = true;
-    }
-  }
+    if (zones.size > 0) ready = true;
+  };
 
-  private persistToDb(): void {
-    if (!this.db) return;
+  const persistToDb = (): void => {
+    if (!dbRef) return;
 
-    const upsert = this.db.prepare(`
+    const upsert = dbRef.prepare(`
       INSERT OR REPLACE INTO baseline (car, track, zone_id, data, updated_at)
       VALUES (?, ?, ?, ?, datetime('now'))
     `);
-
-    const upsertTc = this.db.prepare(`
+    const upsertTc = dbRef.prepare(`
       INSERT OR IGNORE INTO baseline_tc_zones (car, track, zone_id)
       VALUES (?, ?, ?)
     `);
-
-    const upsertAbs = this.db.prepare(`
+    const upsertAbs = dbRef.prepare(`
       INSERT OR IGNORE INTO baseline_abs_zones (car, track, zone_id)
       VALUES (?, ?, ?)
     `);
 
-    const tx = this.db.transaction(() => {
-      for (const [zoneId, data] of this.zones) {
-        upsert.run(this.car, this.track, zoneId, JSON.stringify(data));
+    const tx = dbRef.transaction(() => {
+      for (const [zoneId, data] of zones) {
+        upsert.run(car, track, zoneId, JSON.stringify(data));
       }
-      for (const zoneId of this.tcZones) {
-        upsertTc.run(this.car, this.track, zoneId);
+      for (const zoneId of tcZones) {
+        upsertTc.run(car, track, zoneId);
       }
-      for (const zoneId of this.absZones) {
-        upsertAbs.run(this.car, this.track, zoneId);
+      for (const zoneId of absZones) {
+        upsertAbs.run(car, track, zoneId);
       }
     });
 
     tx();
-  }
-}
+  };
 
-function ema(prev: number, current: number, alpha: number): number {
-  return alpha * current + (1 - alpha) * prev;
-}
+  if (dbRef) loadFromDb();
 
-function deviation(type: DeviationType, zone: ZoneData, delta: number, message: string): Deviation {
-  return { type, zone: zone.zone, dist: zone.dist, delta, message };
-}
+  return {
+    car,
+    track,
+    isReady: () => ready,
+    ingestLap: (zoneList, _lapNumber, isCalibrating) => {
+      for (const zone of zoneList) updateZone(zone);
+      if (dbRef) persistToDb();
+      if (isCalibrating) {
+        ready = true;
+        return null;
+      }
+      return detectDeviations(zoneList);
+    },
+    checkZoneRealtime: (zoneData) => ({
+      tcAnomaly: zoneData.tcActive && !tcZones.has(zoneData.zone),
+      absAnomaly: zoneData.absActive && !absZones.has(zoneData.zone),
+    }),
+  };
+};

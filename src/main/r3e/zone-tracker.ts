@@ -1,7 +1,7 @@
 /**
  * ZoneTracker — Tracks the current 50m zone during a lap.
  *
- * Stateful object (not EventEmitter). Used by RuleEngine.processFrame()
+ * Factory function. Used by RuleEngine.processFrame()
  * to feed AdaptiveBaseline.checkZoneRealtime().
  */
 
@@ -17,48 +17,47 @@ type CurrentZone = {
   frameCount: number;
 };
 
-export class ZoneTracker {
-  private current: CurrentZone | null = null;
-  private previousZone = -1;
+export type ZoneTracker = {
+  /** Call on every frame. Returns true if the zone changed. */
+  update: (frame: R3EFrame) => boolean;
+  getCurrentZone: () => CurrentZone | null;
+  getPreviousZoneId: () => number;
+  reset: () => void;
+};
 
-  /**
-   * Call on every frame — updates the current zone state.
-   * Returns true if the zone changed (useful for triggering post-zone checks).
-   */
-  update(frame: R3EFrame): boolean {
-    const zoneId = Math.floor(frame.lapDistance / ZONE_SIZE_M);
+export const createZoneTracker = (): ZoneTracker => {
+  let current: CurrentZone | null = null;
+  let previousZone = -1;
 
-    if (this.current === null || zoneId !== this.current.zone) {
-      this.previousZone = this.current?.zone ?? -1;
-      this.current = {
-        zone: zoneId,
-        dist: zoneId * ZONE_SIZE_M,
-        tcActive: frame.tcActive > 0,
-        absActive: frame.absActive > 0,
-        enteredAt: Date.now(),
-        frameCount: 1,
-      };
-      return true;
-    }
+  return {
+    update: (frame) => {
+      const zoneId = Math.floor(frame.lapDistance / ZONE_SIZE_M);
 
-    // Same zone — accumulate
-    this.current.frameCount++;
-    if (frame.tcActive > 0) this.current.tcActive = true;
-    if (frame.absActive > 0) this.current.absActive = true;
+      if (current === null || zoneId !== current.zone) {
+        previousZone = current?.zone ?? -1;
+        current = {
+          zone: zoneId,
+          dist: zoneId * ZONE_SIZE_M,
+          tcActive: frame.tcActive > 0,
+          absActive: frame.absActive > 0,
+          enteredAt: Date.now(),
+          frameCount: 1,
+        };
+        return true;
+      }
 
-    return false;
-  }
+      current.frameCount++;
+      if (frame.tcActive > 0) current.tcActive = true;
+      if (frame.absActive > 0) current.absActive = true;
+      return false;
+    },
 
-  getCurrentZone(): CurrentZone | null {
-    return this.current;
-  }
+    getCurrentZone: () => current,
+    getPreviousZoneId: () => previousZone,
 
-  getPreviousZoneId(): number {
-    return this.previousZone;
-  }
-
-  reset(): void {
-    this.current = null;
-    this.previousZone = -1;
-  }
-}
+    reset: () => {
+      current = null;
+      previousZone = -1;
+    },
+  };
+};

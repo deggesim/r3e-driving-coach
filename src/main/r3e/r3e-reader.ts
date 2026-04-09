@@ -43,145 +43,49 @@ type Kernel32 = {
 const BUFFER_SIZE = 1024 * 1024; // 1MB
 const FILE_MAP_READ = 0x0004;
 
-export class R3EReader extends EventEmitter {
-  private connected = false;
-  private pollTimer: ReturnType<typeof setTimeout> | null = null;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private kernel32: Kernel32 | null = null;
-  private mapHandle: NativePointer | null = null;
-  private viewPtr: NativePointer | null = null;
-  private isMock: boolean;
-  private lastCompletedLaps = -1;
-  private lastTrackSector = -1;
-  private lapFrames: CompactFrame[] = [];
-  private currentCar = '';
-  private currentTrack = '';
-  private currentLayout = '';
-  private currentLayoutLength = 0;
-  private stopped = false;
+export type R3EReader = {
+  start: () => void;
+  stop: () => void;
+  on: EventEmitter['on'];
+};
 
-  constructor(options: R3EReaderOptions = {}) {
-    super();
-    this.isMock = options.mock ?? process.platform !== 'win32';
-  }
+export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
+  const emitter = new EventEmitter();
+  const isMock = options.mock ?? process.platform !== 'win32';
 
-  start(): void {
-    this.stopped = false;
-    if (this.isMock) {
-      this.startMock();
-    } else {
-      this.tryConnect();
+  let connected = false;
+  let pollTimer: ReturnType<typeof setTimeout> | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let kernel32: Kernel32 | null = null;
+  let mapHandle: NativePointer | null = null;
+  let viewPtr: NativePointer | null = null;
+  let stopped = false;
+
+  let lastCompletedLaps = -1;
+  let lastTrackSector = -1;
+  let lapFrames: CompactFrame[] = [];
+  let currentCar = '';
+  let currentTrack = '';
+  let currentLayout = '';
+  let currentLayoutLength = 0;
+
+  const cleanup = (): void => {
+    if (kernel32 && viewPtr) kernel32.UnmapViewOfFile(viewPtr);
+    if (kernel32 && mapHandle) kernel32.CloseHandle(mapHandle);
+    viewPtr = null;
+    mapHandle = null;
+    if (connected) {
+      connected = false;
+      emitter.emit('disconnected');
     }
-  }
+  };
 
-  stop(): void {
-    this.stopped = true;
-    if (this.pollTimer) {
-      clearTimeout(this.pollTimer);
-      this.pollTimer = null;
-    }
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    this.cleanup();
-  }
+  const scheduleReconnect = (): void => {
+    if (stopped) return;
+    reconnectTimer = setTimeout(() => tryConnect(), RECONNECT_INTERVAL_MS);
+  };
 
-  private tryConnect(): void {
-    if (this.stopped) return;
-
-    try {
-      if (!this.kernel32) {
-        // Dynamic import of koffi (N-API module, no recompilation needed)
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const koffi = require('koffi');
-        const lib = koffi.load('kernel32.dll');
-
-        this.kernel32 = {
-          OpenFileMappingA: lib.func('void* __stdcall OpenFileMappingA(uint32 dwDesiredAccess, int bInheritHandle, const char* lpName)'),
-          MapViewOfFile: lib.func('void* __stdcall MapViewOfFile(void* hFileMappingObject, uint32 dwDesiredAccess, uint32 dwFileOffsetHigh, uint32 dwFileOffsetLow, size_t dwNumberOfBytesToMap)'),
-          UnmapViewOfFile: lib.func('bool __stdcall UnmapViewOfFile(const void* lpBaseAddress)'),
-          CloseHandle: lib.func('bool __stdcall CloseHandle(void* hObject)'),
-        } as Kernel32;
-      }
-
-      const handle = this.kernel32.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
-      if (!handle) {
-        this.scheduleReconnect();
-        return;
-      }
-
-      const view = this.kernel32.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, BUFFER_SIZE);
-      if (!view) {
-        this.kernel32.CloseHandle(handle);
-        this.scheduleReconnect();
-        return;
-      }
-
-      this.mapHandle = handle;
-      this.viewPtr = view;
-      this.connected = true;
-      this.emit('connected');
-      this.poll();
-    } catch {
-      this.scheduleReconnect();
-    }
-  }
-
-  private scheduleReconnect(): void {
-    if (this.stopped) return;
-    this.reconnectTimer = setTimeout(() => this.tryConnect(), RECONNECT_INTERVAL_MS);
-  }
-
-  private cleanup(): void {
-    if (this.kernel32 && this.viewPtr) {
-      this.kernel32.UnmapViewOfFile(this.viewPtr);
-    }
-    if (this.kernel32 && this.mapHandle) {
-      this.kernel32.CloseHandle(this.mapHandle);
-    }
-    this.viewPtr = null;
-    this.mapHandle = null;
-    if (this.connected) {
-      this.connected = false;
-      this.emit('disconnected');
-    }
-  }
-
-  private poll(): void {
-    if (this.stopped || !this.viewPtr) return;
-
-    try {
-      // Read shared memory into a Buffer via koffi
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const koffi = require('koffi');
-      const raw: Uint8Array = koffi.decode(this.viewPtr, koffi.array('uint8_t', STRUCT_SIZE_KNOWN));
-      const buf: Buffer = Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength);
-
-      const versionMajor = readInt32(buf, 'VersionMajor');
-      if (versionMajor !== VERSION_MAJOR) {
-        // R3E might have closed
-        this.cleanup();
-        this.scheduleReconnect();
-        return;
-      }
-
-      const frame = this.parseFrame(buf);
-      this.emit('frame', frame);
-
-      // Detect lap/sector boundaries
-      this.detectBoundaries(frame);
-
-    } catch {
-      this.cleanup();
-      this.scheduleReconnect();
-      return;
-    }
-
-    this.pollTimer = setTimeout(() => this.poll(), POLL_INTERVAL_MS);
-  }
-
-  private parseFrame(buf: Buffer): R3EFrame {
+  const parseFrame = (buf: Buffer): R3EFrame => {
     const carSpeed = readFloat(buf, 'CarSpeed') * 3.6; // m/s → km/h
     const engineRpm = readFloat(buf, 'EngineRps') * (60 / (2 * Math.PI)); // rad/s → RPM
     const brakeTempEst = readFloatArray(buf, 'BrakeTempActualEstimate', 4);
@@ -248,18 +152,16 @@ export class R3EReader extends EventEmitter {
       inPitlane: readInt32(buf, 'InPitlane') !== 0,
       flagsCheckered: readInt32(buf, 'Flags_Checkered') !== 0,
     };
-  }
+  };
 
-  private detectBoundaries(frame: R3EFrame): void {
-    // Update car/track info
-    if (frame.carName) this.currentCar = frame.carName;
-    if (frame.trackName) this.currentTrack = frame.trackName;
-    if (frame.layoutName) this.currentLayout = frame.layoutName;
-    if (frame.layoutLength > 0) this.currentLayoutLength = frame.layoutLength;
+  const detectBoundaries = (frame: R3EFrame): void => {
+    if (frame.carName) currentCar = frame.carName;
+    if (frame.trackName) currentTrack = frame.trackName;
+    if (frame.layoutName) currentLayout = frame.layoutName;
+    if (frame.layoutLength > 0) currentLayoutLength = frame.layoutLength;
 
-    // Collect compact frame
     if (!frame.gamePaused && !frame.gameInMenus && !frame.inPitlane) {
-      this.lapFrames.push({
+      lapFrames.push({
         d: frame.lapDistance,
         spd: frame.carSpeed,
         thr: frame.throttle,
@@ -274,89 +176,107 @@ export class R3EReader extends EventEmitter {
     }
 
     // Sector boundary
-    if (frame.trackSector !== this.lastTrackSector && this.lastTrackSector >= 0) {
+    if (frame.trackSector !== lastTrackSector && lastTrackSector >= 0) {
       const sectorTimes = frame.sectorTimesCurrentSelf;
-      const completedSector = this.lastTrackSector;
+      const completedSector = lastTrackSector;
       if (sectorTimes[completedSector] > 0) {
-        this.emit('sectorComplete', completedSector, sectorTimes[completedSector]);
+        emitter.emit('sectorComplete', completedSector, sectorTimes[completedSector]);
       }
     }
-    this.lastTrackSector = frame.trackSector;
+    lastTrackSector = frame.trackSector;
 
     // Lap boundary
-    if (frame.completedLaps > this.lastCompletedLaps && this.lastCompletedLaps >= 0) {
+    if (frame.completedLaps > lastCompletedLaps && lastCompletedLaps >= 0) {
       const lapData = {
         lapNumber: frame.completedLaps,
         lapTime: frame.lapTimePreviousSelf,
         sectorTimes: [...frame.sectorTimesCurrentSelf],
-        frames: [...this.lapFrames],
-        car: this.currentCar,
-        track: this.currentTrack,
-        layout: this.currentLayout,
-        layoutLength: this.currentLayoutLength,
+        frames: [...lapFrames],
+        car: currentCar,
+        track: currentTrack,
+        layout: currentLayout,
+        layoutLength: currentLayoutLength,
         valid: frame.currentLapValid,
       };
-      this.lapFrames = [];
-      this.emit('lapComplete', lapData);
+      lapFrames = [];
+      emitter.emit('lapComplete', lapData);
     }
-    this.lastCompletedLaps = frame.completedLaps;
-  }
+    lastCompletedLaps = frame.completedLaps;
+  };
+
+  const poll = (): void => {
+    if (stopped || !viewPtr) return;
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const koffi = require('koffi');
+      const raw: Uint8Array = koffi.decode(viewPtr, koffi.array('uint8_t', STRUCT_SIZE_KNOWN));
+      const buf: Buffer = Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength);
+
+      const versionMajor = readInt32(buf, 'VersionMajor');
+      if (versionMajor !== VERSION_MAJOR) {
+        cleanup();
+        scheduleReconnect();
+        return;
+      }
+
+      const frame = parseFrame(buf);
+      emitter.emit('frame', frame);
+      detectBoundaries(frame);
+    } catch {
+      cleanup();
+      scheduleReconnect();
+      return;
+    }
+
+    pollTimer = setTimeout(() => poll(), POLL_INTERVAL_MS);
+  };
+
+  const tryConnect = (): void => {
+    if (stopped) return;
+
+    try {
+      if (!kernel32) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const koffi = require('koffi');
+        const lib = koffi.load('kernel32.dll');
+
+        kernel32 = {
+          OpenFileMappingA: lib.func('void* __stdcall OpenFileMappingA(uint32 dwDesiredAccess, int bInheritHandle, const char* lpName)'),
+          MapViewOfFile: lib.func('void* __stdcall MapViewOfFile(void* hFileMappingObject, uint32 dwDesiredAccess, uint32 dwFileOffsetHigh, uint32 dwFileOffsetLow, size_t dwNumberOfBytesToMap)'),
+          UnmapViewOfFile: lib.func('bool __stdcall UnmapViewOfFile(const void* lpBaseAddress)'),
+          CloseHandle: lib.func('bool __stdcall CloseHandle(void* hObject)'),
+        } as Kernel32;
+      }
+
+      const handle = kernel32.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
+      if (!handle) { scheduleReconnect(); return; }
+
+      const view = kernel32.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, BUFFER_SIZE);
+      if (!view) {
+        kernel32.CloseHandle(handle);
+        scheduleReconnect();
+        return;
+      }
+
+      mapHandle = handle;
+      viewPtr = view;
+      connected = true;
+      emitter.emit('connected');
+      poll();
+    } catch {
+      scheduleReconnect();
+    }
+  };
 
   // --- Mock mode ---
 
-  private mockLapDist = 0;
-  private mockLapNumber = 0;
-  private mockSector = 0;
+  let mockLapDist = 0;
+  let mockLapNumber = 0;
+  let mockSector = 0;
 
-  private startMock(): void {
-    this.connected = true;
-    this.emit('connected');
-    console.log('[R3EReader] Mock mode active');
-    this.pollMock();
-  }
-
-  private pollMock(): void {
-    if (this.stopped) return;
-
-    const trackLength = 4011; // Zolder GP length
-    this.mockLapDist += 30; // ~30m per 16ms at ~175km/h
-
-    // Lap boundary
-    if (this.mockLapDist >= trackLength) {
-      this.mockLapDist -= trackLength;
-      this.mockLapNumber++;
-
-      const lapData = {
-        lapNumber: this.mockLapNumber,
-        lapTime: 92.5 + Math.random() * 3,
-        sectorTimes: [30.1, 31.2, 31.2],
-        frames: this.generateMockFrames(trackLength),
-        car: 'Porsche 911 GT3 R',
-        track: 'Zolder',
-        layout: 'GP',
-        layoutLength: trackLength,
-        valid: true,
-      };
-      this.emit('lapComplete', lapData);
-    }
-
-    // Sector boundary
-    const newSector = this.mockLapDist < trackLength * 0.33 ? 0
-      : this.mockLapDist < trackLength * 0.66 ? 1 : 2;
-    if (newSector !== this.mockSector) {
-      this.emit('sectorComplete', this.mockSector, 30 + Math.random() * 2);
-      this.mockSector = newSector;
-    }
-
-    const frame = this.generateMockFrame(this.mockLapDist, trackLength);
-    this.emit('frame', frame);
-
-    this.pollTimer = setTimeout(() => this.pollMock(), POLL_INTERVAL_MS);
-  }
-
-  private generateMockFrame(dist: number, trackLength: number): R3EFrame {
+  const generateMockFrame = (dist: number, trackLength: number): R3EFrame => {
     const fraction = dist / trackLength;
-    // Simulate braking zones
     const isBraking = [0.08, 0.25, 0.45, 0.65, 0.82].some(
       (bz) => Math.abs(fraction - bz) < 0.02,
     );
@@ -374,9 +294,9 @@ export class R3EReader extends EventEmitter {
       layoutLength: trackLength,
       sessionType: 1,
       sessionPhase: 5,
-      completedLaps: this.mockLapNumber,
+      completedLaps: mockLapNumber,
       currentLapValid: true,
-      trackSector: this.mockSector,
+      trackSector: mockSector,
       lapDistance: dist,
       lapDistanceFraction: fraction,
       lapTimeBestSelf: 92.5,
@@ -411,9 +331,9 @@ export class R3EReader extends EventEmitter {
       inPitlane: false,
       flagsCheckered: false,
     };
-  }
+  };
 
-  private generateMockFrames(trackLength: number): CompactFrame[] {
+  const generateMockFrames = (trackLength: number): CompactFrame[] => {
     const frames: CompactFrame[] = [];
     for (let d = 0; d < trackLength; d += 30) {
       const fraction = d / trackLength;
@@ -434,12 +354,73 @@ export class R3EReader extends EventEmitter {
       });
     }
     return frames;
-  }
-}
+  };
+
+  const pollMock = (): void => {
+    if (stopped) return;
+
+    const trackLength = 4011; // Zolder GP length
+    mockLapDist += 30; // ~30m per 16ms at ~175km/h
+
+    if (mockLapDist >= trackLength) {
+      mockLapDist -= trackLength;
+      mockLapNumber++;
+
+      const lapData = {
+        lapNumber: mockLapNumber,
+        lapTime: 92.5 + Math.random() * 3,
+        sectorTimes: [30.1, 31.2, 31.2],
+        frames: generateMockFrames(trackLength),
+        car: 'Porsche 911 GT3 R',
+        track: 'Zolder',
+        layout: 'GP',
+        layoutLength: trackLength,
+        valid: true,
+      };
+      emitter.emit('lapComplete', lapData);
+    }
+
+    const newSector = mockLapDist < trackLength * 0.33 ? 0
+      : mockLapDist < trackLength * 0.66 ? 1 : 2;
+    if (newSector !== mockSector) {
+      emitter.emit('sectorComplete', mockSector, 30 + Math.random() * 2);
+      mockSector = newSector;
+    }
+
+    const frame = generateMockFrame(mockLapDist, trackLength);
+    emitter.emit('frame', frame);
+
+    pollTimer = setTimeout(() => pollMock(), POLL_INTERVAL_MS);
+  };
+
+  const startMock = (): void => {
+    connected = true;
+    emitter.emit('connected');
+    console.log('[R3EReader] Mock mode active');
+    pollMock();
+  };
+
+  return {
+    start: () => {
+      stopped = false;
+      if (isMock) startMock();
+      else tryConnect();
+    },
+
+    stop: () => {
+      stopped = true;
+      if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      cleanup();
+    },
+
+    on: emitter.on.bind(emitter),
+  };
+};
 
 // Standalone test
 if (require.main === module) {
-  const reader = new R3EReader();
+  const reader = createR3EReader();
   reader.on('connected', () => console.log('[R3EReader] Connected'));
   reader.on('disconnected', () => console.log('[R3EReader] Disconnected'));
   reader.on('frame', (f: R3EFrame) => {

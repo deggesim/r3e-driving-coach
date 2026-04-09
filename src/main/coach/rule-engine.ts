@@ -12,150 +12,98 @@ import type { AdaptiveBaseline } from './adaptive-baseline';
 
 // --- AlertDispatcher ---
 
-export class AlertDispatcher extends EventEmitter {
-  private firedThisLap = new Set<string>(); // "zone:type"
-  private lastAlertTime = 0;
-  private queue: Alert[] = [];
-  private processing = false;
+export type AlertDispatcher = {
+  dispatch: (alert: Alert) => void;
+  resetLap: () => void;
+  on: (event: 'alert', listener: (alert: Alert) => void) => void;
+};
 
-  /**
-   * Enqueue an alert. Applies dedup and silence window rules.
-   */
-  dispatch(alert: Alert): void {
-    const key = `${alert.zone}:${alert.type}`;
+export const createAlertDispatcher = (): AlertDispatcher => {
+  const emitter = new EventEmitter();
+  const firedThisLap = new Set<string>(); // "zone:type"
+  let lastAlertTime = 0;
+  let queue: Alert[] = [];
+  let processing = false;
 
-    // Dedup: max 1 per (zone × type) per lap
-    if (this.firedThisLap.has(key)) return;
-
-    // P1 bypasses silence window
-    if (alert.priority === 1) {
-      this.firedThisLap.add(key);
-      this.lastAlertTime = Date.now();
-      this.emit('alert', alert);
-      return;
-    }
-
-    // Silence window check
-    const elapsed = Date.now() - this.lastAlertTime;
-    if (elapsed < ANTI_SPAM.silenceWindowMs) {
-      // Queue for later
-      this.queue.push(alert);
-      this.scheduleFlush(ANTI_SPAM.silenceWindowMs - elapsed);
-      return;
-    }
-
-    this.firedThisLap.add(key);
-    this.lastAlertTime = Date.now();
-    this.emit('alert', alert);
-  }
-
-  /** Reset at start of new lap */
-  resetLap(): void {
-    this.firedThisLap.clear();
-    this.queue = [];
-  }
-
-  private scheduleFlush(delayMs: number): void {
-    if (this.processing) return;
-    this.processing = true;
-
+  const scheduleFlush = (delayMs: number): void => {
+    if (processing) return;
+    processing = true;
     setTimeout(() => {
-      this.processing = false;
-      this.flushQueue();
+      processing = false;
+      flushQueue();
     }, delayMs);
-  }
+  };
 
-  private flushQueue(): void {
-    // Sort by priority (P1 first)
-    this.queue.sort((a, b) => a.priority - b.priority);
+  const flushQueue = (): void => {
+    queue.sort((a, b) => a.priority - b.priority);
 
-    while (this.queue.length > 0) {
-      const elapsed = Date.now() - this.lastAlertTime;
+    while (queue.length > 0) {
+      const elapsed = Date.now() - lastAlertTime;
       if (elapsed < ANTI_SPAM.silenceWindowMs) {
-        this.scheduleFlush(ANTI_SPAM.silenceWindowMs - elapsed);
+        scheduleFlush(ANTI_SPAM.silenceWindowMs - elapsed);
         return;
       }
 
-      const alert = this.queue.shift()!;
+      const alert = queue.shift()!;
       const key = `${alert.zone}:${alert.type}`;
-      if (this.firedThisLap.has(key)) continue;
+      if (firedThisLap.has(key)) continue;
 
-      this.firedThisLap.add(key);
-      this.lastAlertTime = Date.now();
-      this.emit('alert', alert);
+      firedThisLap.add(key);
+      lastAlertTime = Date.now();
+      emitter.emit('alert', alert);
     }
-  }
-}
+  };
+
+  return {
+    dispatch: (alert) => {
+      const key = `${alert.zone}:${alert.type}`;
+      if (firedThisLap.has(key)) return;
+
+      // P1 bypasses silence window
+      if (alert.priority === 1) {
+        firedThisLap.add(key);
+        lastAlertTime = Date.now();
+        emitter.emit('alert', alert);
+        return;
+      }
+
+      const elapsed = Date.now() - lastAlertTime;
+      if (elapsed < ANTI_SPAM.silenceWindowMs) {
+        queue.push(alert);
+        scheduleFlush(ANTI_SPAM.silenceWindowMs - elapsed);
+        return;
+      }
+
+      firedThisLap.add(key);
+      lastAlertTime = Date.now();
+      emitter.emit('alert', alert);
+    },
+
+    resetLap: () => {
+      firedThisLap.clear();
+      queue = [];
+    },
+
+    on: (event, listener) => emitter.on(event, listener),
+  };
+};
 
 // --- RuleEngine ---
 
 type GetCornerNameFn = (dist: number) => string | null;
 
-export class RuleEngine {
-  private dispatcher: AlertDispatcher;
-  private baseline: AdaptiveBaseline;
-  private getCornerName: GetCornerNameFn;
+export type RuleEngine = {
+  processFrame: (frame: R3EFrame) => void;
+  processLapDeviations: (deviations: Deviation[]) => void;
+  resetLap: () => void;
+};
 
-  constructor(
-    dispatcher: AlertDispatcher,
-    baseline: AdaptiveBaseline,
-    getCornerName: GetCornerNameFn,
-  ) {
-    this.dispatcher = dispatcher;
-    this.baseline = baseline;
-    this.getCornerName = getCornerName;
-  }
-
-  /**
-   * Process a single frame for P1 (brake temp) and P2 (TC/ABS anomaly) alerts.
-   */
-  processFrame(frame: R3EFrame): void {
-    const zone = Math.floor(frame.lapDistance / 50);
-    const cornerName = this.getCornerName(frame.lapDistance);
-    const location = cornerName
-      ? `${cornerName}, metro ${Math.round(frame.lapDistance)}`
-      : `metro ${Math.round(frame.lapDistance)}`;
-
-    // P1: Brake temp critical
-    this.checkBrakeTemp(frame, zone, location);
-
-    // P2: TC/ABS in unexpected zone
-    if (this.baseline.isReady) {
-      this.checkTcAbsAnomaly(frame, zone, location);
-    }
-  }
-
-  /**
-   * Process post-lap deviations from AdaptiveBaseline for P3 alerts.
-   */
-  processLapDeviations(deviations: Deviation[]): void {
-    for (const dev of deviations) {
-      const cornerName = this.getCornerName(dev.dist);
-      const location = cornerName
-        ? `${cornerName}, metro ${Math.round(dev.dist)}`
-        : `metro ${Math.round(dev.dist)}`;
-
-      const alertType = dev.type as AlertType;
-
-      this.dispatcher.dispatch({
-        type: alertType,
-        priority: 3,
-        zone: dev.zone,
-        dist: dev.dist,
-        message: `${location}: ${dev.message}`,
-        immediate: false,
-        data: { delta: dev.delta },
-        timestamp: Date.now(),
-      });
-    }
-  }
-
-  /** Call at start of each new lap */
-  resetLap(): void {
-    this.dispatcher.resetLap();
-  }
-
-  private checkBrakeTemp(frame: R3EFrame, zone: number, _location: string): void {
+export const createRuleEngine = (
+  dispatcher: AlertDispatcher,
+  baseline: AdaptiveBaseline,
+  getCornerName: GetCornerNameFn,
+): RuleEngine => {
+  const checkBrakeTemp = (frame: R3EFrame, zone: number, _location: string): void => {
     const temps = [
       { label: 'anteriore sinistro', value: frame.brakeTempFL },
       { label: 'anteriore destro', value: frame.brakeTempFR },
@@ -167,7 +115,7 @@ export class RuleEngine {
       if (t.value === BRAKE_TEMP.unavailable) continue;
 
       if (t.value > BRAKE_TEMP.max) {
-        this.dispatcher.dispatch({
+        dispatcher.dispatch({
           type: 'BRAKE_TEMP_CRITICAL',
           priority: 1,
           zone,
@@ -179,17 +127,17 @@ export class RuleEngine {
         });
       }
     }
-  }
+  };
 
-  private checkTcAbsAnomaly(frame: R3EFrame, zone: number, location: string): void {
-    const check = this.baseline.checkZoneRealtime({
+  const checkTcAbsAnomaly = (frame: R3EFrame, zone: number, location: string): void => {
+    const check = baseline.checkZoneRealtime({
       zone,
       tcActive: frame.tcActive > 0,
       absActive: frame.absActive > 0,
     });
 
     if (check.tcAnomaly) {
-      this.dispatcher.dispatch({
+      dispatcher.dispatch({
         type: 'TC_ANOMALY',
         priority: 2,
         zone,
@@ -201,7 +149,7 @@ export class RuleEngine {
     }
 
     if (check.absAnomaly) {
-      this.dispatcher.dispatch({
+      dispatcher.dispatch({
         type: 'ABS_ANOMALY',
         priority: 2,
         zone,
@@ -211,5 +159,40 @@ export class RuleEngine {
         timestamp: Date.now(),
       });
     }
-  }
-}
+  };
+
+  return {
+    processFrame: (frame) => {
+      const zone = Math.floor(frame.lapDistance / 50);
+      const cornerName = getCornerName(frame.lapDistance);
+      const location = cornerName
+        ? `${cornerName}, metro ${Math.round(frame.lapDistance)}`
+        : `metro ${Math.round(frame.lapDistance)}`;
+
+      checkBrakeTemp(frame, zone, location);
+      if (baseline.isReady()) checkTcAbsAnomaly(frame, zone, location);
+    },
+
+    processLapDeviations: (deviations) => {
+      for (const dev of deviations) {
+        const cornerName = getCornerName(dev.dist);
+        const location = cornerName
+          ? `${cornerName}, metro ${Math.round(dev.dist)}`
+          : `metro ${Math.round(dev.dist)}`;
+
+        dispatcher.dispatch({
+          type: dev.type as AlertType,
+          priority: 3,
+          zone: dev.zone,
+          dist: dev.dist,
+          message: `${location}: ${dev.message}`,
+          immediate: false,
+          data: { delta: dev.delta },
+          timestamp: Date.now(),
+        });
+      }
+    },
+
+    resetLap: () => dispatcher.resetLap(),
+  };
+};
