@@ -1,6 +1,6 @@
 /**
  * R3E Shared Memory Struct Definition
- * Source: sector3studios/r3e-api v2.16 (sample-csharp/src/R3E.cs)
+ * Source: sector3studios/r3e-api v3.x (sample-csharp/src/R3E.cs)
  * Shared memory name: $R3E
  *
  * All fields declared in struct order — offsets computed automatically.
@@ -261,8 +261,8 @@ const readString = (buf: Buffer, name: string, byteLen: number): string => {
 };
 
 export const SHM_NAME = '$R3E';
-export const VERSION_MAJOR = 2;
-export const VERSION_MINOR_MIN = 16;
+export const VERSION_MAJOR = 3;
+export const VERSION_MINOR_MIN = 0;
 
 export {
   OFFSETS,

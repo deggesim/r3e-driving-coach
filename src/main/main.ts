@@ -471,6 +471,14 @@ const setupPipeline = (): void => {
   reader.start();
 
   pushStatus(recorder);
+
+  // Re-push status once the renderer has finished loading its IPC listeners.
+  // reader.start() is synchronous — the 'connected' event fires before the
+  // renderer mounts useIPC, so the first pushStatus is lost. This ensures the
+  // renderer receives the correct state after load.
+  mainWindow?.webContents.once("did-finish-load", () => {
+    pushStatus(recorder);
+  });
 };
 
 // ──────────────────────────────────────────────

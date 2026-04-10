@@ -40,7 +40,6 @@ type Kernel32 = {
   CloseHandle: (handle: NativePointer) => boolean;
 };
 
-const BUFFER_SIZE = 1024 * 1024; // 1MB
 const FILE_MAP_READ = 0x0004;
 
 export type R3EReader = {
@@ -56,11 +55,23 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
   let connected = false;
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let koffi: any = null;
   let kernel32: Kernel32 | null = null;
   let mapHandle: NativePointer | null = null;
   let viewPtr: NativePointer | null = null;
   let stopped = false;
 
+  const isNullPtr = (ptr: NativePointer): boolean => {
+    if (ptr === null || ptr === undefined) return true;
+    try { return koffi.address(ptr) === 0n; } catch { return false; }
+  };
+
+  const ptrStr = (ptr: NativePointer): string => {
+    try { return `0x${koffi.address(ptr).toString(16)}`; } catch { return String(ptr); }
+  };
+
+  let firstPoll = true; // log version on first successful poll
   let lastCompletedLaps = -1;
   let lastTrackSector = -1;
   let lapFrames: CompactFrame[] = [];
@@ -208,13 +219,17 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     if (stopped || !viewPtr) return;
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const koffi = require('koffi');
       const raw: Uint8Array = koffi.decode(viewPtr, koffi.array('uint8_t', STRUCT_SIZE_KNOWN));
       const buf: Buffer = Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength);
 
       const versionMajor = readInt32(buf, 'VersionMajor');
+      const versionMinor = readInt32(buf, 'VersionMinor');
+      if (firstPoll || versionMajor !== VERSION_MAJOR) {
+        console.log(`[R3EReader] poll — VersionMajor=${versionMajor} VersionMinor=${versionMinor} (expected major=${VERSION_MAJOR})`);
+        firstPoll = false;
+      }
       if (versionMajor !== VERSION_MAJOR) {
+        console.warn(`[R3EReader] version mismatch: got ${versionMajor}, expected ${VERSION_MAJOR} — disconnecting`);
         cleanup();
         scheduleReconnect();
         return;
@@ -234,12 +249,14 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 
   const tryConnect = (): void => {
     if (stopped) return;
+    console.log(`[R3EReader] tryConnect — platform=${process.platform} SHM_NAME="${SHM_NAME}"`);
 
     try {
       if (!kernel32) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const koffi = require('koffi');
+        koffi = require('koffi');
         const lib = koffi.load('kernel32.dll');
+        console.log('[R3EReader] kernel32.dll loaded');
 
         kernel32 = {
           OpenFileMappingA: lib.func('void* __stdcall OpenFileMappingA(uint32 dwDesiredAccess, int bInheritHandle, const char* lpName)'),
@@ -250,10 +267,17 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       }
 
       const handle = kernel32.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
-      if (!handle) { scheduleReconnect(); return; }
+      console.log(`[R3EReader] OpenFileMappingA("${SHM_NAME}") → handle=${ptrStr(handle)}`);
+      if (isNullPtr(handle)) {
+        console.log('[R3EReader] handle is null — game not running or SHM not created yet');
+        scheduleReconnect();
+        return;
+      }
 
-      const view = kernel32.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, BUFFER_SIZE);
-      if (!view) {
+      const view = kernel32.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 0); // 0 = map entire file
+      console.log(`[R3EReader] MapViewOfFile → view=${ptrStr(view)}`);
+      if (isNullPtr(view)) {
+        console.log('[R3EReader] MapViewOfFile failed');
         kernel32.CloseHandle(handle);
         scheduleReconnect();
         return;
@@ -264,7 +288,8 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       connected = true;
       emitter.emit('connected');
       poll();
-    } catch {
+    } catch (err) {
+      console.error('[R3EReader] tryConnect error:', err);
       scheduleReconnect();
     }
   };
@@ -282,8 +307,8 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     );
 
     return {
-      versionMajor: 2,
-      versionMinor: 16,
+      versionMajor: 3,
+      versionMinor: 0,
       gamePaused: false,
       gameInMenus: false,
       gameInReplay: false,
