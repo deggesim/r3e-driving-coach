@@ -33,6 +33,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   configSet: (key: string, value: unknown) =>
     ipcRenderer.invoke('config:set', key, value),
 
+  // Window controls
+  windowClose: () => ipcRenderer.send('window:close'),
+
   // Cleanup
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);

@@ -50,6 +50,12 @@ body {
   user-select: none;
   flex-shrink: 0;
 }
+.title-bar-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
 .title-bar-name {
   font-weight: 700;
   color: var(--accent);
@@ -86,6 +92,23 @@ body {
   border-radius: 4px;
 }
 .tts-toggle:hover { background: var(--bg3); }
+.title-bar-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  -webkit-app-region: no-drag;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.title-bar-close:hover { background: var(--red); color: white; }
 
 /* ── Main content ── */
 .main-content {

@@ -51,7 +51,11 @@
       "output": "release"
     },
     "win": {
-      "target": ["nsis", "portable"]
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "public/icon.png"
     },
     "nsis": {
       "oneClick": false,

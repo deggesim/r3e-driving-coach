@@ -5,8 +5,8 @@
  * Post-lap: reads Section [5] of Template v3 (passed as postLapText).
  */
 
-import { useEffect, useRef, useCallback } from 'react';
-import type { Alert } from '../../shared/types';
+import { useEffect, useRef, useCallback } from "react";
+import type { Alert } from "../../shared/types";
 
 type TTSManagerProps = {
   alerts: Alert[];
@@ -19,26 +19,31 @@ type QueuedUtterance = {
   priority: 1 | 2 | 3;
 };
 
-export default function TTSManager({ alerts, postLapText, enabled = true }: TTSManagerProps) {
+export default function TTSManager({
+  alerts,
+  postLapText,
+  enabled = true,
+}: TTSManagerProps) {
   const queueRef = useRef<QueuedUtterance[]>([]);
   const speakingRef = useRef(false);
   const lastAlertRef = useRef<Alert | null>(null);
   const lastPostLapRef = useRef<string | null>(null);
 
   const speakNext = useCallback(() => {
-    if (!enabled || speakingRef.current || queueRef.current.length === 0) return;
+    if (!enabled || speakingRef.current || queueRef.current.length === 0)
+      return;
 
     const item = queueRef.current.shift()!;
     speakingRef.current = true;
 
     const utterance = new SpeechSynthesisUtterance(item.text);
-    utterance.lang = 'it-IT';
+    utterance.lang = "it-IT";
     utterance.rate = 0.9;
     utterance.pitch = 1.0;
 
     // Pick an Italian voice if available
     const voices = window.speechSynthesis.getVoices();
-    const itVoice = voices.find((v) => v.lang.startsWith('it'));
+    const itVoice = voices.find((v) => v.lang.startsWith("it"));
     if (itVoice) utterance.voice = itVoice;
 
     utterance.onend = () => {
@@ -62,10 +67,15 @@ export default function TTSManager({ alerts, postLapText, enabled = true }: TTSM
         // P1: interrupt immediately
         window.speechSynthesis.cancel();
         speakingRef.current = false;
-        queueRef.current = [{ text, priority }, ...queueRef.current.filter((q) => q.priority === 1)];
+        queueRef.current = [
+          { text, priority },
+          ...queueRef.current.filter((q) => q.priority === 1),
+        ];
       } else {
         // Insert by priority (lower number = higher priority)
-        const insertAt = queueRef.current.findIndex((q) => q.priority > priority);
+        const insertAt = queueRef.current.findIndex(
+          (q) => q.priority > priority,
+        );
         if (insertAt === -1) {
           queueRef.current.push({ text, priority });
         } else {
@@ -93,6 +103,31 @@ export default function TTSManager({ alerts, postLapText, enabled = true }: TTSM
     lastPostLapRef.current = postLapText;
     enqueue(postLapText, 3);
   }, [postLapText, enqueue]);
+
+  // Welcome message on first mount
+  useEffect(() => {
+    const speakWelcome = () => {
+      const utterance = new SpeechSynthesisUtterance(
+        "Ciao, sono pronto ad aiutarti in pista",
+      );
+      utterance.lang = "it-IT";
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      const voices = window.speechSynthesis.getVoices();
+      const itVoice = voices.find((v) => v.lang.startsWith("it"));
+      if (itVoice) utterance.voice = itVoice;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    // Voices may not be ready yet — retry after a short delay
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      speakWelcome();
+    } else {
+      const timer = setTimeout(speakWelcome, 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Voices may load async — retry on change
   useEffect(() => {

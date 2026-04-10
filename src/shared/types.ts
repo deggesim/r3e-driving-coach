@@ -243,6 +243,7 @@ export type ElectronAPI = {
   getSession: (id: number) => Promise<SessionRow | null>;
   configGet: (key: string) => Promise<unknown>;
   configSet: (key: string, value: unknown) => Promise<void>;
+  windowClose: () => void;
   removeAllListeners: (channel: string) => void;
 };
 

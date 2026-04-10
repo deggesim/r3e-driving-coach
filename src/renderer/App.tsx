@@ -6,6 +6,7 @@
 
 import { useState, useEffect } from "react";
 import { useIPC, useConfig } from "./hooks/useIPC";
+import iconUrl from "/icon.png";
 import TTSManager from "./components/TTSManager";
 import StatusBar from "./components/StatusBar";
 import Debriefing from "./components/Debriefing";
@@ -55,6 +56,7 @@ export default function App() {
 
       {/* Title bar (frameless window drag area) */}
       <div className="title-bar">
+        <img src={iconUrl} className="title-bar-icon" alt="" />
         <span className="title-bar-name">R3E Driving Coach</span>
         <div className="title-bar-tabs">
           <button
@@ -85,6 +87,14 @@ export default function App() {
             {ttsEnabled ? "🎙" : "🔇"}
           </button>
         </div>
+        <button
+          className="title-bar-close"
+          onClick={() => window.electronAPI.windowClose()}
+          title="Chiudi"
+          aria-label="Chiudi finestra"
+        >
+          ✕
+        </button>
       </div>
 
       {/* Main content */}

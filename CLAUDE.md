@@ -14,7 +14,7 @@ Electron + React app serving as a **real-time voice coach** for RaceRoom Racing 
 ```bash
 # Install & rebuild native modules for Electron
 npm install
-npx electron-rebuild -f -w ffi-napi,ref-napi,better-sqlite3
+npm run rebuild:native
 
 # Development (Vite + Electron concurrently)
 npm run dev
@@ -52,7 +52,7 @@ R3E Shared Memory ($R3E) — polling 16ms
 
 ### Main process (`src/main/`)
 - **r3e/r3e-struct.ts** — R3E shared memory struct layout (v2.16), auto-computed offsets, read helpers
-- **r3e/r3e-reader.ts** — Opens `$R3E` via `ffi-napi` + kernel32.dll, polls at 16ms, emits `frame`, `lapComplete`, `connected/disconnected`. Auto-enters mock mode on non-Windows
+- **r3e/r3e-reader.ts** — Opens `$R3E` via `koffi` + kernel32.dll, polls at 16ms, emits `frame`, `lapComplete`, `connected/disconnected`. Auto-enters mock mode on non-Windows
 - **r3e/lap-recorder.ts** — Attaches to reader, aggregates frames into 50m zones with driving metrics, handles 2-lap calibration phase
 - **r3e/zone-tracker.ts** — Stateful tracker for current 50m zone during a lap (feeds RuleEngine real-time checks)
 - **coach/adaptive-baseline.ts** — EMA (alpha=0.3) baseline per zone, detects deviations (LATE_BRAKE, SLOW_THROTTLE, TRAIL_BRAKING, COASTING, BRAKE_THROTTLE_OVERLAP), persists to SQLite
@@ -97,8 +97,4 @@ Build remaining modules in this order: `zone-tracker.ts` -> `main.ts` -> `coach-
 
 ## Code Style
 
-- TypeScript strict mode. Prefer `type` over `interface` for unions/intersections.
-- Named exports everywhere. Relative imports only, no path aliases.
-- English for all comments and code.
-- **Arrow functions**: Always use arrow functions (`const fn = () => {}`) — never the `function` keyword, for any purpose (helpers, callbacks, module-level utilities).
-- **Functional programming style**: No `class` keyword. Prefer factory functions over classes. Use closures for stateful encapsulation. Stateful modules export a `createX()` factory that returns a plain object with typed methods. For event-based modules, expose `on` bound from an internal `EventEmitter` instance rather than subclassing it.
+See [CODE_STYLE.md](CODE_STYLE.md).
