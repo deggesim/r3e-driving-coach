@@ -94,6 +94,7 @@ body {
   text-decoration: none;
 }
 .tts-toggle:hover { background: var(--bg3); text-decoration: none; }
+.title-bar-wc,
 .title-bar-close {
   background: none;
   border: none;
@@ -111,6 +112,7 @@ body {
   transition: background 0.15s, color 0.15s;
   flex-shrink: 0;
 }
+.title-bar-wc:hover { background: var(--bg3); color: var(--text); text-decoration: none; }
 .title-bar-close:hover { background: var(--red); color: white; text-decoration: none; }
 
 /* ── Main content ── */
@@ -203,9 +205,13 @@ body {
 
 /* ── Settings ── */
 .settings-panel {
-  max-width: 600px;
   overflow-y: auto;
   height: 100%;
+}
+
+/* Bootstrap Form.Text override — default #6c757d is too dark on dark bg */
+.form-text {
+  color: #aaa !important;
 }
 .setting-section-label {
   display: block;

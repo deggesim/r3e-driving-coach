@@ -84,6 +84,18 @@ ipcMain.on("window:close", () => {
   mainWindow?.close();
 });
 
+ipcMain.on("window:minimize", () => {
+  mainWindow?.minimize();
+});
+
+ipcMain.on("window:maximize", () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow?.maximize();
+  }
+});
+
 // ──────────────────────────────────────────────
 // Push helpers
 // ──────────────────────────────────────────────

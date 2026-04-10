@@ -62,6 +62,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Window controls
   windowClose: () => ipcRenderer.send('window:close'),
+  windowMinimize: () => ipcRenderer.send('window:minimize'),
+  windowMaximize: () => ipcRenderer.send('window:maximize'),
 
   // Cleanup
   removeAllListeners: (channel: string) => {

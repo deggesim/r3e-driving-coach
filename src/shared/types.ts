@@ -285,6 +285,8 @@ export type ElectronAPI = {
 
   // Window
   windowClose: () => void;
+  windowMinimize: () => void;
+  windowMaximize: () => void;
   removeAllListeners: (channel: string) => void;
 };
 

@@ -284,6 +284,24 @@ const App = () => {
         </div>
         <Button
           variant="link"
+          className="title-bar-wc"
+          onClick={() => window.electronAPI.windowMinimize()}
+          title="Riduci a icona"
+          aria-label="Riduci a icona"
+        >
+          &#x2212;
+        </Button>
+        <Button
+          variant="link"
+          className="title-bar-wc"
+          onClick={() => window.electronAPI.windowMaximize()}
+          title="Ingrandisci"
+          aria-label="Ingrandisci finestra"
+        >
+          &#x25A1;
+        </Button>
+        <Button
+          variant="link"
           className="title-bar-close"
           onClick={() => window.electronAPI.windowClose()}
           title="Chiudi"
