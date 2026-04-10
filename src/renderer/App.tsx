@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useCallback } from "react";
-import { Button, Form, Spinner } from "react-bootstrap";
+import { Button, Form, Spinner, Container, Row, Col } from "react-bootstrap";
 import { useIPC, useConfig } from "./hooks/useIPC";
 import { useIPCStore } from "./store/ipcStore";
 import { useSettingsStore } from "./store/settingsStore";
@@ -23,6 +23,7 @@ import VoiceCoachOverlay from "./components/VoiceCoachOverlay";
 type Tab = "debriefing" | "history" | "settings";
 
 const AZURE_REGIONS = [
+  { value: "italynorth", label: "North Italy" },
   { value: "westeurope", label: "West Europe" },
   { value: "northeurope", label: "North Europe" },
   { value: "eastus", label: "East US" },
@@ -65,6 +66,7 @@ const App = () => {
 
   const { get: configGet, set: configSet } = useConfig();
   const [tab, setTab] = useState<Tab>("debriefing");
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [alerts, setAlerts] = useState<NonNullable<typeof lastAlert>[]>([]);
   const [azureVoices, setAzureVoices] = useState<AzureVoice[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
@@ -100,6 +102,7 @@ const App = () => {
       if (voice) setAzureVoiceName(voice);
       if (name) setAssistantName(name);
       if (button) setGamepadButton(Number(button));
+      setSettingsLoaded(true);
     };
     load().catch(console.error);
   }, [
@@ -153,8 +156,8 @@ const App = () => {
       const voices = await window.electronAPI.ttsGetVoices();
       setAzureVoices(voices);
       if (voices.length > 0 && !azureVoiceName) {
-        setAzureVoiceName(voices[0].shortName);
-        await configSet("azureVoiceName", voices[0].shortName);
+        setAzureVoiceName(voices[0].ShortName);
+        await configSet("azureVoiceName", voices[0].ShortName);
       }
     } catch (err) {
       setVoicesError(
@@ -198,6 +201,8 @@ const App = () => {
         postLapText={postLapText}
         enabled={ttsEnabled}
         azureEnabled={azureTtsEnabled}
+        assistantName={assistantName}
+        settingsLoaded={settingsLoaded}
       />
 
       {/* Voice coach overlay */}
@@ -212,42 +217,47 @@ const App = () => {
         <img src={iconUrl} className="title-bar-icon" alt="" />
         <span className="title-bar-name">R3E Driving Coach</span>
         <div className="title-bar-tabs">
-          <button
+          <Button
+            variant="link"
             className={`tab-btn ${tab === "debriefing" ? "active" : ""}`}
             onClick={() => setTab("debriefing")}
           >
             Debriefing
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="link"
             className={`tab-btn ${tab === "history" ? "active" : ""}`}
             onClick={() => setTab("history")}
           >
             Storico
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="link"
             className={`tab-btn ${tab === "settings" ? "active" : ""}`}
             onClick={() => setTab("settings")}
           >
             Impostazioni
-          </button>
+          </Button>
         </div>
         <div className="title-bar-tts">
-          <button
+          <Button
+            variant="link"
             className={`tts-toggle ${ttsEnabled ? "on" : "off"}`}
             onClick={() => setTtsEnabled(!ttsEnabled)}
             title={ttsEnabled ? "Voce attiva" : "Voce disattiva"}
           >
             {ttsEnabled ? "🎙" : "🔇"}
-          </button>
+          </Button>
         </div>
-        <button
+        <Button
+          variant="link"
           className="title-bar-close"
           onClick={() => window.electronAPI.windowClose()}
           title="Chiudi"
           aria-label="Chiudi finestra"
         >
           ✕
-        </button>
+        </Button>
       </div>
 
       {/* Main content */}
@@ -258,243 +268,263 @@ const App = () => {
         {tab === "history" && <SessionHistory status={status} />}
 
         {tab === "settings" && (
-          <div className="settings-panel">
-            <h2>Impostazioni</h2>
+          <Container fluid className="settings-panel p-4">
+            <Row>
+              <Col>
+                <h2 className="fs-5 fw-bold mb-4">Impostazioni</h2>
 
-            {/* Claude API Key */}
-            <Form.Group className="setting-group">
-              <Form.Label className="setting-section-label">
-                API Key Anthropic
-              </Form.Label>
-              <div className="setting-row">
-                <Form.Control
-                  id="api-key"
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-ant-..."
-                  className="setting-input"
-                />
-                <Button variant="danger" size="sm" onClick={handleSaveApiKey}>
-                  {settingSaved === "apiKey" ? "✓ Salvata" : "Salva"}
-                </Button>
-              </div>
-              <Form.Text className="setting-hint">
-                Necessaria per il debriefing post-giro e il coach vocale via
-                Claude API.
-              </Form.Text>
-            </Form.Group>
-
-            {/* Voce TTS */}
-            <Form.Group className="setting-group">
-              <Form.Label className="setting-section-label">
-                Voce TTS
-              </Form.Label>
-              <div className="setting-row">
-                <Button
-                  variant={ttsEnabled ? "success" : "secondary"}
-                  size="sm"
-                  onClick={() => setTtsEnabled(!ttsEnabled)}
-                >
-                  {ttsEnabled ? "Attiva" : "Disattiva"}
-                </Button>
-              </div>
-              <Form.Text className="setting-hint">
-                Attiva/disattiva tutti gli output vocali (alert, debriefing,
-                coach).
-              </Form.Text>
-            </Form.Group>
-
-            {/* Assistente Vocale */}
-            <Form.Group className="setting-group">
-              <Form.Label className="setting-section-label">
-                Assistente Vocale
-              </Form.Label>
-              <div className="setting-row">
-                <Form.Label
-                  htmlFor="assistant-name"
-                  className="setting-inline-label"
-                >
-                  Nome assistente
-                </Form.Label>
-                <Form.Control
-                  id="assistant-name"
-                  type="text"
-                  value={assistantName}
-                  onChange={(e) => setAssistantName(e.target.value)}
-                  placeholder="Aria"
-                  className="setting-input setting-input-sm"
-                  maxLength={32}
-                />
-              </div>
-              <div className="setting-row">
-                <Form.Label
-                  htmlFor="gamepad-button"
-                  className="setting-inline-label"
-                >
-                  Tasto controller (0–19)
-                </Form.Label>
-                <Form.Control
-                  id="gamepad-button"
-                  type="number"
-                  min={0}
-                  max={19}
-                  value={gamepadButton}
-                  onChange={(e) => setGamepadButton(Number(e.target.value))}
-                  className="setting-input setting-input-xs"
-                />
-              </div>
-              <div className="setting-row">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleSaveAssistant}
-                >
-                  {settingSaved === "assistant" ? "✓ Salvato" : "Salva"}
-                </Button>
-              </div>
-              <Form.Text className="setting-hint">
-                Premi il tasto configurato sul controller per attivare il
-                microfono e fare domande al coach. Il tasto 0 corrisponde al
-                tasto A su controller Xbox.
-              </Form.Text>
-            </Form.Group>
-
-            {/* Azure TTS */}
-            <Form.Group className="setting-group">
-              <Form.Label className="setting-section-label">
-                Azure Text-to-Speech
-              </Form.Label>
-              <div className="setting-row">
-                <Button
-                  variant={azureTtsEnabled ? "success" : "secondary"}
-                  size="sm"
-                  onClick={handleToggleAzure}
-                >
-                  {azureTtsEnabled ? "Attivo" : "Disattivo"}
-                </Button>
-              </div>
-
-              <div className="setting-row">
-                <Form.Label
-                  htmlFor="azure-key"
-                  className="setting-inline-label"
-                >
-                  Chiave servizio
-                </Form.Label>
-                <Form.Control
-                  id="azure-key"
-                  type="password"
-                  value={azureSpeechKey}
-                  onChange={(e) => setAzureSpeechKey(e.target.value)}
-                  placeholder="Chiave Azure Speech"
-                  className="setting-input"
-                />
-              </div>
-
-              <div className="setting-row">
-                <Form.Label
-                  htmlFor="azure-region"
-                  className="setting-inline-label"
-                >
-                  Regione
-                </Form.Label>
-                <Form.Select
-                  id="azure-region"
-                  value={azureRegion}
-                  onChange={(e) => setAzureRegion(e.target.value)}
-                  className="setting-select"
-                >
-                  {AZURE_REGIONS.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Button variant="danger" size="sm" onClick={handleSaveAzureKey}>
-                  {settingSaved === "azureKey" ? "✓ Salvata" : "Salva"}
-                </Button>
-              </div>
-
-              <div className="setting-row">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleLoadVoices}
-                  disabled={voicesLoading || !azureSpeechKey}
-                >
-                  {voicesLoading ? (
-                    <>
-                      <Spinner size="sm" className="me-1" />
-                      Caricamento...
-                    </>
-                  ) : (
-                    "Carica voci"
-                  )}
-                </Button>
-              </div>
-
-              {voicesError && (
-                <Form.Text className="text-danger d-block mt-1">
-                  {voicesError}
-                </Form.Text>
-              )}
-
-              {azureVoices.length > 0 && (
-                <div className="setting-row">
-                  <Form.Label
-                    htmlFor="azure-voice"
-                    className="setting-inline-label"
-                  >
-                    Voce
+                {/* Claude API Key */}
+                <Form.Group className="mb-4">
+                  <Form.Label className="setting-section-label">
+                    API Key Anthropic
                   </Form.Label>
-                  <Form.Select
-                    id="azure-voice"
-                    value={azureVoiceName}
-                    onChange={(e) => handleVoiceChange(e.target.value)}
-                    className="setting-select"
-                  >
-                    {azureVoices.map((v) => (
-                      <option key={v.shortName} value={v.shortName}>
-                        {v.localName} ({v.gender === "Female" ? "F" : "M"})
-                      </option>
-                    ))}
-                  </Form.Select>
-                </div>
-              )}
+                  <Row className="g-2 align-items-center">
+                    <Col>
+                      <Form.Control
+                        id="api-key"
+                        type="password"
+                        value={apiKey}
+                        onChange={(e) => setApiKey(e.target.value)}
+                        placeholder="sk-ant-..."
+                      />
+                    </Col>
+                    <Col xs="auto">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={handleSaveApiKey}
+                      >
+                        {settingSaved === "apiKey" ? "✓ Salvata" : "Salva"}
+                      </Button>
+                    </Col>
+                  </Row>
+                  <Form.Text>
+                    Necessaria per il debriefing post-giro e il coach vocale via
+                    Claude API.
+                  </Form.Text>
+                </Form.Group>
 
-              <Form.Text className="setting-hint">
-                Selezionando una voce viene riprodotta un&apos;anteprima:
-                &quot;Ciao, sono {assistantName} e oggi sono il tuo insegnante
-                virtuale&quot;. Richiede una sottoscrizione Azure Cognitive
-                Services.
-              </Form.Text>
-            </Form.Group>
+                {/* Voce TTS */}
+                <Form.Group className="mb-4">
+                  <Form.Label className="setting-section-label">
+                    Voce TTS
+                  </Form.Label>
+                  <Row className="g-2 align-items-center">
+                    <Col xs="auto">
+                      <Button
+                        variant={ttsEnabled ? "success" : "secondary"}
+                        size="sm"
+                        onClick={() => setTtsEnabled(!ttsEnabled)}
+                      >
+                        {ttsEnabled ? "Attiva" : "Disattiva"}
+                      </Button>
+                    </Col>
+                  </Row>
+                  <Form.Text>
+                    Attiva/disattiva tutti gli output vocali (alert, debriefing,
+                    coach).
+                  </Form.Text>
+                </Form.Group>
 
-            {/* Debug frame */}
-            {frame && (
-              <div className="setting-group debug">
-                <Form.Label className="setting-section-label">
-                  Debug — Ultimo frame
-                </Form.Label>
-                <pre className="debug-frame">
-                  {JSON.stringify(
-                    {
-                      car: frame.carName,
-                      track: frame.trackName,
-                      speed: frame.carSpeed.toFixed(1) + " km/h",
-                      gear: frame.gear,
-                      dist: frame.lapDistance.toFixed(0) + "m",
-                      thr: (frame.throttle * 100).toFixed(0) + "%",
-                      brk: (frame.brake * 100).toFixed(0) + "%",
-                    },
-                    null,
-                    2,
+                {/* Assistente Vocale */}
+                <Form.Group className="mb-4">
+                  <Form.Label className="setting-section-label">
+                    Assistente Vocale
+                  </Form.Label>
+                  <Row className="g-2 align-items-center mb-2">
+                    <Col xs="auto">
+                      <Form.Label htmlFor="assistant-name" className="mb-0">
+                        Nome assistente
+                      </Form.Label>
+                    </Col>
+                    <Col xs={4}>
+                      <Form.Control
+                        id="assistant-name"
+                        type="text"
+                        value={assistantName}
+                        onChange={(e) => setAssistantName(e.target.value)}
+                        placeholder="Aria"
+                        maxLength={32}
+                      />
+                    </Col>
+                  </Row>
+                  <Row className="g-2 align-items-center mb-2">
+                    <Col xs="auto">
+                      <Form.Label htmlFor="gamepad-button" className="mb-0">
+                        Tasto controller (0–19)
+                      </Form.Label>
+                    </Col>
+                    <Col xs={2}>
+                      <Form.Control
+                        id="gamepad-button"
+                        type="number"
+                        min={0}
+                        max={19}
+                        value={gamepadButton}
+                        onChange={(e) =>
+                          setGamepadButton(Number(e.target.value))
+                        }
+                      />
+                    </Col>
+                  </Row>
+                  <Row className="g-2 align-items-center">
+                    <Col xs="auto">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={handleSaveAssistant}
+                      >
+                        {settingSaved === "assistant" ? "✓ Salvato" : "Salva"}
+                      </Button>
+                    </Col>
+                  </Row>
+                  <Form.Text>
+                    Premi il tasto configurato sul controller per attivare il
+                    microfono e fare domande al coach. Il tasto 0 corrisponde al
+                    tasto A su controller Xbox.
+                  </Form.Text>
+                </Form.Group>
+
+                {/* Azure TTS */}
+                <Form.Group className="mb-4">
+                  <Form.Label className="setting-section-label">
+                    Azure Text-to-Speech
+                  </Form.Label>
+                  <Row className="g-2 align-items-center mb-2">
+                    <Col xs="auto">
+                      <Button
+                        variant={azureTtsEnabled ? "success" : "secondary"}
+                        size="sm"
+                        onClick={handleToggleAzure}
+                      >
+                        {azureTtsEnabled ? "Attivo" : "Disattivo"}
+                      </Button>
+                    </Col>
+                  </Row>
+                  <Row className="g-2 align-items-center mb-2">
+                    <Col xs="auto">
+                      <Form.Label htmlFor="azure-key" className="mb-0">
+                        Chiave servizio
+                      </Form.Label>
+                    </Col>
+                    <Col>
+                      <Form.Control
+                        id="azure-key"
+                        type="password"
+                        value={azureSpeechKey}
+                        onChange={(e) => setAzureSpeechKey(e.target.value)}
+                        placeholder="Chiave Azure Speech"
+                      />
+                    </Col>
+                  </Row>
+                  <Row className="g-2 align-items-center mb-2">
+                    <Col xs="auto">
+                      <Form.Label htmlFor="azure-region" className="mb-0">
+                        Regione
+                      </Form.Label>
+                    </Col>
+                    <Col>
+                      <Form.Select
+                        id="azure-region"
+                        value={azureRegion}
+                        onChange={(e) => setAzureRegion(e.target.value)}
+                      >
+                        {AZURE_REGIONS.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {r.label}
+                          </option>
+                        ))}
+                      </Form.Select>
+                    </Col>
+                    <Col xs="auto">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={handleSaveAzureKey}
+                      >
+                        {settingSaved === "azureKey" ? "✓ Salvata" : "Salva"}
+                      </Button>
+                    </Col>
+                  </Row>
+                  <Row className="g-2 align-items-center mb-2">
+                    <Col xs="auto">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleLoadVoices}
+                        disabled={voicesLoading || !azureSpeechKey}
+                      >
+                        {voicesLoading ? (
+                          <>
+                            <Spinner size="sm" className="me-1" />
+                            Caricamento...
+                          </>
+                        ) : (
+                          "Carica voci"
+                        )}
+                      </Button>
+                    </Col>
+                  </Row>
+                  {voicesError && (
+                    <p className="text-danger small mt-1 mb-2">{voicesError}</p>
                   )}
-                </pre>
-              </div>
-            )}
-          </div>
+                  {azureVoices.length > 0 && (
+                    <Row className="g-2 align-items-center mb-2">
+                      <Col xs="auto">
+                        <Form.Label htmlFor="azure-voice" className="mb-0">
+                          Voce
+                        </Form.Label>
+                      </Col>
+                      <Col>
+                        <Form.Select
+                          id="azure-voice"
+                          value={azureVoiceName}
+                          onChange={(e) => handleVoiceChange(e.target.value)}
+                        >
+                          {azureVoices.map((v) => (
+                            <option key={v.ShortName} value={v.ShortName}>
+                              {v.LocalName} ({v.Gender === "Female" ? "F" : "M"}
+                              )
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Col>
+                    </Row>
+                  )}
+                  <Form.Text>
+                    Selezionando una voce viene riprodotta un&apos;anteprima:
+                    &quot;Ciao, sono {assistantName} e oggi sono il tuo
+                    insegnante virtuale&quot;. Richiede una sottoscrizione Azure
+                    Cognitive Services.
+                  </Form.Text>
+                </Form.Group>
+
+                {/* Debug frame */}
+                {frame && (
+                  <div className="mt-4 pt-4 border-top">
+                    <Form.Label className="setting-section-label">
+                      Debug — Ultimo frame
+                    </Form.Label>
+                    <pre className="debug-frame">
+                      {JSON.stringify(
+                        {
+                          car: frame.carName,
+                          track: frame.trackName,
+                          speed: frame.carSpeed.toFixed(1) + " km/h",
+                          gear: frame.gear,
+                          dist: frame.lapDistance.toFixed(0) + "m",
+                          thr: (frame.throttle * 100).toFixed(0) + "%",
+                          brk: (frame.brake * 100).toFixed(0) + "%",
+                        },
+                        null,
+                        2,
+                      )}
+                    </pre>
+                  </div>
+                )}
+              </Col>
+            </Row>
+          </Container>
         )}
       </div>
 

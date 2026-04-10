@@ -58,9 +58,9 @@ const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
     marked.parse(md, { async: false }) as string;
 
   return (
-    <div className="debriefing">
+    <div className="d-flex flex-column h-100 overflow-hidden">
       {/* Header */}
-      <div className="debriefing-header">
+      <div className="debriefing-header d-flex align-items-center gap-2 flex-shrink-0">
         {displayedLap ? (
           <>
             <span className="deb-car">{displayedLap.car}</span>
@@ -85,13 +85,15 @@ const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
       </div>
 
       {/* Body */}
-      <div className="debriefing-body">
+      <div className="flex-grow-1 overflow-y-auto p-3">
         {state === "idle" && (
-          <div className="deb-idle">In attesa del giro...</div>
+          <div className="d-flex align-items-center justify-content-center gap-2 text-secondary" style={{ height: 200 }}>
+            In attesa del giro...
+          </div>
         )}
 
         {state === "loading" && (
-          <div className="deb-loading">
+          <div className="d-flex align-items-center justify-content-center gap-2 text-secondary" style={{ height: 200 }}>
             <Spinner size="sm" variant="danger" />
             <span>Analisi in corso...</span>
           </div>
@@ -110,7 +112,7 @@ const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
 
       {/* Footer */}
       {state === "result" && displayedAnalysis && (
-        <div className="debriefing-footer">
+        <div className="debriefing-footer d-flex align-items-center justify-content-end gap-2 flex-shrink-0">
           <span className="deb-generated">
             Generato:{" "}
             {new Date(displayedAnalysis.generatedAt).toLocaleTimeString(

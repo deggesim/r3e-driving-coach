@@ -8,6 +8,7 @@
  *   speaking  → streaming answer text
  */
 
+import { Card, Spinner } from "react-bootstrap";
 import type { VoiceCoachState } from "../hooks/useVoiceCoach";
 
 type VoiceCoachOverlayProps = {
@@ -24,37 +25,51 @@ const VoiceCoachOverlay = ({
   if (state === "idle") return null;
 
   return (
-    <div className="voice-overlay">
-      <div className="voice-overlay-card">
-        {state === "listening" && (
-          <>
-            <div className="voice-mic-pulse">🎙</div>
-            <p className="voice-status-text">In ascolto...</p>
-          </>
-        )}
+    <div
+      className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75"
+      style={{ zIndex: 1050 }}
+    >
+      <Card
+        bg="dark"
+        border="secondary"
+        text="light"
+        style={{ minWidth: 320, maxWidth: 480 }}
+      >
+        <Card.Body className="d-flex flex-column align-items-center gap-3 p-4">
+          {state === "listening" && (
+            <>
+              <div className="voice-mic-pulse fs-1">🎙</div>
+              <p className="mb-0 text-secondary">In ascolto...</p>
+            </>
+          )}
 
-        {state === "processing" && (
-          <>
-            <div className="voice-spinner" />
-            {transcript && (
-              <p className="voice-transcript">"{transcript}"</p>
-            )}
-            <p className="voice-status-text">Elaborazione in corso...</p>
-          </>
-        )}
+          {state === "processing" && (
+            <>
+              <Spinner variant="danger" />
+              {transcript && (
+                <p className="mb-0 fst-italic text-secondary">
+                  &ldquo;{transcript}&rdquo;
+                </p>
+              )}
+              <p className="mb-0 text-secondary">Elaborazione in corso...</p>
+            </>
+          )}
 
-        {state === "speaking" && (
-          <>
-            {transcript && (
-              <p className="voice-transcript">"{transcript}"</p>
-            )}
-            <div className="voice-answer">
-              <p>{answer}</p>
-              <span className="voice-cursor" />
-            </div>
-          </>
-        )}
-      </div>
+          {state === "speaking" && (
+            <>
+              {transcript && (
+                <p className="mb-0 fst-italic text-secondary">
+                  &ldquo;{transcript}&rdquo;
+                </p>
+              )}
+              <div className="text-light">
+                <p className="mb-0">{answer}</p>
+                <span className="voice-cursor">|</span>
+              </div>
+            </>
+          )}
+        </Card.Body>
+      </Card>
     </div>
   );
 };

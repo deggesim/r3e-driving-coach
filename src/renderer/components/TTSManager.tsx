@@ -16,6 +16,8 @@ type TTSManagerProps = {
   postLapText: string | null;
   enabled?: boolean;
   azureEnabled?: boolean;
+  assistantName?: string;
+  settingsLoaded?: boolean;
 };
 
 type QueuedUtterance = {
@@ -36,14 +38,15 @@ const TTSManager = ({
   postLapText,
   enabled = true,
   azureEnabled = false,
+  assistantName = "Aria",
+  settingsLoaded = false,
 }: TTSManagerProps) => {
   const queueRef = useRef<QueuedUtterance[]>([]);
   const speakingRef = useRef(false);
   const lastAlertRef = useRef<Alert | null>(null);
   const lastPostLapRef = useRef<string | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
-  // Capture initial azureEnabled for the mount-only welcome effect
-  const azureEnabledAtMountRef = useRef(azureEnabled);
+  const welcomeSpokenRef = useRef(false);
 
   // ── Azure TTS path ──────────────────────────────────────────────────────────
 
@@ -162,35 +165,16 @@ const TTSManager = ({
     enqueue(postLapText, 3);
   }, [postLapText, enqueue]);
 
-  // Welcome message on first mount
+  // Welcome message — fires once when settings are loaded from config
   useEffect(() => {
-    const speakWelcome = async () => {
-      if (azureEnabledAtMountRef.current) {
-        try {
-          const raw = await window.electronAPI.ttsSynthesize(
-            "Ciao, sono pronto ad aiutarti in pista",
-          );
-          const arrayBuffer = toArrayBuffer(raw);
-          const ctx = new AudioContext();
-          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-          const source = ctx.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(ctx.destination);
-          source.start(0);
-          source.onended = () => ctx.close();
-        } catch {
-          // Fall through to Web Speech
-          speakWelcomeWebSpeech();
-        }
-        return;
-      }
-      speakWelcomeWebSpeech();
-    };
+    if (!settingsLoaded) return;
+    if (welcomeSpokenRef.current) return;
+    welcomeSpokenRef.current = true;
+
+    const welcomeText = `Ciao, sono ${assistantName}, pronto ad aiutarti in pista`;
 
     const speakWelcomeWebSpeech = () => {
-      const utterance = new SpeechSynthesisUtterance(
-        "Ciao, sono pronto ad aiutarti in pista",
-      );
+      const utterance = new SpeechSynthesisUtterance(welcomeText);
       utterance.lang = "it-IT";
       utterance.rate = 0.9;
       utterance.pitch = 1.0;
@@ -200,14 +184,33 @@ const TTSManager = ({
       window.speechSynthesis.speak(utterance);
     };
 
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0 || azureEnabledAtMountRef.current) {
+    const speakWelcome = async () => {
+      if (azureEnabled) {
+        try {
+          const raw = await window.electronAPI.ttsSynthesize(welcomeText);
+          const arrayBuffer = toArrayBuffer(raw);
+          const ctx = new AudioContext();
+          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+          const source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(ctx.destination);
+          source.start(0);
+          source.onended = () => ctx.close();
+          return;
+        } catch {
+          // Fall through to Web Speech
+        }
+      }
+      speakWelcomeWebSpeech();
+    };
+
+    if (azureEnabled || window.speechSynthesis.getVoices().length > 0) {
       speakWelcome().catch(console.error);
     } else {
       const timer = setTimeout(() => speakWelcome().catch(console.error), 500);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [settingsLoaded, azureEnabled, assistantName]);
 
   useEffect(() => {
     window.speechSynthesis.onvoiceschanged = () => {

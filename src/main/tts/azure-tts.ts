@@ -8,14 +8,7 @@
  */
 
 import axios from "axios";
-
-export type AzureVoice = {
-  name: string; // e.g. "Microsoft Server Speech Text to Speech Voice (it-IT, ElsaNeural)"
-  shortName: string; // e.g. "it-IT-ElsaNeural"
-  localName: string; // e.g. "Elsa"
-  locale: string; // e.g. "it-IT"
-  gender: string; // "Female" | "Male"
-};
+import type { AzureVoice } from "../../shared/types";
 
 /** Create a region-scoped axios instance for Azure Speech endpoints. */
 const createAzureClient = (region: string, key: string) =>
@@ -33,7 +26,8 @@ export const getAzureVoices = async (
 ): Promise<AzureVoice[]> => {
   const client = createAzureClient(region, key);
   const { data } = await client.get<AzureVoice[]>("/voices/list");
-  return data.filter((v) => v.locale.startsWith("it-IT"));
+  console.log("data", data);
+  return data.filter((v) => v.Locale.startsWith("it-IT"));
 };
 
 /**

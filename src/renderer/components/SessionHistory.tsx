@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Table, Spinner, Badge } from 'react-bootstrap';
+import { Table, Spinner, Badge, Row, Col } from 'react-bootstrap';
 import type { R3EStatus, LapRow } from '../../shared/types';
 
 type SessionHistoryProps = {
@@ -40,26 +40,26 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
 
   if (!status.car) {
     return (
-      <div className="session-history empty">
+      <div className="session-history d-flex align-items-center justify-content-center text-secondary h-100">
         <span>Nessuna sessione attiva</span>
       </div>
     );
   }
 
   return (
-    <div className="session-history">
-      <div className="sh-header">
-        <span className="sh-title">Storico giri</span>
-        <span className="sh-subtitle">{status.car} · {status.track}</span>
-      </div>
+    <div className="session-history p-3 overflow-y-auto h-100">
+      <Row className="mb-3 align-items-baseline g-0">
+        <Col xs="auto" className="sh-title me-2">Storico giri</Col>
+        <Col className="sh-subtitle">{status.car} · {status.track}</Col>
+      </Row>
 
       {loading ? (
-        <div className="sh-loading">
-          <Spinner size="sm" variant="danger" className="me-2" />
+        <div className="d-flex align-items-center gap-2 text-secondary py-3">
+          <Spinner size="sm" variant="danger" />
           Caricamento...
         </div>
       ) : laps.length === 0 ? (
-        <div className="sh-empty">Nessun giro registrato per questa combinazione.</div>
+        <p className="text-secondary py-2 mb-0">Nessun giro registrato per questa combinazione.</p>
       ) : (
         <Table hover size="sm" className="sh-table">
           <thead>

@@ -234,11 +234,23 @@ export type CornerNamesMap = Record<string, CornerEntry[]>;
 // --- Azure TTS voice info ---
 
 export type AzureVoice = {
-  name: string;
-  shortName: string;
-  localName: string;
-  locale: string;
-  gender: string;
+  Name: string;
+  DisplayName: string;
+  LocalName: string;
+  ShortName: string;
+  Gender: "Female" | "Male";
+  Locale: string;
+  LocaleName: string;
+  SecondaryLocaleList?: string[];
+  SampleRateHertz: string;
+  VoiceType: string;
+  Status: string;
+  VoiceTag?: {
+    ModelSeries?: string[];
+    Source?: string[];
+    TailoredScenarios?: string[];
+    VoicePersonalities?: string[];
+  };
 };
 
 // --- electronAPI exposed via preload ---
