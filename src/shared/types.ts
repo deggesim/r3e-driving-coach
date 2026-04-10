@@ -275,6 +275,9 @@ export type ElectronAPI = {
   // Voice coach
   voiceQuery: (question: string) => Promise<void>;
 
+  // Azure STT
+  sttTranscribe: (audioBuffer: ArrayBuffer) => Promise<string>;
+
   // Azure TTS
   ttsGetVoices: () => Promise<AzureVoice[]>;
   ttsSynthesize: (text: string) => Promise<unknown>;

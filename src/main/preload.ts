@@ -48,6 +48,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   voiceQuery: (question: string) =>
     ipcRenderer.invoke('coach:voiceQuery', question),
 
+  // Azure STT
+  sttTranscribe: (audioBuffer: ArrayBuffer): Promise<string> =>
+    ipcRenderer.invoke('stt:transcribe', audioBuffer),
+
   // Azure TTS
   ttsGetVoices: () =>
     ipcRenderer.invoke('tts:getVoices'),

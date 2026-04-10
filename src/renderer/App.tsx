@@ -71,6 +71,7 @@ const App = () => {
   const [azureVoices, setAzureVoices] = useState<AzureVoice[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [voicesError, setVoicesError] = useState("");
+  const [isCapturingButton, setIsCapturingButton] = useState(false);
 
   // Voice coach hook
   const {
@@ -191,7 +192,39 @@ const App = () => {
     [configSet, setAzureVoiceName],
   );
 
+  // Gamepad button capture: polls all buttons until one is pressed
+  useEffect(() => {
+    if (!isCapturingButton) return;
+    const id = setInterval(() => {
+      const gamepads = navigator.getGamepads();
+      for (const gp of gamepads) {
+        if (!gp) continue;
+        for (let i = 0; i < gp.buttons.length; i++) {
+          if (gp.buttons[i]?.pressed) {
+            setGamepadButton(i);
+            configSet("gamepadTriggerButton", String(i)).catch(console.error);
+            showSaved("gamepadButton");
+            setIsCapturingButton(false);
+            return;
+          }
+        }
+      }
+    }, 50);
+    return () => clearInterval(id);
+  }, [isCapturingButton, setGamepadButton, configSet, showSaved]);
+
   const postLapText = lastAnalysis?.section5Summary ?? null;
+
+  const getButtonLabel = (index: number): string => {
+    const labels: Record<number, string> = {
+      0: "A", 1: "B", 2: "X", 3: "Y",
+      4: "LB", 5: "RB", 6: "LT", 7: "RT",
+      8: "Select", 9: "Start",
+      10: "L3", 11: "R3",
+      12: "Su (D-pad)", 13: "Giù (D-pad)", 14: "Sinistra (D-pad)", 15: "Destra (D-pad)",
+    };
+    return labels[index] ?? `Tasto ${index}`;
+  };
 
   return (
     <div className="app">
@@ -350,21 +383,43 @@ const App = () => {
                   </Row>
                   <Row className="g-2 align-items-center mb-2">
                     <Col xs="auto">
-                      <Form.Label htmlFor="gamepad-button" className="mb-0">
-                        Tasto controller (0–19)
+                      <Form.Label className="mb-0">
+                        Tasto controller
                       </Form.Label>
                     </Col>
-                    <Col xs={2}>
-                      <Form.Control
-                        id="gamepad-button"
-                        type="number"
-                        min={0}
-                        max={19}
-                        value={gamepadButton}
-                        onChange={(e) =>
-                          setGamepadButton(Number(e.target.value))
-                        }
-                      />
+                    <Col xs="auto">
+                      {isCapturingButton ? (
+                        <>
+                          <Spinner animation="border" size="sm" className="me-2" />
+                          <span className="text-warning me-2">
+                            Premi un tasto sul controller…
+                          </span>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setIsCapturingButton(false)}
+                          >
+                            Annulla
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="badge bg-secondary me-2 fs-6 fw-normal">
+                            {getButtonLabel(gamepadButton)}{" "}
+                            <span className="text-white-50">({gamepadButton})</span>
+                          </span>
+                          <Button
+                            variant="outline-light"
+                            size="sm"
+                            onClick={() => setIsCapturingButton(true)}
+                          >
+                            Assegna
+                          </Button>
+                          {settingSaved === "gamepadButton" && (
+                            <span className="text-success ms-2">✓ Salvato</span>
+                          )}
+                        </>
+                      )}
                     </Col>
                   </Row>
                   <Row className="g-2 align-items-center">

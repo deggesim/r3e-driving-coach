@@ -1,45 +1,22 @@
 /**
- * useVoiceCoach — integrates gamepad trigger, Web Speech API (STT),
- * voice query IPC, and Azure/Web Speech TTS playback.
+ * useVoiceCoach — integrates gamepad trigger, MediaRecorder (audio capture),
+ * Azure STT via IPC, voice query IPC, and Azure/Web Speech TTS playback.
  *
  * Flow:
  *   gamepad button press
- *     → start SpeechRecognition (it-IT)
+ *     → getUserMedia + MediaRecorder (up to MAX_RECORD_MS)
+ *     → audio ArrayBuffer → IPC stt:transcribe (Azure STT)
  *     → transcript → IPC coach:voiceQuery
  *     → streaming tokens via coach:voiceChunk
  *     → coach:voiceDone (full answer)
  *     → coach:voiceAudio (MP3 buffer, if Azure TTS enabled)
+ *
+ * Replaces Web Speech API which fails in Electron with a "network" error
+ * because Chrome's embedded speech API key is not usable outside Chrome.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useGamepad } from "./useGamepad";
-
-// ── SpeechRecognition types (not universally in TS DOM lib) ───────────────────
-
-interface ISpeechRecognition {
-  lang: string;
-  continuous: boolean;
-  interimResults: boolean;
-  maxAlternatives: number;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  abort: () => void;
-}
-
-interface ISpeechRecognitionConstructor {
-  new (): ISpeechRecognition;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: ISpeechRecognitionConstructor;
-    webkitSpeechRecognition?: ISpeechRecognitionConstructor;
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 export type VoiceCoachState = "idle" | "listening" | "processing" | "speaking";
 
@@ -63,6 +40,17 @@ const toArrayBuffer = (data: unknown): ArrayBuffer => {
   return new Uint8Array(values).buffer;
 };
 
+/** Max recording duration in ms before auto-stopping. */
+const MAX_RECORD_MS = 8000;
+
+/** Pick the best supported MIME type for MediaRecorder. */
+const pickMimeType = (): string => {
+  for (const type of ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]) {
+    if (MediaRecorder.isTypeSupported(type)) return type;
+  }
+  return "";
+};
+
 export const useVoiceCoach = ({
   triggerButtonIndex,
   enabled,
@@ -71,9 +59,10 @@ export const useVoiceCoach = ({
   const [state, setState] = useState<VoiceCoachState>("idle");
   const [transcript, setTranscript] = useState("");
   const [answer, setAnswer] = useState("");
-  const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
 
   const resetToIdle = useCallback(() => {
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
@@ -85,57 +74,71 @@ export const useVoiceCoach = ({
   }, []);
 
   const triggerListening = useCallback(() => {
-    if (!enabled) return;
-    if (state !== "idle") return;
+    if (!enabled || state !== "idle") return;
 
-    // Cancel any in-flight Web Speech TTS
+    // Cancel any ongoing TTS
     window.speechSynthesis.cancel();
-
-    // Stop any Azure audio
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
-
-    const SpeechRecognitionImpl =
-      window.SpeechRecognition ?? window.webkitSpeechRecognition;
-
-    if (!SpeechRecognitionImpl) {
-      console.warn("[VoiceCoach] SpeechRecognition not available");
-      return;
-    }
-
-    const recognition = new SpeechRecognitionImpl();
-    recognition.lang = "it-IT";
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognitionRef.current = recognition;
 
     setState("listening");
     setTranscript("");
     setAnswer("");
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const text = event.results[0]?.[0]?.transcript ?? "";
-      setTranscript(text);
-      setState("processing");
+    const mimeType = pickMimeType();
 
-      if (text.trim()) {
-        window.electronAPI.voiceQuery(text).catch(console.error);
-      } else {
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        streamRef.current = stream;
+
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        recorderRef.current = recorder;
+        const chunks: BlobPart[] = [];
+
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data);
+        };
+
+        recorder.onstop = () => {
+          // Release mic
+          stream.getTracks().forEach((t) => t.stop());
+          streamRef.current = null;
+          recorderRef.current = null;
+
+          const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+          blob
+            .arrayBuffer()
+            .then((buf) => {
+              setState("processing");
+              return window.electronAPI.sttTranscribe(buf);
+            })
+            .then((text) => {
+              if (text.trim()) {
+                setTranscript(text);
+                return window.electronAPI.voiceQuery(text);
+              } else {
+                // Nothing recognised — go back to idle
+                setState("idle");
+              }
+            })
+            .catch((err: unknown) => {
+              console.error("[VoiceCoach] STT error:", err);
+              setState("idle");
+            });
+        };
+
+        recorder.start();
+
+        // Auto-stop after MAX_RECORD_MS
+        setTimeout(() => {
+          if (recorder.state !== "inactive") recorder.stop();
+        }, MAX_RECORD_MS);
+      })
+      .catch((err: unknown) => {
+        console.error("[VoiceCoach] Microphone access error:", err);
         setState("idle");
-      }
-    };
-
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error("[VoiceCoach] SpeechRecognition error:", event.error);
-      setState("idle");
-    };
-
-    recognition.onend = () => {
-      recognitionRef.current = null;
-    };
-
-    recognition.start();
+      });
   }, [enabled, state]);
 
   // Subscribe to voice coach push channels
@@ -157,7 +160,7 @@ export const useVoiceCoach = ({
       setAnswer(fullAnswer);
       setState("speaking");
 
-      // If Azure TTS is NOT enabled, speak the answer via Web Speech API
+      // If Azure TTS is NOT enabled, speak via Web Speech API
       if (!azureTtsEnabled) {
         const utterance = new SpeechSynthesisUtterance(fullAnswer);
         utterance.lang = "it-IT";
@@ -219,7 +222,8 @@ export const useVoiceCoach = ({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      recognitionRef.current?.abort();
+      recorderRef.current?.stop();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
       audioCtxRef.current?.close();
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };

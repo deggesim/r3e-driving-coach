@@ -21,7 +21,7 @@ import {
 import { createAlertDispatcher, createRuleEngine } from "./coach/rule-engine";
 import { createCoachEngine } from "./coach/coach-engine";
 import { createVoiceCoachEngine, type VoiceCoachEngine } from "./coach/voice-coach";
-import { getAzureVoices, synthesizeAzure } from "./tts/azure-tts";
+import { getAzureVoices, synthesizeAzure, transcribeAzure } from "./tts/azure-tts";
 import { getDb, seedCornerNames, getCornerName } from "./db/db";
 import type {
   LapRecord,
@@ -363,6 +363,25 @@ const setupPipeline = (): void => {
     const testPhrase = `Ciao, sono ${assistantName} e oggi sono il tuo insegnante virtuale`;
     const buffer = await synthesizeAzure(testPhrase, key, region, voiceName);
     return buffer;
+  });
+
+  // ─── Azure STT IPC
+  ipcMain.handle("stt:transcribe", async (_event, audioBuffer: ArrayBuffer) => {
+    const keyRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureSpeechKey") as { value: string } | undefined;
+    const regionRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureRegion") as { value: string } | undefined;
+
+    const key = keyRow?.value;
+    const region = regionRow?.value;
+
+    if (!key || !region) {
+      throw new Error("Azure Speech Key e Region non configurati nelle impostazioni");
+    }
+
+    return transcribeAzure(Buffer.from(audioBuffer), key, region);
   });
 
   // ─── Voice Query IPC

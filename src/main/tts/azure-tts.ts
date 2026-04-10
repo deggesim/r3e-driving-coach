@@ -10,6 +10,7 @@
 import axios from "axios";
 import type { AzureVoice } from "../../shared/types";
 
+
 /** Create a region-scoped axios instance for Azure Speech endpoints. */
 const createAzureClient = (region: string, key: string) =>
   axios.create({
@@ -61,4 +62,37 @@ export const synthesizeAzure = async (
   });
 
   return Buffer.from(data);
+};
+
+/**
+ * Transcribe audio using Azure Speech-to-Text REST API.
+ * @param audioBuffer  Raw audio bytes (WebM/Opus from MediaRecorder)
+ * @param key          Azure Speech subscription key
+ * @param region       Azure region (e.g. "westeurope")
+ * @returns            Recognized text, or empty string if nothing was heard
+ */
+export const transcribeAzure = async (
+  audioBuffer: Buffer,
+  key: string,
+  region: string,
+): Promise<string> => {
+  const url =
+    `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation` +
+    `/cognitiveservices/v1?language=it-IT&format=simple`;
+
+  const { data } = await axios.post<{ RecognitionStatus: string; DisplayText?: string }>(
+    url,
+    audioBuffer,
+    {
+      headers: {
+        "Ocp-Apim-Subscription-Key": key,
+        "Content-Type": "audio/webm;codecs=opus",
+      },
+    },
+  );
+
+  if (data.RecognitionStatus === "Success") {
+    return data.DisplayText ?? "";
+  }
+  return "";
 };
