@@ -231,18 +231,44 @@ export type CornerEntry = {
 
 export type CornerNamesMap = Record<string, CornerEntry[]>;
 
+// --- Azure TTS voice info ---
+
+export type AzureVoice = {
+  name: string;
+  shortName: string;
+  localName: string;
+  locale: string;
+  gender: string;
+};
+
 // --- electronAPI exposed via preload ---
 
 export type ElectronAPI = {
+  // Push channels (Main → Renderer)
   onFrame: (callback: (data: R3EFrame) => void) => void;
   onAlert: (callback: (data: Alert) => void) => void;
   onLapComplete: (callback: (data: LapRecord) => void) => void;
   onStatus: (callback: (data: R3EStatus) => void) => void;
   onAnalysis: (callback: (data: LapAnalysis) => void) => void;
+  onVoiceChunk: (callback: (data: { token: string }) => void) => void;
+  onVoiceDone: (callback: (data: { answer: string }) => void) => void;
+  onVoiceAudio: (callback: (data: unknown) => void) => void;
+
+  // Request/response
   getLaps: (params: { car: string; track: string }) => Promise<LapRow[]>;
   getSession: (id: number) => Promise<SessionRow | null>;
   configGet: (key: string) => Promise<unknown>;
   configSet: (key: string, value: unknown) => Promise<void>;
+
+  // Voice coach
+  voiceQuery: (question: string) => Promise<void>;
+
+  // Azure TTS
+  ttsGetVoices: () => Promise<AzureVoice[]>;
+  ttsSynthesize: (text: string) => Promise<unknown>;
+  ttsTest: (voiceName: string) => Promise<unknown>;
+
+  // Window
   windowClose: () => void;
   removeAllListeners: (channel: string) => void;
 };

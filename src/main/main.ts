@@ -20,6 +20,8 @@ import {
 } from "./coach/adaptive-baseline";
 import { createAlertDispatcher, createRuleEngine } from "./coach/rule-engine";
 import { createCoachEngine } from "./coach/coach-engine";
+import { createVoiceCoachEngine, type VoiceCoachEngine } from "./coach/voice-coach";
+import { getAzureVoices, synthesizeAzure } from "./tts/azure-tts";
 import { getDb, seedCornerNames, getCornerName } from "./db/db";
 import type {
   LapRecord,
@@ -27,6 +29,7 @@ import type {
   R3EStatus,
   R3EFrame,
   Alert,
+  Deviation,
 } from "../shared/types";
 import cornerNamesData from "../shared/corner-names.json";
 
@@ -53,6 +56,13 @@ const createWindow = (): void => {
       sandbox: true,
     },
   });
+
+  // Allow microphone access for Web Speech API (SpeechRecognition)
+  mainWindow.webContents.session.setPermissionRequestHandler(
+    (_wc, permission, callback) => {
+      callback(permission === "media");
+    },
+  );
 
   if (IS_DEV) {
     mainWindow.loadURL("http://localhost:5173");
@@ -100,6 +110,8 @@ const setupPipeline = (): void => {
 
   let currentTrack = "";
   let currentLayout = "";
+  let lastDeviations: Deviation[] | null = null;
+
   const lookupCorner = (dist: number): string | null =>
     getCornerName(db, currentTrack, currentLayout, dist);
 
@@ -132,6 +144,22 @@ const setupPipeline = (): void => {
       pushToRenderer("r3e:analysis", analysis);
     },
   });
+
+  // VoiceCoach engine — lazy init on first voice query (needs API key from config)
+  let voiceCoach: VoiceCoachEngine | null = null;
+
+  const getVoiceCoach = (): VoiceCoachEngine | null => {
+    const row = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("anthropicApiKey") as { value: string } | undefined;
+    const apiKey = row?.value;
+    if (!apiKey) return null;
+
+    if (!voiceCoach) {
+      voiceCoach = createVoiceCoachEngine(db, apiKey);
+    }
+    return voiceCoach;
+  };
 
   // Alert dispatcher → renderer
   dispatcher.on("alert", (alert: Alert) => {
@@ -201,6 +229,21 @@ const setupPipeline = (): void => {
         ruleEngine.processLapDeviations(deviations);
       }
 
+      // Keep last deviations for voice coach context
+      lastDeviations = deviations;
+
+      // Update voice coach context with the completed lap
+      const zonesJson = JSON.stringify(lap.zones);
+      const cornerMap = buildCornerMap();
+      voiceCoach?.updateContext({
+        car: lap.car,
+        track: lap.track,
+        layout: lap.layout,
+        lastLapZones: zonesJson,
+        deviations: lastDeviations,
+        cornerMap,
+      });
+
       if (!calibrating) {
         const apiKey = ipcMain.emit(
           "config:get",
@@ -228,6 +271,9 @@ const setupPipeline = (): void => {
     db.prepare(
       "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
     ).run(key, String(value));
+
+    // Invalidate voice coach on API key change so it re-initializes
+    if (key === "anthropicApiKey") voiceCoach = null;
   });
 
   // ─── DB IPC
@@ -250,6 +296,128 @@ const setupPipeline = (): void => {
 
   ipcMain.handle("db:getSession", (_event, id: number) => {
     return db.prepare("SELECT * FROM sessions WHERE id = ?").get(id);
+  });
+
+  // ─── Azure TTS IPC
+  ipcMain.handle("tts:getVoices", async () => {
+    const keyRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureSpeechKey") as { value: string } | undefined;
+    const regionRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureRegion") as { value: string } | undefined;
+
+    const key = keyRow?.value;
+    const region = regionRow?.value;
+
+    if (!key || !region) {
+      throw new Error("Azure Speech Key e Region non configurati");
+    }
+
+    return getAzureVoices(key, region);
+  });
+
+  ipcMain.handle("tts:synthesize", async (_event, text: string) => {
+    const keyRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureSpeechKey") as { value: string } | undefined;
+    const regionRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureRegion") as { value: string } | undefined;
+    const voiceRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureVoiceName") as { value: string } | undefined;
+
+    const key = keyRow?.value;
+    const region = regionRow?.value;
+    const voice = voiceRow?.value;
+
+    if (!key || !region || !voice) {
+      throw new Error("Azure TTS non completamente configurato");
+    }
+
+    const buffer = await synthesizeAzure(text, key, region, voice);
+    // Return as Uint8Array so it can be transferred via IPC (Buffers serialize fine)
+    return buffer;
+  });
+
+  ipcMain.handle("tts:test", async (_event, voiceName: string) => {
+    const keyRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureSpeechKey") as { value: string } | undefined;
+    const regionRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureRegion") as { value: string } | undefined;
+    const nameRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("assistantName") as { value: string } | undefined;
+
+    const key = keyRow?.value;
+    const region = regionRow?.value;
+    const assistantName = nameRow?.value ?? "Aria";
+
+    if (!key || !region) {
+      throw new Error("Azure Speech Key e Region non configurati");
+    }
+
+    const testPhrase = `Ciao, sono ${assistantName} e oggi sono il tuo insegnante virtuale`;
+    const buffer = await synthesizeAzure(testPhrase, key, region, voiceName);
+    return buffer;
+  });
+
+  // ─── Voice Query IPC
+  ipcMain.handle("coach:voiceQuery", async (_event, question: string) => {
+    const coach = getVoiceCoach();
+    if (!coach) {
+      pushToRenderer("coach:voiceDone", {
+        answer: "API Key Anthropic non configurata. Vai nelle impostazioni per aggiungerla.",
+      });
+      return;
+    }
+
+    // Update corner map before answering
+    coach.updateContext({ cornerMap: buildCornerMap() });
+
+    let fullAnswer = "Si è verificato un errore durante l'elaborazione della domanda.";
+    try {
+      fullAnswer = await coach.handleVoiceQuery(question, (token) => {
+        pushToRenderer("coach:voiceChunk", { token });
+      });
+    } catch (err) {
+      console.error("[VoiceCoach] Error:", err);
+    }
+
+    pushToRenderer("coach:voiceDone", { answer: fullAnswer });
+
+    // If Azure TTS is enabled, synthesize the answer and push the audio
+    const azureEnabledRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureTtsEnabled") as { value: string } | undefined;
+
+    if (azureEnabledRow?.value === "true") {
+      try {
+        const keyRow = db
+          .prepare("SELECT value FROM app_config WHERE key = ?")
+          .get("azureSpeechKey") as { value: string } | undefined;
+        const regionRow = db
+          .prepare("SELECT value FROM app_config WHERE key = ?")
+          .get("azureRegion") as { value: string } | undefined;
+        const voiceRow = db
+          .prepare("SELECT value FROM app_config WHERE key = ?")
+          .get("azureVoiceName") as { value: string } | undefined;
+
+        const key = keyRow?.value;
+        const region = regionRow?.value;
+        const voice = voiceRow?.value;
+
+        if (key && region && voice) {
+          const audioBuffer = await synthesizeAzure(fullAnswer, key, region, voice);
+          pushToRenderer("coach:voiceAudio", { audio: audioBuffer });
+        }
+      } catch (err) {
+        console.error("[VoiceCoach] TTS synthesis error:", err);
+      }
+    }
   });
 
   // Start reader

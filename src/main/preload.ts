@@ -23,6 +23,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('r3e:analysis', (_event, data) => callback(data));
   },
 
+  // Voice coach push channels (Main → Renderer)
+  onVoiceChunk: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('coach:voiceChunk', (_event, data) => callback(data));
+  },
+  onVoiceDone: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('coach:voiceDone', (_event, data) => callback(data));
+  },
+  onVoiceAudio: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('coach:voiceAudio', (_event, data) => callback(data));
+  },
+
   // Renderer → Main (request/response)
   getLaps: (params: { car: string; track: string }) =>
     ipcRenderer.invoke('db:getLaps', params),
@@ -32,6 +43,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('config:get', key),
   configSet: (key: string, value: unknown) =>
     ipcRenderer.invoke('config:set', key, value),
+
+  // Voice coach query
+  voiceQuery: (question: string) =>
+    ipcRenderer.invoke('coach:voiceQuery', question),
+
+  // Azure TTS
+  ttsGetVoices: () =>
+    ipcRenderer.invoke('tts:getVoices'),
+  ttsSynthesize: (text: string) =>
+    ipcRenderer.invoke('tts:synthesize', text),
+  ttsTest: (voiceName: string) =>
+    ipcRenderer.invoke('tts:test', voiceName),
 
   // Window controls
   windowClose: () => ipcRenderer.send('window:close'),

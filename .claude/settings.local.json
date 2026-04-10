@@ -1,11 +1,28 @@
 {
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npm run lint 2>&1",
+            "timeout": 60,
+            "statusMessage": "Running ESLint..."
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "WebFetch(domain:skills.sh)",
       "mcp__plugin_chrome-devtools-mcp_chrome-devtools__list_pages",
       "mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page",
       "mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_screenshot",
-      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__evaluate_script"
+      "mcp__plugin_chrome-devtools-mcp_chrome-devtools__evaluate_script",
+      "Skill(update-config)",
+      "Bash(npm run:*)"
     ]
   }
 }
