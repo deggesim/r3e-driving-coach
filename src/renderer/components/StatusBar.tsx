@@ -3,9 +3,12 @@
  * Shows: connection badge, car/track, calibration state, last alert (fade 5s).
  */
 
+import { faMicrophone } from "@fortawesome/free-solid-svg-icons/faMicrophone";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Badge } from "react-bootstrap";
-import type { R3EStatus, Alert } from "../../shared/types";
+import type { Alert, R3EStatus } from "../../shared/types";
 
 type StatusBarProps = {
   status: R3EStatus;
@@ -33,9 +36,13 @@ const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
     };
   }, [lastAlert]);
 
-  const calibrationText = status.calibrating
-    ? `Calibrazione: ${status.lapsToCalibration} ${status.lapsToCalibration === 1 ? "giro rimanente" : "giri rimanenti"}`
-    : "🎙 Coach attivo";
+  const calibrationText: ReactNode = status.calibrating ? (
+    `Calibrazione: ${status.lapsToCalibration} ${status.lapsToCalibration === 1 ? "giro rimanente" : "giri rimanenti"}`
+  ) : (
+    <>
+      <FontAwesomeIcon icon={faMicrophone} /> Coach attivo
+    </>
+  );
 
   return (
     <div className="status-bar">

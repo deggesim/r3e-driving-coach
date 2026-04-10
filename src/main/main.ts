@@ -20,8 +20,15 @@ import {
 } from "./coach/adaptive-baseline";
 import { createAlertDispatcher, createRuleEngine } from "./coach/rule-engine";
 import { createCoachEngine } from "./coach/coach-engine";
-import { createVoiceCoachEngine, type VoiceCoachEngine } from "./coach/voice-coach";
-import { getAzureVoices, synthesizeAzure, transcribeAzure } from "./tts/azure-tts";
+import {
+  createVoiceCoachEngine,
+  type VoiceCoachEngine,
+} from "./coach/voice-coach";
+import {
+  getAzureVoices,
+  synthesizeAzure,
+  transcribeAzure,
+} from "./tts/azure-tts";
 import { getDb, seedCornerNames, getCornerName } from "./db/db";
 import type {
   LapRecord,
@@ -390,7 +397,9 @@ const setupPipeline = (): void => {
     const region = regionRow?.value;
 
     if (!key || !region) {
-      throw new Error("Azure Speech Key e Region non configurati nelle impostazioni");
+      throw new Error(
+        "Azure Speech Key e Region non configurati nelle impostazioni",
+      );
     }
 
     return transcribeAzure(Buffer.from(audioBuffer), key, region);
@@ -401,7 +410,8 @@ const setupPipeline = (): void => {
     const coach = getVoiceCoach();
     if (!coach) {
       pushToRenderer("coach:voiceDone", {
-        answer: "API Key Anthropic non configurata. Vai nelle impostazioni per aggiungerla.",
+        answer:
+          "API Key Anthropic non configurata. Vai nelle impostazioni per aggiungerla.",
       });
       return;
     }
@@ -409,7 +419,8 @@ const setupPipeline = (): void => {
     // Update corner map before answering
     coach.updateContext({ cornerMap: buildCornerMap() });
 
-    let fullAnswer = "Si è verificato un errore durante l'elaborazione della domanda.";
+    let fullAnswer =
+      "Si è verificato un errore durante l'elaborazione della domanda.";
     try {
       fullAnswer = await coach.handleVoiceQuery(question, (token) => {
         pushToRenderer("coach:voiceChunk", { token });
@@ -442,7 +453,12 @@ const setupPipeline = (): void => {
         const voice = voiceRow?.value;
 
         if (key && region && voice) {
-          const audioBuffer = await synthesizeAzure(fullAnswer, key, region, voice);
+          const audioBuffer = await synthesizeAzure(
+            fullAnswer,
+            key,
+            region,
+            voice,
+          );
           pushToRenderer("coach:voiceAudio", { audio: audioBuffer });
         }
       } catch (err) {

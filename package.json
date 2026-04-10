@@ -16,6 +16,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.85.0",
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.3.0",
     "axios": "^1.15.0",
     "better-sqlite3": "^12.8.0",
     "bootstrap": "^5.3.8",

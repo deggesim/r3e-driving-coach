@@ -3,20 +3,23 @@
  * Loads from SQLite via IPC when car/track are known.
  */
 
-import { useEffect, useState } from 'react';
-import { Table, Spinner, Badge, Row, Col } from 'react-bootstrap';
-import type { R3EStatus, LapRow } from '../../shared/types';
+import { faCheck } from "@fortawesome/free-solid-svg-icons/faCheck";
+import { faXmark } from "@fortawesome/free-solid-svg-icons/faXmark";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useState } from "react";
+import { Badge, Col, Row, Spinner, Table } from "react-bootstrap";
+import type { LapRow, R3EStatus } from "../../shared/types";
 
 type SessionHistoryProps = {
   status: R3EStatus;
 };
 
 const formatLapTime = (seconds: number | null): string => {
-  if (!seconds || seconds <= 0) return '--:--';
+  if (!seconds || seconds <= 0) return "--:--";
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return mins > 0
-    ? `${mins}:${secs.toFixed(3).padStart(6, '0')}`
+    ? `${mins}:${secs.toFixed(3).padStart(6, "0")}`
     : `${secs.toFixed(3)}s`;
 };
 
@@ -49,8 +52,12 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
   return (
     <div className="session-history p-3 overflow-y-auto h-100">
       <Row className="mb-3 align-items-baseline g-0">
-        <Col xs="auto" className="sh-title me-2">Storico giri</Col>
-        <Col className="sh-subtitle">{status.car} · {status.track}</Col>
+        <Col xs="auto" className="sh-title me-2">
+          Storico giri
+        </Col>
+        <Col className="sh-subtitle">
+          {status.car} · {status.track}
+        </Col>
       </Row>
 
       {loading ? (
@@ -59,7 +66,9 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
           Caricamento...
         </div>
       ) : laps.length === 0 ? (
-        <p className="text-secondary py-2 mb-0">Nessun giro registrato per questa combinazione.</p>
+        <p className="text-secondary py-2 mb-0">
+          Nessun giro registrato per questa combinazione.
+        </p>
       ) : (
         <Table hover size="sm" className="sh-table">
           <thead>
@@ -74,16 +83,22 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
           </thead>
           <tbody>
             {laps.map((lap) => (
-              <tr key={lap.id} className={!lap.valid ? 'invalid' : ''}>
+              <tr key={lap.id} className={!lap.valid ? "invalid" : ""}>
                 <td>{lap.lap_number}</td>
                 <td className="sh-laptime">{formatLapTime(lap.lap_time)}</td>
                 <td>{formatLapTime(lap.sector1)}</td>
                 <td>{formatLapTime(lap.sector2)}</td>
                 <td>{formatLapTime(lap.sector3)}</td>
                 <td>
-                  {lap.valid
-                    ? <Badge bg="success" pill>✓</Badge>
-                    : <Badge bg="secondary" pill>✗</Badge>}
+                  {lap.valid ? (
+                    <Badge bg="success" pill>
+                      <FontAwesomeIcon icon={faCheck} />
+                    </Badge>
+                  ) : (
+                    <Badge bg="secondary" pill>
+                      <FontAwesomeIcon icon={faXmark} />
+                    </Badge>
+                  )}
                 </td>
               </tr>
             ))}

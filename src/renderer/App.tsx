@@ -7,6 +7,15 @@
 
 import { useEffect, useCallback } from "react";
 import { Button, Form, Spinner, Container, Row, Col } from "react-bootstrap";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faMicrophone,
+  faMicrophoneSlash,
+  faMinus,
+  faExpand,
+  faXmark,
+  faCheck,
+} from "@fortawesome/free-solid-svg-icons";
 import { useIPC, useConfig } from "./hooks/useIPC";
 import { useIPCStore } from "./store/ipcStore";
 import { useSettingsStore } from "./store/settingsStore";
@@ -217,11 +226,22 @@ const App = () => {
 
   const getButtonLabel = (index: number): string => {
     const labels: Record<number, string> = {
-      0: "A", 1: "B", 2: "X", 3: "Y",
-      4: "LB", 5: "RB", 6: "LT", 7: "RT",
-      8: "Select", 9: "Start",
-      10: "L3", 11: "R3",
-      12: "Su (D-pad)", 13: "Giù (D-pad)", 14: "Sinistra (D-pad)", 15: "Destra (D-pad)",
+      0: "A",
+      1: "B",
+      2: "X",
+      3: "Y",
+      4: "LB",
+      5: "RB",
+      6: "LT",
+      7: "RT",
+      8: "Select",
+      9: "Start",
+      10: "L3",
+      11: "R3",
+      12: "Su (D-pad)",
+      13: "Giù (D-pad)",
+      14: "Sinistra (D-pad)",
+      15: "Destra (D-pad)",
     };
     return labels[index] ?? `Tasto ${index}`;
   };
@@ -279,7 +299,11 @@ const App = () => {
             onClick={() => setTtsEnabled(!ttsEnabled)}
             title={ttsEnabled ? "Voce attiva" : "Voce disattiva"}
           >
-            {ttsEnabled ? "🎙" : "🔇"}
+            {ttsEnabled ? (
+              <FontAwesomeIcon icon={faMicrophone} />
+            ) : (
+              <FontAwesomeIcon icon={faMicrophoneSlash} />
+            )}
           </Button>
         </div>
         <Button
@@ -289,7 +313,7 @@ const App = () => {
           title="Riduci a icona"
           aria-label="Riduci a icona"
         >
-          &#x2212;
+          <FontAwesomeIcon icon={faMinus} />
         </Button>
         <Button
           variant="link"
@@ -298,7 +322,7 @@ const App = () => {
           title="Ingrandisci"
           aria-label="Ingrandisci finestra"
         >
-          &#x25A1;
+          <FontAwesomeIcon icon={faExpand} />
         </Button>
         <Button
           variant="link"
@@ -307,7 +331,7 @@ const App = () => {
           title="Chiudi"
           aria-label="Chiudi finestra"
         >
-          ✕
+          <FontAwesomeIcon icon={faXmark} />
         </Button>
       </div>
 
@@ -345,7 +369,13 @@ const App = () => {
                         size="sm"
                         onClick={handleSaveApiKey}
                       >
-                        {settingSaved === "apiKey" ? "✓ Salvata" : "Salva"}
+                        {settingSaved === "apiKey" ? (
+                          <>
+                            <FontAwesomeIcon icon={faCheck} /> Salvata
+                          </>
+                        ) : (
+                          "Salva"
+                        )}
                       </Button>
                     </Col>
                   </Row>
@@ -401,14 +431,16 @@ const App = () => {
                   </Row>
                   <Row className="g-2 align-items-center mb-2">
                     <Col xs="auto">
-                      <Form.Label className="mb-0">
-                        Tasto controller
-                      </Form.Label>
+                      <Form.Label className="mb-0">Tasto controller</Form.Label>
                     </Col>
                     <Col xs="auto">
                       {isCapturingButton ? (
                         <>
-                          <Spinner animation="border" size="sm" className="me-2" />
+                          <Spinner
+                            animation="border"
+                            size="sm"
+                            className="me-2"
+                          />
                           <span className="text-warning me-2">
                             Premi un tasto sul controller…
                           </span>
@@ -424,7 +456,9 @@ const App = () => {
                         <>
                           <span className="badge bg-secondary me-2 fs-6 fw-normal">
                             {getButtonLabel(gamepadButton)}{" "}
-                            <span className="text-white-50">({gamepadButton})</span>
+                            <span className="text-white-50">
+                              ({gamepadButton})
+                            </span>
                           </span>
                           <Button
                             variant="outline-light"
@@ -434,7 +468,9 @@ const App = () => {
                             Assegna
                           </Button>
                           {settingSaved === "gamepadButton" && (
-                            <span className="text-success ms-2">✓ Salvato</span>
+                            <span className="text-success ms-2">
+                              <FontAwesomeIcon icon={faCheck} /> Salvato
+                            </span>
                           )}
                         </>
                       )}
@@ -447,7 +483,13 @@ const App = () => {
                         size="sm"
                         onClick={handleSaveAssistant}
                       >
-                        {settingSaved === "assistant" ? "✓ Salvato" : "Salva"}
+                        {settingSaved === "assistant" ? (
+                          <>
+                            <FontAwesomeIcon icon={faCheck} /> Salvato
+                          </>
+                        ) : (
+                          "Salva"
+                        )}
                       </Button>
                     </Col>
                   </Row>
