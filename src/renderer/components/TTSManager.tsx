@@ -19,11 +19,11 @@ type QueuedUtterance = {
   priority: 1 | 2 | 3;
 };
 
-export default function TTSManager({
+const TTSManager = ({
   alerts,
   postLapText,
   enabled = true,
-}: TTSManagerProps) {
+}: TTSManagerProps) => {
   const queueRef = useRef<QueuedUtterance[]>([]);
   const speakingRef = useRef(false);
   const lastAlertRef = useRef<Alert | null>(null);
@@ -147,4 +147,6 @@ export default function TTSManager({
   }, []);
 
   return null; // headless component
-}
+};
+
+export default TTSManager;

@@ -23,7 +23,7 @@ const DEFAULT_STATUS: R3EStatus = {
   layout: null,
 };
 
-export function useIPC(): IPCState {
+export const useIPC = (): IPCState => {
   const [frame, setFrame] = useState<R3EFrame | null>(null);
   const [lastAlert, setLastAlert] = useState<Alert | null>(null);
   const [lastLap, setLastLap] = useState<LapRecord | null>(null);
@@ -49,10 +49,10 @@ export function useIPC(): IPCState {
   }, []);
 
   return { frame, lastAlert, lastLap, status, lastAnalysis };
-}
+};
 
 /** Config helpers */
-export function useConfig() {
+export const useConfig = () => {
   const get = useCallback(async (key: string): Promise<string | null> => {
     if (!window.electronAPI) return null;
     const result = await window.electronAPI.configGet(key) as { value: string } | undefined;
@@ -65,4 +65,4 @@ export function useConfig() {
   }, []);
 
   return { get, set };
-}
+};

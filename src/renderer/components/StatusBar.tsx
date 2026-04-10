@@ -11,7 +11,7 @@ type StatusBarProps = {
   lastAlert: Alert | null;
 };
 
-export default function StatusBar({ status, lastAlert }: StatusBarProps) {
+const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
   const [visibleAlert, setVisibleAlert] = useState<string | null>(null);
   const [fadeOut, setFadeOut] = useState(false);
 
@@ -68,4 +68,6 @@ export default function StatusBar({ status, lastAlert }: StatusBarProps) {
       </div>
     </div>
   );
-}
+};
+
+export default StatusBar;

@@ -14,7 +14,7 @@ import SessionHistory from "./components/SessionHistory";
 
 type Tab = "debriefing" | "history" | "settings";
 
-export default function App() {
+const App = () => {
   const { frame, lastAlert, lastLap, status, lastAnalysis } = useIPC();
   const { get: configGet, set: configSet } = useConfig();
   const [tab, setTab] = useState<Tab>("debriefing");
@@ -172,4 +172,6 @@ export default function App() {
       <StatusBar status={status} lastAlert={lastAlert} />
     </div>
   );
-}
+};
+
+export default App;

@@ -239,29 +239,26 @@ for (const field of STRUCT_FIELDS) {
 
 const STRUCT_SIZE_KNOWN = _cursor;
 
-function readInt32(buf: Buffer, name: string): number {
-  return buf.readInt32LE(OFFSETS[name]);
-}
+const readInt32 = (buf: Buffer, name: string): number =>
+  buf.readInt32LE(OFFSETS[name]);
 
-function readFloat(buf: Buffer, name: string): number {
-  return buf.readFloatLE(OFFSETS[name]);
-}
+const readFloat = (buf: Buffer, name: string): number =>
+  buf.readFloatLE(OFFSETS[name]);
 
-function readDouble(buf: Buffer, name: string): number {
-  return buf.readDoubleLE(OFFSETS[name]);
-}
+const readDouble = (buf: Buffer, name: string): number =>
+  buf.readDoubleLE(OFFSETS[name]);
 
-function readFloatArray(buf: Buffer, name: string, count: number): number[] {
+const readFloatArray = (buf: Buffer, name: string, count: number): number[] => {
   const base = OFFSETS[name];
   return Array.from({ length: count }, (_, i) => buf.readFloatLE(base + i * 4));
-}
+};
 
-function readString(buf: Buffer, name: string, byteLen: number): string {
+const readString = (buf: Buffer, name: string, byteLen: number): string => {
   const base = OFFSETS[name];
   const slice = buf.subarray(base, base + byteLen);
   const end = slice.indexOf(0);
   return slice.subarray(0, end < 0 ? byteLen : end).toString('utf8');
-}
+};
 
 export const SHM_NAME = '$R3E';
 export const VERSION_MAJOR = 2;

@@ -16,16 +16,16 @@ type DebriefingProps = {
 
 type DebriefingState = 'idle' | 'loading' | 'result';
 
-function formatLapTime(seconds: number): string {
+const formatLapTime = (seconds: number): string => {
   if (!seconds || seconds <= 0) return '--:--';
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return mins > 0
     ? `${mins}:${secs.toFixed(3).padStart(6, '0')}`
     : `${secs.toFixed(3)}s`;
-}
+};
 
-export default function Debriefing({ lastLap, lastAnalysis }: DebriefingProps) {
+const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
   const [state, setState] = useState<DebriefingState>('idle');
   const [displayedAnalysis, setDisplayedAnalysis] = useState<LapAnalysis | null>(null);
   const [displayedLap, setDisplayedLap] = useState<LapRecord | null>(null);
@@ -114,4 +114,6 @@ export default function Debriefing({ lastLap, lastAnalysis }: DebriefingProps) {
       )}
     </div>
   );
-}
+};
+
+export default Debriefing;

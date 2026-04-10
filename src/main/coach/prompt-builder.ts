@@ -43,11 +43,11 @@ Regole:
 /**
  * Build the user message for Claude API from lap data.
  */
-export function buildPrompt(
+export const buildPrompt = (
   lap: LapRecord,
   deviations: Deviation[] | null,
   cornerNames: Map<number, string>,
-): string {
+): string => {
   const parts: string[] = [];
 
   // Header
@@ -121,9 +121,9 @@ export function buildPrompt(
   parts.push('Produci l\'analisi nel formato Template v3 (sezioni [1]-[5]).');
 
   return parts.join('\n');
-}
+};
 
-function buildBrakeTempSummary(lap: LapRecord): string | null {
+const buildBrakeTempSummary = (lap: LapRecord): string | null => {
   const frames = lap.frames;
   if (frames.length === 0) return null;
 
@@ -156,13 +156,13 @@ function buildBrakeTempSummary(lap: LapRecord): string | null {
   }
 
   return lines.join('\n');
-}
+};
 
 /**
  * Select zones that are "interesting" for the analysis:
  * zones with deviations, braking zones, or high TC/ABS activity.
  */
-function getSignificantZones(zones: ZoneData[], deviations: Deviation[] | null): ZoneData[] {
+const getSignificantZones = (zones: ZoneData[], deviations: Deviation[] | null): ZoneData[] => {
   const deviationZones = new Set(deviations?.map((d) => d.zone) ?? []);
 
   return zones.filter((z) =>
@@ -172,13 +172,13 @@ function getSignificantZones(zones: ZoneData[], deviations: Deviation[] | null):
     z.absActivations > 2 ||
     z.overlapFrames > 3,
   );
-}
+};
 
-function formatLapTime(seconds: number): string {
+const formatLapTime = (seconds: number): string => {
   if (seconds <= 0 || !isFinite(seconds)) return '--:--';
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return mins > 0
     ? `${mins}:${secs.toFixed(3).padStart(6, '0')}`
     : `${secs.toFixed(3)}s`;
-}
+};

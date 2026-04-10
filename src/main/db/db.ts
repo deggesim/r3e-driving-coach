@@ -8,19 +8,7 @@ import path from "path";
 
 let _db: Database.Database | null = null;
 
-export function getDb(userDataPath: string): Database.Database {
-  if (_db) return _db;
-
-  const dbPath = path.join(userDataPath, "r3e-driving-coach.db");
-  _db = new Database(dbPath);
-  _db.pragma("journal_mode = WAL");
-  _db.pragma("foreign_keys = ON");
-
-  initSchema(_db);
-  return _db;
-}
-
-function initSchema(db: Database.Database): void {
+const initSchema = (db: Database.Database): void => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS baseline (
       car       TEXT NOT NULL,
@@ -86,18 +74,30 @@ function initSchema(db: Database.Database): void {
       value TEXT NOT NULL
     );
   `);
-}
+};
+
+export const getDb = (userDataPath: string): Database.Database => {
+  if (_db) return _db;
+
+  const dbPath = path.join(userDataPath, "r3e-driving-coach.db");
+  _db = new Database(dbPath);
+  _db.pragma("journal_mode = WAL");
+  _db.pragma("foreign_keys = ON");
+
+  initSchema(_db);
+  return _db;
+};
 
 /**
  * Look up the official corner name for a given track distance.
  * Returns null if no corner is mapped at that distance.
  */
-export function getCornerName(
+export const getCornerName = (
   db: Database.Database,
   track: string,
   layout: string,
   dist: number,
-): string | null {
+): string | null => {
   const row = db
     .prepare(
       `
@@ -109,18 +109,18 @@ export function getCornerName(
     .get(track, layout, dist, dist) as { name: string } | undefined;
 
   return row?.name ?? null;
-}
+};
 
 /**
  * Seed corner names from the shared JSON data.
  */
-export function seedCornerNames(
+export const seedCornerNames = (
   db: Database.Database,
   data: Record<
     string,
     Array<{ distMin: number; distMax: number; name: string }>
   >,
-): void {
+): void => {
   const insert = db.prepare(`
     INSERT OR REPLACE INTO corner_names (track, layout, dist_min, dist_max, name)
     VALUES (?, ?, ?, ?, ?)
@@ -146,11 +146,11 @@ export function seedCornerNames(
     corners.map((c) => ({ key, ...c })),
   );
   insertMany(flat);
-}
+};
 
-export function closeDb(): void {
+export const closeDb = (): void => {
   if (_db) {
     _db.close();
     _db = null;
   }
-}
+};
