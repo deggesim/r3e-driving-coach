@@ -300,6 +300,15 @@ body {
 }
 .setting-toggle.active { background: var(--green); color: white; border-color: var(--green); }
 .setting-hint { color: var(--text-dim); font-size: 11px; margin-top: 6px; display: block; }
+.setting-section-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
 .setting-group.debug { margin-top: 32px; border-top: 1px solid var(--border); padding-top: 20px; }
 .debug-frame {
   background: var(--bg3);
@@ -327,6 +336,7 @@ body {
   color: var(--text-dim);
 }
 .status-connection { display: flex; align-items: center; gap: 5px; }
+.status-badge { font-size: 10px; font-weight: 500; vertical-align: middle; }
 .status-dot {
   width: 7px;
   height: 7px;

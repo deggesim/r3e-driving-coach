@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import { Table, Spinner, Badge } from 'react-bootstrap';
 import type { R3EStatus, LapRow } from '../../shared/types';
 
 type SessionHistoryProps = {
@@ -53,11 +54,14 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
       </div>
 
       {loading ? (
-        <div className="sh-loading">Caricamento...</div>
+        <div className="sh-loading">
+          <Spinner size="sm" variant="danger" className="me-2" />
+          Caricamento...
+        </div>
       ) : laps.length === 0 ? (
         <div className="sh-empty">Nessun giro registrato per questa combinazione.</div>
       ) : (
-        <table className="sh-table">
+        <Table hover size="sm" className="sh-table">
           <thead>
             <tr>
               <th>#</th>
@@ -76,11 +80,15 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
                 <td>{formatLapTime(lap.sector1)}</td>
                 <td>{formatLapTime(lap.sector2)}</td>
                 <td>{formatLapTime(lap.sector3)}</td>
-                <td>{lap.valid ? '✓' : '✗'}</td>
+                <td>
+                  {lap.valid
+                    ? <Badge bg="success" pill>✓</Badge>
+                    : <Badge bg="secondary" pill>✗</Badge>}
+                </td>
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       )}
     </div>
   );

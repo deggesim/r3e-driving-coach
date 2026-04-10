@@ -1,12 +1,17 @@
 /**
  * App — Root component.
- * Layout: left panel (Debriefing + SessionHistory), right rail (settings/config), bottom bar (StatusBar).
+ * Layout: custom title bar (frameless Electron), main content area, bottom StatusBar.
  * TTSManager and VoiceCoachOverlay are headless/overlay — mounted globally.
+ * Settings tab uses react-bootstrap Form/Button components.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback } from "react";
+import { Button, Form, Spinner } from "react-bootstrap";
 import { useIPC, useConfig } from "./hooks/useIPC";
+import { useIPCStore } from "./store/ipcStore";
+import { useSettingsStore } from "./store/settingsStore";
 import { useVoiceCoach } from "./hooks/useVoiceCoach";
+import { useState } from "react";
 import type { AzureVoice } from "../shared/types";
 import iconUrl from "/icon.png";
 import TTSManager from "./components/TTSManager";
@@ -26,47 +31,60 @@ const AZURE_REGIONS = [
 ];
 
 const App = () => {
-  const { frame, lastAlert, lastLap, status, lastAnalysis } = useIPC();
+  // Bootstrap IPC subscriptions (writes to ipcStore)
+  useIPC();
+
+  // Read IPC state from store
+  const frame = useIPCStore((s) => s.frame);
+  const lastAlert = useIPCStore((s) => s.lastAlert);
+  const lastLap = useIPCStore((s) => s.lastLap);
+  const status = useIPCStore((s) => s.status);
+  const lastAnalysis = useIPCStore((s) => s.lastAnalysis);
+
+  // Settings state from Zustand store
+  const {
+    apiKey,
+    setApiKey,
+    assistantName,
+    setAssistantName,
+    gamepadButton,
+    setGamepadButton,
+    ttsEnabled,
+    setTtsEnabled,
+    azureTtsEnabled,
+    setAzureTtsEnabled,
+    azureSpeechKey,
+    setAzureSpeechKey,
+    azureRegion,
+    setAzureRegion,
+    azureVoiceName,
+    setAzureVoiceName,
+    settingSaved,
+    showSaved,
+  } = useSettingsStore();
+
   const { get: configGet, set: configSet } = useConfig();
   const [tab, setTab] = useState<Tab>("debriefing");
-  const [alerts, setAlerts] = useState<(typeof lastAlert)[]>([]);
-
-  // ── TTS / Voice settings ─────────────────────────────────────────────────
-  const [ttsEnabled, setTtsEnabled] = useState(true);
-  const [azureTtsEnabled, setAzureTtsEnabled] = useState(false);
-  const [azureSpeechKey, setAzureSpeechKey] = useState("");
-  const [azureRegion, setAzureRegion] = useState("westeurope");
-  const [azureVoiceName, setAzureVoiceName] = useState("");
+  const [alerts, setAlerts] = useState<NonNullable<typeof lastAlert>[]>([]);
   const [azureVoices, setAzureVoices] = useState<AzureVoice[]>([]);
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [voicesError, setVoicesError] = useState("");
 
-  // ── General / AI settings ────────────────────────────────────────────────
-  const [apiKey, setApiKey] = useState("");
-  const [assistantName, setAssistantName] = useState("Aria");
-  const [gamepadButton, setGamepadButton] = useState(0);
-
-  // ── Save state ───────────────────────────────────────────────────────────
-  const [settingSaved, setSettingSaved] = useState<string | null>(null);
-
-  const showSaved = (key: string) => {
-    setSettingSaved(key);
-    setTimeout(() => setSettingSaved(null), 2000);
-  };
-
-  // ── Voice coach hook ─────────────────────────────────────────────────────
-  const { state: voiceState, transcript, answer } = useVoiceCoach({
+  // Voice coach hook
+  const {
+    state: voiceState,
+    transcript,
+    answer,
+  } = useVoiceCoach({
     triggerButtonIndex: gamepadButton,
     enabled: ttsEnabled,
     azureTtsEnabled,
   });
 
-  // ── Load all settings from config on mount ───────────────────────────────
+  // Load all settings from config on mount
   useEffect(() => {
     const load = async () => {
-      const [
-        ak, az, key, region, voice, name, button,
-      ] = await Promise.all([
+      const [ak, az, key, region, voice, name, button] = await Promise.all([
         configGet("anthropicApiKey"),
         configGet("azureTtsEnabled"),
         configGet("azureSpeechKey"),
@@ -84,7 +102,16 @@ const App = () => {
       if (button) setGamepadButton(Number(button));
     };
     load().catch(console.error);
-  }, [configGet]);
+  }, [
+    configGet,
+    setApiKey,
+    setAzureTtsEnabled,
+    setAzureSpeechKey,
+    setAzureRegion,
+    setAzureVoiceName,
+    setAssistantName,
+    setGamepadButton,
+  ]);
 
   // Accumulate alerts for TTSManager
   useEffect(() => {
@@ -93,8 +120,7 @@ const App = () => {
     setAlerts((prev) => [...prev.slice(-19), lastAlert]);
   }, [lastAlert]);
 
-  // ── Handlers ─────────────────────────────────────────────────────────────
-
+  // Handlers
   const handleSaveApiKey = async () => {
     await configSet("anthropicApiKey", apiKey);
     showSaved("apiKey");
@@ -121,7 +147,6 @@ const App = () => {
   const handleLoadVoices = async () => {
     setVoicesLoading(true);
     setVoicesError("");
-    // Save key + region first so the main process can read them
     await configSet("azureSpeechKey", azureSpeechKey);
     await configSet("azureRegion", azureRegion);
     try {
@@ -132,31 +157,36 @@ const App = () => {
         await configSet("azureVoiceName", voices[0].shortName);
       }
     } catch (err) {
-      setVoicesError(err instanceof Error ? err.message : "Errore nel caricamento voci");
+      setVoicesError(
+        err instanceof Error ? err.message : "Errore nel caricamento voci",
+      );
     } finally {
       setVoicesLoading(false);
     }
   };
 
-  const handleVoiceChange = useCallback(async (shortName: string) => {
-    setAzureVoiceName(shortName);
-    await configSet("azureVoiceName", shortName);
-    // Play preview
-    try {
-      const raw = await window.electronAPI.ttsTest(shortName);
-      // raw is a Buffer-like object — convert to ArrayBuffer
-      const bytes = new Uint8Array(Object.values(raw as unknown as Record<string, number>));
-      const ctx = new AudioContext();
-      const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      source.start(0);
-      source.onended = () => ctx.close();
-    } catch (err) {
-      console.error("[App] Voice preview error:", err);
-    }
-  }, [configSet]);
+  const handleVoiceChange = useCallback(
+    async (shortName: string) => {
+      setAzureVoiceName(shortName);
+      await configSet("azureVoiceName", shortName);
+      try {
+        const raw = await window.electronAPI.ttsTest(shortName);
+        const bytes = new Uint8Array(
+          Object.values(raw as unknown as Record<string, number>),
+        );
+        const ctx = new AudioContext();
+        const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        source.start(0);
+        source.onended = () => ctx.close();
+      } catch (err) {
+        console.error("[App] Voice preview error:", err);
+      }
+    },
+    [configSet, setAzureVoiceName],
+  );
 
   const postLapText = lastAnalysis?.section5Summary ?? null;
 
@@ -164,7 +194,7 @@ const App = () => {
     <div className="app">
       {/* Headless TTS */}
       <TTSManager
-        alerts={alerts.filter(Boolean) as NonNullable<typeof lastAlert>[]}
+        alerts={alerts}
         postLapText={postLapText}
         enabled={ttsEnabled}
         azureEnabled={azureTtsEnabled}
@@ -177,7 +207,7 @@ const App = () => {
         answer={answer}
       />
 
-      {/* Title bar (frameless window drag area) */}
+      {/* Title bar (frameless Electron drag area) */}
       <div className="title-bar">
         <img src={iconUrl} className="title-bar-icon" alt="" />
         <span className="title-bar-name">R3E Driving Coach</span>
@@ -204,7 +234,7 @@ const App = () => {
         <div className="title-bar-tts">
           <button
             className={`tts-toggle ${ttsEnabled ? "on" : "off"}`}
-            onClick={() => setTtsEnabled((v) => !v)}
+            onClick={() => setTtsEnabled(!ttsEnabled)}
             title={ttsEnabled ? "Voce attiva" : "Voce disattiva"}
           >
             {ttsEnabled ? "🎙" : "🔇"}
@@ -225,18 +255,19 @@ const App = () => {
         {tab === "debriefing" && (
           <Debriefing lastLap={lastLap} lastAnalysis={lastAnalysis} />
         )}
-
         {tab === "history" && <SessionHistory status={status} />}
 
         {tab === "settings" && (
           <div className="settings-panel">
             <h2>Impostazioni</h2>
 
-            {/* ── Claude API Key ── */}
-            <div className="setting-group">
-              <label htmlFor="api-key">API Key Anthropic</label>
+            {/* Claude API Key */}
+            <Form.Group className="setting-group">
+              <Form.Label className="setting-section-label">
+                API Key Anthropic
+              </Form.Label>
               <div className="setting-row">
-                <input
+                <Form.Control
                   id="api-key"
                   type="password"
                   value={apiKey}
@@ -244,39 +275,49 @@ const App = () => {
                   placeholder="sk-ant-..."
                   className="setting-input"
                 />
-                <button className="setting-btn" onClick={handleSaveApiKey}>
+                <Button variant="danger" size="sm" onClick={handleSaveApiKey}>
                   {settingSaved === "apiKey" ? "✓ Salvata" : "Salva"}
-                </button>
+                </Button>
               </div>
-              <span className="setting-hint">
-                Necessaria per il debriefing post-giro e il coach vocale via Claude API.
-              </span>
-            </div>
+              <Form.Text className="setting-hint">
+                Necessaria per il debriefing post-giro e il coach vocale via
+                Claude API.
+              </Form.Text>
+            </Form.Group>
 
-            {/* ── Voce TTS (Web Speech) ── */}
-            <div className="setting-group">
-              <label>Voce TTS</label>
+            {/* Voce TTS */}
+            <Form.Group className="setting-group">
+              <Form.Label className="setting-section-label">
+                Voce TTS
+              </Form.Label>
               <div className="setting-row">
-                <button
-                  className={`setting-toggle ${ttsEnabled ? "active" : ""}`}
-                  onClick={() => setTtsEnabled((v) => !v)}
+                <Button
+                  variant={ttsEnabled ? "success" : "secondary"}
+                  size="sm"
+                  onClick={() => setTtsEnabled(!ttsEnabled)}
                 >
                   {ttsEnabled ? "Attiva" : "Disattiva"}
-                </button>
+                </Button>
               </div>
-              <span className="setting-hint">
-                Attiva/disattiva tutti gli output vocali (alert, debriefing, coach).
-              </span>
-            </div>
+              <Form.Text className="setting-hint">
+                Attiva/disattiva tutti gli output vocali (alert, debriefing,
+                coach).
+              </Form.Text>
+            </Form.Group>
 
-            {/* ── Assistente Vocale ── */}
-            <div className="setting-group">
-              <label>Assistente Vocale</label>
+            {/* Assistente Vocale */}
+            <Form.Group className="setting-group">
+              <Form.Label className="setting-section-label">
+                Assistente Vocale
+              </Form.Label>
               <div className="setting-row">
-                <label htmlFor="assistant-name" className="setting-inline-label">
+                <Form.Label
+                  htmlFor="assistant-name"
+                  className="setting-inline-label"
+                >
                   Nome assistente
-                </label>
-                <input
+                </Form.Label>
+                <Form.Control
                   id="assistant-name"
                   type="text"
                   value={assistantName}
@@ -287,10 +328,13 @@ const App = () => {
                 />
               </div>
               <div className="setting-row">
-                <label htmlFor="gamepad-button" className="setting-inline-label">
+                <Form.Label
+                  htmlFor="gamepad-button"
+                  className="setting-inline-label"
+                >
                   Tasto controller (0–19)
-                </label>
-                <input
+                </Form.Label>
+                <Form.Control
                   id="gamepad-button"
                   type="number"
                   min={0}
@@ -301,33 +345,44 @@ const App = () => {
                 />
               </div>
               <div className="setting-row">
-                <button className="setting-btn" onClick={handleSaveAssistant}>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleSaveAssistant}
+                >
                   {settingSaved === "assistant" ? "✓ Salvato" : "Salva"}
-                </button>
+                </Button>
               </div>
-              <span className="setting-hint">
-                Premi il tasto configurato sul controller per attivare il microfono e fare domande al coach.
-                Il tasto 0 corrisponde al tasto A su controller Xbox.
-              </span>
-            </div>
+              <Form.Text className="setting-hint">
+                Premi il tasto configurato sul controller per attivare il
+                microfono e fare domande al coach. Il tasto 0 corrisponde al
+                tasto A su controller Xbox.
+              </Form.Text>
+            </Form.Group>
 
-            {/* ── Azure TTS ── */}
-            <div className="setting-group">
-              <label>Azure Text-to-Speech</label>
+            {/* Azure TTS */}
+            <Form.Group className="setting-group">
+              <Form.Label className="setting-section-label">
+                Azure Text-to-Speech
+              </Form.Label>
               <div className="setting-row">
-                <button
-                  className={`setting-toggle ${azureTtsEnabled ? "active" : ""}`}
+                <Button
+                  variant={azureTtsEnabled ? "success" : "secondary"}
+                  size="sm"
                   onClick={handleToggleAzure}
                 >
                   {azureTtsEnabled ? "Attivo" : "Disattivo"}
-                </button>
+                </Button>
               </div>
 
               <div className="setting-row">
-                <label htmlFor="azure-key" className="setting-inline-label">
+                <Form.Label
+                  htmlFor="azure-key"
+                  className="setting-inline-label"
+                >
                   Chiave servizio
-                </label>
-                <input
+                </Form.Label>
+                <Form.Control
                   id="azure-key"
                   type="password"
                   value={azureSpeechKey}
@@ -338,10 +393,13 @@ const App = () => {
               </div>
 
               <div className="setting-row">
-                <label htmlFor="azure-region" className="setting-inline-label">
+                <Form.Label
+                  htmlFor="azure-region"
+                  className="setting-inline-label"
+                >
                   Regione
-                </label>
-                <select
+                </Form.Label>
+                <Form.Select
                   id="azure-region"
                   value={azureRegion}
                   onChange={(e) => setAzureRegion(e.target.value)}
@@ -352,32 +410,45 @@ const App = () => {
                       {r.label}
                     </option>
                   ))}
-                </select>
-                <button className="setting-btn" onClick={handleSaveAzureKey}>
+                </Form.Select>
+                <Button variant="danger" size="sm" onClick={handleSaveAzureKey}>
                   {settingSaved === "azureKey" ? "✓ Salvata" : "Salva"}
-                </button>
+                </Button>
               </div>
 
               <div className="setting-row">
-                <button
-                  className="setting-btn"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={handleLoadVoices}
                   disabled={voicesLoading || !azureSpeechKey}
                 >
-                  {voicesLoading ? "Caricamento..." : "Carica voci"}
-                </button>
+                  {voicesLoading ? (
+                    <>
+                      <Spinner size="sm" className="me-1" />
+                      Caricamento...
+                    </>
+                  ) : (
+                    "Carica voci"
+                  )}
+                </Button>
               </div>
 
               {voicesError && (
-                <span className="setting-error">{voicesError}</span>
+                <Form.Text className="text-danger d-block mt-1">
+                  {voicesError}
+                </Form.Text>
               )}
 
               {azureVoices.length > 0 && (
                 <div className="setting-row">
-                  <label htmlFor="azure-voice" className="setting-inline-label">
+                  <Form.Label
+                    htmlFor="azure-voice"
+                    className="setting-inline-label"
+                  >
                     Voce
-                  </label>
-                  <select
+                  </Form.Label>
+                  <Form.Select
                     id="azure-voice"
                     value={azureVoiceName}
                     onChange={(e) => handleVoiceChange(e.target.value)}
@@ -388,21 +459,24 @@ const App = () => {
                         {v.localName} ({v.gender === "Female" ? "F" : "M"})
                       </option>
                     ))}
-                  </select>
+                  </Form.Select>
                 </div>
               )}
 
-              <span className="setting-hint">
-                Selezionando una voce viene riprodotta un'anteprima:
-                "Ciao, sono {assistantName} e oggi sono il tuo insegnante virtuale".
-                Richiede una sottoscrizione Azure Cognitive Services.
-              </span>
-            </div>
+              <Form.Text className="setting-hint">
+                Selezionando una voce viene riprodotta un&apos;anteprima:
+                &quot;Ciao, sono {assistantName} e oggi sono il tuo insegnante
+                virtuale&quot;. Richiede una sottoscrizione Azure Cognitive
+                Services.
+              </Form.Text>
+            </Form.Group>
 
-            {/* ── Debug frame ── */}
+            {/* Debug frame */}
             {frame && (
               <div className="setting-group debug">
-                <label>Debug — Ultimo frame</label>
+                <Form.Label className="setting-section-label">
+                  Debug — Ultimo frame
+                </Form.Label>
                 <pre className="debug-frame">
                   {JSON.stringify(
                     {

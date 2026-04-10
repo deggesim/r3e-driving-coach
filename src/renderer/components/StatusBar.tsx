@@ -1,10 +1,11 @@
 /**
  * StatusBar — Always-visible bottom bar.
- * Shows: connection dot, car/track, calibration state, last alert (fade 5s).
+ * Shows: connection badge, car/track, calibration state, last alert (fade 5s).
  */
 
-import { useEffect, useState } from 'react';
-import type { R3EStatus, Alert } from '../../shared/types';
+import { useEffect, useState } from "react";
+import { Badge } from "react-bootstrap";
+import type { R3EStatus, Alert } from "../../shared/types";
 
 type StatusBarProps = {
   status: R3EStatus;
@@ -33,15 +34,19 @@ const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
   }, [lastAlert]);
 
   const calibrationText = status.calibrating
-    ? `Calibrazione: ${status.lapsToCalibration} ${status.lapsToCalibration === 1 ? 'giro rimanente' : 'giri rimanenti'}`
-    : '🎙 Coach attivo';
+    ? `Calibrazione: ${status.lapsToCalibration} ${status.lapsToCalibration === 1 ? "giro rimanente" : "giri rimanenti"}`
+    : "🎙 Coach attivo";
 
   return (
     <div className="status-bar">
       {/* Connection */}
       <div className="status-connection">
-        <span className={`status-dot ${status.connected ? 'connected' : 'disconnected'}`} />
-        <span>{status.connected ? 'R3E connesso' : 'R3E disconnesso'}</span>
+        <Badge
+          bg={status.connected ? "success" : "danger"}
+          className="status-badge"
+        >
+          {status.connected ? "R3E connesso" : "R3E disconnesso"}
+        </Badge>
       </div>
 
       {/* Car / Track */}
@@ -51,7 +56,10 @@ const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
           {status.track && (
             <>
               <span className="status-sep">·</span>
-              <span className="status-track">{status.track}{status.layout ? ` (${status.layout})` : ''}</span>
+              <span className="status-track">
+                {status.track}
+                {status.layout ? ` (${status.layout})` : ""}
+              </span>
             </>
           )}
         </div>
@@ -59,12 +67,12 @@ const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
 
       {/* Calibration / Active */}
       <div className="status-calibration">
-        {status.connected ? calibrationText : '—'}
+        {status.connected ? calibrationText : "—"}
       </div>
 
       {/* Last alert */}
-      <div className={`status-alert ${fadeOut ? 'fade-out' : ''}`}>
-        {visibleAlert ?? ''}
+      <div className={`status-alert ${fadeOut ? "fade-out" : ""}`}>
+        {visibleAlert ?? ""}
       </div>
     </div>
   );

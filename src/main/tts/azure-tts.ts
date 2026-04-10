@@ -1,19 +1,28 @@
 /**
  * Azure Cognitive Services TTS — REST API wrapper.
  *
- * No SDK required — uses Node 18+ built-in fetch.
+ * Uses axios for all HTTP calls (shared instance per request, base URL varies by region).
  * Endpoints:
- *   - Voices list: GET https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list
+ *   - Voices list: GET  https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list
  *   - Synthesis:   POST https://{region}.tts.speech.microsoft.com/cognitiveservices/v1
  */
 
+import axios from "axios";
+
 export type AzureVoice = {
-  name: string;        // e.g. "Microsoft Server Speech Text to Speech Voice (it-IT, ElsaNeural)"
-  shortName: string;   // e.g. "it-IT-ElsaNeural"
-  localName: string;   // e.g. "Elsa"
-  locale: string;      // e.g. "it-IT"
-  gender: string;      // "Female" | "Male"
+  name: string; // e.g. "Microsoft Server Speech Text to Speech Voice (it-IT, ElsaNeural)"
+  shortName: string; // e.g. "it-IT-ElsaNeural"
+  localName: string; // e.g. "Elsa"
+  locale: string; // e.g. "it-IT"
+  gender: string; // "Female" | "Male"
 };
+
+/** Create a region-scoped axios instance for Azure Speech endpoints. */
+const createAzureClient = (region: string, key: string) =>
+  axios.create({
+    baseURL: `https://${region}.tts.speech.microsoft.com/cognitiveservices`,
+    headers: { "Ocp-Apim-Subscription-Key": key },
+  });
 
 /**
  * Fetch available voices for a given region, filtered to Italian (it-IT).
@@ -22,17 +31,9 @@ export const getAzureVoices = async (
   key: string,
   region: string,
 ): Promise<AzureVoice[]> => {
-  const url = `https://${region}.tts.speech.microsoft.com/cognitiveservices/voices/list`;
-  const res = await fetch(url, {
-    headers: { "Ocp-Apim-Subscription-Key": key },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Azure voices fetch failed: ${res.status} ${res.statusText}`);
-  }
-
-  const all = (await res.json()) as AzureVoice[];
-  return all.filter((v) => v.locale.startsWith("it-IT"));
+  const client = createAzureClient(region, key);
+  const { data } = await client.get<AzureVoice[]>("/voices/list");
+  return data.filter((v) => v.locale.startsWith("it-IT"));
 };
 
 /**
@@ -45,7 +46,7 @@ export const synthesizeAzure = async (
   region: string,
   voiceName: string,
 ): Promise<Buffer> => {
-  const url = `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`;
+  const client = createAzureClient(region, key);
 
   // Escape XML special chars in text
   const escaped = text
@@ -57,20 +58,13 @@ export const synthesizeAzure = async (
 
   const ssml = `<speak version='1.0' xml:lang='it-IT'><voice name='${voiceName}'>${escaped}</voice></speak>`;
 
-  const res = await fetch(url, {
-    method: "POST",
+  const { data } = await client.post<ArrayBuffer>("/v1", ssml, {
     headers: {
-      "Ocp-Apim-Subscription-Key": key,
       "Content-Type": "application/ssml+xml",
       "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
     },
-    body: ssml,
+    responseType: "arraybuffer",
   });
 
-  if (!res.ok) {
-    throw new Error(`Azure TTS synthesis failed: ${res.status} ${res.statusText}`);
-  }
-
-  const arrayBuffer = await res.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  return Buffer.from(data);
 };

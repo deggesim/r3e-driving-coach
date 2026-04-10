@@ -16,11 +16,15 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.85.0",
+    "axios": "^1.15.0",
     "better-sqlite3": "^12.8.0",
+    "bootstrap": "^5.3.8",
     "electron-store": "^11.0.2",
     "jspdf": "^4.2.1",
     "koffi": "^2.15.6",
-    "marked": "^18.0.0"
+    "marked": "^18.0.0",
+    "react-bootstrap": "^2.10.10",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^4.2.3",

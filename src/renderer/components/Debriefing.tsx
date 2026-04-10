@@ -1,33 +1,35 @@
 /**
  * Debriefing — Post-lap panel.
  *
- * States: idle ("In attesa del giro..."), loading ("Analisi in corso..."), result (Template v3).
- * Layout: header with lap info, body with Template v3 rendered, footer with PDF export button.
+ * States: idle ("In attesa del giro..."), loading (Spinner), result (Template v3).
+ * Layout: header with lap info, body with Template v3 rendered, footer with generated timestamp.
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { marked } from 'marked';
-import type { LapRecord, LapAnalysis } from '../../shared/types';
+import { useState, useEffect, useRef } from "react";
+import { Spinner, Badge } from "react-bootstrap";
+import { marked } from "marked";
+import type { LapRecord, LapAnalysis } from "../../shared/types";
 
 type DebriefingProps = {
   lastLap: LapRecord | null;
   lastAnalysis: LapAnalysis | null;
 };
 
-type DebriefingState = 'idle' | 'loading' | 'result';
+type DebriefingState = "idle" | "loading" | "result";
 
 const formatLapTime = (seconds: number): string => {
-  if (!seconds || seconds <= 0) return '--:--';
+  if (!seconds || seconds <= 0) return "--:--";
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return mins > 0
-    ? `${mins}:${secs.toFixed(3).padStart(6, '0')}`
+    ? `${mins}:${secs.toFixed(3).padStart(6, "0")}`
     : `${secs.toFixed(3)}s`;
 };
 
 const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
-  const [state, setState] = useState<DebriefingState>('idle');
-  const [displayedAnalysis, setDisplayedAnalysis] = useState<LapAnalysis | null>(null);
+  const [state, setState] = useState<DebriefingState>("idle");
+  const [displayedAnalysis, setDisplayedAnalysis] =
+    useState<LapAnalysis | null>(null);
   const [displayedLap, setDisplayedLap] = useState<LapRecord | null>(null);
   const lastLapRef = useRef<LapRecord | null>(null);
   const lastAnalysisRef = useRef<LapAnalysis | null>(null);
@@ -39,7 +41,7 @@ const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setDisplayedLap(lastLap);
     // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setState('loading');
+    setState("loading");
   }, [lastLap]);
 
   // Analysis arrived → show result
@@ -49,18 +51,11 @@ const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setDisplayedAnalysis(lastAnalysis);
     // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setState('result');
+    setState("result");
   }, [lastAnalysis]);
 
-  const renderMarkdown = (md: string): string => {
-    return marked.parse(md, { async: false }) as string;
-  };
-
-  const deltaLabel = (): string => {
-    if (!displayedLap || !displayedAnalysis) return '';
-    // We don't have reference lap time here, just show lap time
-    return formatLapTime(displayedLap.lapTime);
-  };
+  const renderMarkdown = (md: string): string =>
+    marked.parse(md, { async: false }) as string;
 
   return (
     <div className="debriefing">
@@ -70,10 +65,19 @@ const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
           <>
             <span className="deb-car">{displayedLap.car}</span>
             <span className="deb-sep">·</span>
-            <span className="deb-track">{displayedLap.track} {displayedLap.layout}</span>
+            <span className="deb-track">
+              {displayedLap.track} {displayedLap.layout}
+            </span>
             <span className="deb-sep">·</span>
-            <span className="deb-time">Giro {displayedLap.lapNumber}: {deltaLabel()}</span>
-            {!displayedLap.valid && <span className="deb-invalid">⚠ Non valido</span>}
+            <span className="deb-time">
+              Giro {displayedLap.lapNumber}:{" "}
+              {formatLapTime(displayedLap.lapTime)}
+            </span>
+            {!displayedLap.valid && (
+              <Badge bg="warning" text="dark" className="ms-2">
+                Non valido
+              </Badge>
+            )}
           </>
         ) : (
           <span className="deb-placeholder">Nessun giro registrato</span>
@@ -82,18 +86,18 @@ const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
 
       {/* Body */}
       <div className="debriefing-body">
-        {state === 'idle' && (
+        {state === "idle" && (
           <div className="deb-idle">In attesa del giro...</div>
         )}
 
-        {state === 'loading' && (
+        {state === "loading" && (
           <div className="deb-loading">
-            <div className="deb-spinner" />
+            <Spinner size="sm" variant="danger" />
             <span>Analisi in corso...</span>
           </div>
         )}
 
-        {state === 'result' && displayedAnalysis && (
+        {state === "result" && displayedAnalysis && (
           <div
             className="deb-content"
             // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
@@ -105,10 +109,13 @@ const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
       </div>
 
       {/* Footer */}
-      {state === 'result' && displayedAnalysis && (
+      {state === "result" && displayedAnalysis && (
         <div className="debriefing-footer">
           <span className="deb-generated">
-            Generato: {new Date(displayedAnalysis.generatedAt).toLocaleTimeString('it-IT')}
+            Generato:{" "}
+            {new Date(displayedAnalysis.generatedAt).toLocaleTimeString(
+              "it-IT",
+            )}
           </span>
         </div>
       )}

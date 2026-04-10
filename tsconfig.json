@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2024",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
@@ -16,7 +16,7 @@
     "rootDir": "src",
     "jsx": "react-jsx",
     "strictNullChecks": true, // Recommended for better type inference
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
