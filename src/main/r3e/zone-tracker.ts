@@ -5,8 +5,8 @@
  * to feed AdaptiveBaseline.checkZoneRealtime().
  */
 
-import { ZONE_SIZE_M } from '../../shared/alert-types';
-import type { R3EFrame } from '../../shared/types';
+import { ZONE_SIZE_M } from "../../shared/alert-types";
+import type { R3EFrame } from "../../shared/types";
 
 type CurrentZone = {
   zone: number;

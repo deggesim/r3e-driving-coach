@@ -7,19 +7,22 @@
  *   calibrationComplete()
  */
 
-import { EventEmitter } from 'events';
-import { ZONE_SIZE_M, CALIBRATION_LAPS } from '../../shared/alert-types';
-import type { CompactFrame, LapRecord, ZoneData } from '../../shared/types';
-import type { R3EReader } from './r3e-reader';
+import { EventEmitter } from "events";
+import { ZONE_SIZE_M, CALIBRATION_LAPS } from "../../shared/alert-types";
+import type { CompactFrame, LapRecord, ZoneData } from "../../shared/types";
+import type { R3EReader } from "./r3e-reader";
 
 export type LapRecorder = {
   attach: (reader: R3EReader) => void;
   isCalibrating: () => boolean;
   lapsToCalibration: () => number;
-  on: EventEmitter['on'];
+  on: EventEmitter["on"];
 };
 
-const aggregateZones = (frames: CompactFrame[], layoutLength: number): ZoneData[] => {
+const aggregateZones = (
+  frames: CompactFrame[],
+  layoutLength: number,
+): ZoneData[] => {
   const numZones = Math.ceil(layoutLength / ZONE_SIZE_M);
   const zoneMap = new Map<number, CompactFrame[]>();
 
@@ -41,8 +44,12 @@ const aggregateZones = (frames: CompactFrame[], layoutLength: number): ZoneData[
 
     const brakeFrames = zoneFrames.filter((f) => f.brk > 0.05);
     const throttleFrames = zoneFrames.filter((f) => f.thr > 0.05);
-    const coastFrames = zoneFrames.filter((f) => f.brk <= 0.05 && f.thr <= 0.05);
-    const overlapFrames = zoneFrames.filter((f) => f.brk > 0.05 && f.thr > 0.05);
+    const coastFrames = zoneFrames.filter(
+      (f) => f.brk <= 0.05 && f.thr <= 0.05,
+    );
+    const overlapFrames = zoneFrames.filter(
+      (f) => f.brk > 0.05 && f.thr > 0.05,
+    );
 
     // Brake start/end distances
     let brakeStartDist: number | null = null;
@@ -58,7 +65,7 @@ const aggregateZones = (frames: CompactFrame[], layoutLength: number): ZoneData[
     let throttlePickupDist: number | null = null;
     if (brakeEndDist !== null) {
       for (const f of zoneFrames) {
-        if (f.d > brakeEndDist && f.thr > 0.20) {
+        if (f.d > brakeEndDist && f.thr > 0.2) {
           throttlePickupDist = f.d;
           break;
         }
@@ -69,7 +76,8 @@ const aggregateZones = (frames: CompactFrame[], layoutLength: number): ZoneData[
     const steerDuringBrakeValues = brakeFrames.map((f) => Math.abs(f.str));
     const steerDuringBrake =
       steerDuringBrakeValues.length > 0
-        ? steerDuringBrakeValues.reduce((a, b) => a + b, 0) / steerDuringBrakeValues.length
+        ? steerDuringBrakeValues.reduce((a, b) => a + b, 0) /
+          steerDuringBrakeValues.length
         : 0;
 
     zones.push({
@@ -134,23 +142,24 @@ export const createLapRecorder = (hasExistingBaseline = false): LapRecorder => {
 
     if (!calibrationDone && lapsRecorded >= CALIBRATION_LAPS) {
       calibrationDone = true;
-      emitter.emit('calibrationComplete');
+      emitter.emit("calibrationComplete");
     }
 
     if (lap.valid && lap.lapTime < bestLapTime) {
       bestLapTime = lap.lapTime;
-      emitter.emit('newBestLap', lap);
+      emitter.emit("newBestLap", lap);
     }
 
-    emitter.emit('lapRecorded', lap, { calibrating });
+    emitter.emit("lapRecorded", lap, { calibrating });
   };
 
   return {
     attach: (reader) => {
-      reader.on('lapComplete', onLapComplete);
+      reader.on("lapComplete", onLapComplete);
     },
     isCalibrating: () => !calibrationDone,
-    lapsToCalibration: () => calibrationDone ? 0 : Math.max(0, CALIBRATION_LAPS - lapsRecorded),
+    lapsToCalibration: () =>
+      calibrationDone ? 0 : Math.max(0, CALIBRATION_LAPS - lapsRecorded),
     on: emitter.on.bind(emitter),
   };
 };

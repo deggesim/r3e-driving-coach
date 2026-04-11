@@ -11,7 +11,7 @@
  * Auto-enters mock mode on non-Windows or when { mock: true }.
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 import {
   STRUCT_SIZE_KNOWN,
   SHM_NAME,
@@ -21,9 +21,12 @@ import {
   readDouble,
   readFloatArray,
   readString,
-} from './r3e-struct';
-import { POLL_INTERVAL_MS, RECONNECT_INTERVAL_MS } from '../../shared/alert-types';
-import type { R3EFrame, CompactFrame } from '../../shared/types';
+} from "./r3e-struct";
+import {
+  POLL_INTERVAL_MS,
+  RECONNECT_INTERVAL_MS,
+} from "../../shared/alert-types";
+import type { R3EFrame, CompactFrame } from "../../shared/types";
 
 type R3EReaderOptions = {
   mock?: boolean;
@@ -34,8 +37,18 @@ type R3EReaderOptions = {
 type NativePointer = any; // koffi opaque pointer
 
 type Kernel32 = {
-  OpenFileMappingA: (access: number, inherit: number, name: string) => NativePointer;
-  MapViewOfFile: (handle: NativePointer, access: number, offsetHigh: number, offsetLow: number, bytes: number) => NativePointer;
+  OpenFileMappingA: (
+    access: number,
+    inherit: number,
+    name: string,
+  ) => NativePointer;
+  MapViewOfFile: (
+    handle: NativePointer,
+    access: number,
+    offsetHigh: number,
+    offsetLow: number,
+    bytes: number,
+  ) => NativePointer;
   UnmapViewOfFile: (addr: NativePointer) => boolean;
   CloseHandle: (handle: NativePointer) => boolean;
 };
@@ -45,12 +58,12 @@ const FILE_MAP_READ = 0x0004;
 export type R3EReader = {
   start: () => void;
   stop: () => void;
-  on: EventEmitter['on'];
+  on: EventEmitter["on"];
 };
 
 export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
   const emitter = new EventEmitter();
-  const isMock = options.mock ?? process.platform !== 'win32';
+  const isMock = options.mock ?? process.platform !== "win32";
 
   let connected = false;
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -64,20 +77,28 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 
   const isNullPtr = (ptr: NativePointer): boolean => {
     if (ptr === null || ptr === undefined) return true;
-    try { return koffi.address(ptr) === 0n; } catch { return false; }
+    try {
+      return koffi.address(ptr) === 0n;
+    } catch {
+      return false;
+    }
   };
 
   const ptrStr = (ptr: NativePointer): string => {
-    try { return `0x${koffi.address(ptr).toString(16)}`; } catch { return String(ptr); }
+    try {
+      return `0x${koffi.address(ptr).toString(16)}`;
+    } catch {
+      return String(ptr);
+    }
   };
 
   let firstPoll = true; // log version on first successful poll
   let lastCompletedLaps = -1;
   let lastTrackSector = -1;
   let lapFrames: CompactFrame[] = [];
-  let currentCar = '';
-  let currentTrack = '';
-  let currentLayout = '';
+  let currentCar = "";
+  let currentTrack = "";
+  let currentLayout = "";
   let currentLayoutLength = 0;
 
   const cleanup = (): void => {
@@ -87,7 +108,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     mapHandle = null;
     if (connected) {
       connected = false;
-      emitter.emit('disconnected');
+      emitter.emit("disconnected");
     }
   };
 
@@ -97,71 +118,85 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
   };
 
   const parseFrame = (buf: Buffer): R3EFrame => {
-    const carSpeed = readFloat(buf, 'CarSpeed') * 3.6; // m/s → km/h
-    const engineRpm = readFloat(buf, 'EngineRps') * (60 / (2 * Math.PI)); // rad/s → RPM
-    const brakeTempEst = readFloatArray(buf, 'BrakeTempActualEstimate', 4);
-    const tireTempCenter = readFloatArray(buf, 'TireTempCenter', 4);
+    const carSpeed = readFloat(buf, "CarSpeed") * 3.6; // m/s → km/h
+    const engineRpm = readFloat(buf, "EngineRps") * (60 / (2 * Math.PI)); // rad/s → RPM
+
+    // BrakeTemp: TireData<BrakeTempInformation> — current temp is first field of each entry
+    const brakeTempFL = readFloat(buf, "BrakeTemp_FL_Current");
+    const brakeTempFR = readFloat(buf, "BrakeTemp_FR_Current");
+    const brakeTempRL = readFloat(buf, "BrakeTemp_RL_Current");
+    const brakeTempRR = readFloat(buf, "BrakeTemp_RR_Current");
+
+    // TireTemp: TireData<TireTempInformation> — center tread temp (Left=0, Center=1, Right=2)
+    const tireTempFL = readFloat(buf, "TireTemp_FL_Center");
+    const tireTempFR = readFloat(buf, "TireTemp_FR_Center");
+    const tireTempRL = readFloat(buf, "TireTemp_RL_Center");
+    const tireTempRR = readFloat(buf, "TireTemp_RR_Center");
+
+    // AidSettings: value 5 means aid is currently active
+    const absActive = readInt32(buf, "AidSettings_Abs") === 5 ? 1 : 0;
+    const tcActive = readInt32(buf, "AidSettings_Tc") === 5 ? 1 : 0;
 
     return {
-      versionMajor: readInt32(buf, 'VersionMajor'),
-      versionMinor: readInt32(buf, 'VersionMinor'),
-      gamePaused: readInt32(buf, 'GamePaused') !== 0,
-      gameInMenus: readInt32(buf, 'GameInMenus') !== 0,
-      gameInReplay: readInt32(buf, 'GameInReplay') !== 0,
+      versionMajor: readInt32(buf, "VersionMajor"),
+      versionMinor: readInt32(buf, "VersionMinor"),
+      gamePaused: readInt32(buf, "GamePaused") !== 0,
+      gameInMenus: readInt32(buf, "GameInMenus") !== 0,
+      gameInReplay: readInt32(buf, "GameInReplay") !== 0,
 
-      trackId: readInt32(buf, 'TrackId'),
-      layoutId: readInt32(buf, 'LayoutId'),
-      trackName: readString(buf, 'TrackName', 64),
-      layoutName: readString(buf, 'LayoutName', 64),
-      layoutLength: readFloat(buf, 'LayoutLength'),
-      sessionType: readInt32(buf, 'SessionType'),
-      sessionPhase: readInt32(buf, 'SessionPhase'),
+      trackId: readInt32(buf, "TrackId"),
+      layoutId: readInt32(buf, "LayoutId"),
+      trackName: readString(buf, "TrackName", 64),
+      layoutName: readString(buf, "LayoutName", 64),
+      layoutLength: readFloat(buf, "LayoutLength"),
+      sessionType: readInt32(buf, "SessionType"),
+      sessionPhase: readInt32(buf, "SessionPhase"),
 
-      completedLaps: readInt32(buf, 'CompletedLaps'),
-      currentLapValid: readInt32(buf, 'CurrentLapValid') !== 0,
-      trackSector: readInt32(buf, 'TrackSector'),
-      lapDistance: readFloat(buf, 'LapDistance'),
-      lapDistanceFraction: readFloat(buf, 'LapDistanceFraction'),
+      completedLaps: readInt32(buf, "CompletedLaps"),
+      currentLapValid: readInt32(buf, "CurrentLapValid") !== 0,
+      trackSector: readInt32(buf, "TrackSector"),
+      lapDistance: readFloat(buf, "LapDistance"),
+      lapDistanceFraction: readFloat(buf, "LapDistanceFraction"),
 
-      lapTimeBestSelf: readFloat(buf, 'LapTimeBestSelf'),
-      sectorTimesBestSelf: readFloatArray(buf, 'SectorTimesBestSelf', 3),
-      lapTimePreviousSelf: readFloat(buf, 'LapTimePreviousSelf'),
-      lapTimeCurrentSelf: readFloat(buf, 'LapTimeCurrentSelf'),
-      sectorTimesCurrentSelf: readFloatArray(buf, 'SectorTimesCurrentSelf', 3),
+      lapTimeBestSelf: readFloat(buf, "LapTimeBestSelf"),
+      sectorTimesBestSelf: readFloatArray(buf, "SectorTimesBestSelf", 3),
+      lapTimePreviousSelf: readFloat(buf, "LapTimePreviousSelf"),
+      lapTimeCurrentSelf: readFloat(buf, "LapTimeCurrentSelf"),
+      sectorTimesCurrentSelf: readFloatArray(buf, "SectorTimesCurrentSelf", 3),
 
-      carModelId: readInt32(buf, 'VehicleInfo_ModelId'),
-      carName: readString(buf, 'VehicleInfo_Name', 64),
+      carModelId: readInt32(buf, "VehicleInfo_ModelId"),
+      carName: readString(buf, "VehicleInfo_Name", 64),
       carSpeed,
-      gear: readInt32(buf, 'Gear'),
+      gear: readInt32(buf, "Gear"),
       engineRpm,
 
-      throttle: readFloat(buf, 'Throttle'),
-      brake: readFloat(buf, 'Brake'),
-      steerInput: readFloat(buf, 'SteerInputRaw'),
+      throttle: readFloat(buf, "Throttle"),
+      brake: readFloat(buf, "Brake"),
+      steerInput: readFloat(buf, "SteerInputRaw"),
 
-      absActive: readFloat(buf, 'AidAbsActive'),
-      tcActive: readFloat(buf, 'AidTcActive'),
+      absActive,
+      tcActive,
 
-      brakeTempFL: brakeTempEst[0],
-      brakeTempFR: brakeTempEst[1],
-      brakeTempRL: brakeTempEst[2],
-      brakeTempRR: brakeTempEst[3],
+      brakeTempFL,
+      brakeTempFR,
+      brakeTempRL,
+      brakeTempRR,
 
-      tireTempFL: tireTempCenter[0],
-      tireTempFR: tireTempCenter[1],
-      tireTempRL: tireTempCenter[2],
-      tireTempRR: tireTempCenter[3],
+      tireTempFL,
+      tireTempFR,
+      tireTempRL,
+      tireTempRR,
 
-      fuelLeft: readFloat(buf, 'FuelLeft'),
-      fuelCapacity: readFloat(buf, 'FuelCapacity'),
-      fuelPerLap: readFloat(buf, 'FuelPerLap'),
+      fuelLeft: readFloat(buf, "FuelLeft"),
+      fuelCapacity: readFloat(buf, "FuelCapacity"),
+      fuelPerLap: readFloat(buf, "FuelPerLap"),
 
-      posX: readDouble(buf, 'Player_Pos_X'),
-      posY: readDouble(buf, 'Player_Pos_Y'),
-      posZ: readDouble(buf, 'Player_Pos_Z'),
+      posX: readDouble(buf, "Player_Pos_X"),
+      posY: readDouble(buf, "Player_Pos_Y"),
+      posZ: readDouble(buf, "Player_Pos_Z"),
 
-      inPitlane: readInt32(buf, 'InPitlane') !== 0,
-      flagsCheckered: readInt32(buf, 'Flags_Checkered') !== 0,
+      inPitlane: readInt32(buf, "InPitlane") !== 0,
+      flagsCheckered: readInt32(buf, "Flags_Checkered") !== 0,
     };
   };
 
@@ -181,7 +216,12 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         gear: frame.gear,
         abs: frame.absActive,
         tc: frame.tcActive,
-        bt: [frame.brakeTempFL, frame.brakeTempFR, frame.brakeTempRL, frame.brakeTempRR],
+        bt: [
+          frame.brakeTempFL,
+          frame.brakeTempFR,
+          frame.brakeTempRL,
+          frame.brakeTempRR,
+        ],
         ts: Date.now(),
       });
     }
@@ -191,7 +231,11 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       const sectorTimes = frame.sectorTimesCurrentSelf;
       const completedSector = lastTrackSector;
       if (sectorTimes[completedSector] > 0) {
-        emitter.emit('sectorComplete', completedSector, sectorTimes[completedSector]);
+        emitter.emit(
+          "sectorComplete",
+          completedSector,
+          sectorTimes[completedSector],
+        );
       }
     }
     lastTrackSector = frame.trackSector;
@@ -210,7 +254,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         valid: frame.currentLapValid,
       };
       lapFrames = [];
-      emitter.emit('lapComplete', lapData);
+      emitter.emit("lapComplete", lapData);
     }
     lastCompletedLaps = frame.completedLaps;
   };
@@ -219,24 +263,35 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     if (stopped || !viewPtr) return;
 
     try {
-      const raw: Uint8Array = koffi.decode(viewPtr, koffi.array('uint8_t', STRUCT_SIZE_KNOWN));
-      const buf: Buffer = Buffer.from(raw.buffer, raw.byteOffset, raw.byteLength);
+      const raw: Uint8Array = koffi.decode(
+        viewPtr,
+        koffi.array("uint8_t", STRUCT_SIZE_KNOWN),
+      );
+      const buf: Buffer = Buffer.from(
+        raw.buffer,
+        raw.byteOffset,
+        raw.byteLength,
+      );
 
-      const versionMajor = readInt32(buf, 'VersionMajor');
-      const versionMinor = readInt32(buf, 'VersionMinor');
+      const versionMajor = readInt32(buf, "VersionMajor");
+      const versionMinor = readInt32(buf, "VersionMinor");
       if (firstPoll || versionMajor !== VERSION_MAJOR) {
-        console.log(`[R3EReader] poll — VersionMajor=${versionMajor} VersionMinor=${versionMinor} (expected major=${VERSION_MAJOR})`);
+        console.log(
+          `[R3EReader] poll — VersionMajor=${versionMajor} VersionMinor=${versionMinor} (expected major=${VERSION_MAJOR})`,
+        );
         firstPoll = false;
       }
       if (versionMajor !== VERSION_MAJOR) {
-        console.warn(`[R3EReader] version mismatch: got ${versionMajor}, expected ${VERSION_MAJOR} — disconnecting`);
+        console.warn(
+          `[R3EReader] version mismatch: got ${versionMajor}, expected ${VERSION_MAJOR} — disconnecting`,
+        );
         cleanup();
         scheduleReconnect();
         return;
       }
 
       const frame = parseFrame(buf);
-      emitter.emit('frame', frame);
+      emitter.emit("frame", frame);
       detectBoundaries(frame);
     } catch {
       cleanup();
@@ -249,27 +304,39 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 
   const tryConnect = (): void => {
     if (stopped) return;
-    console.log(`[R3EReader] tryConnect — platform=${process.platform} SHM_NAME="${SHM_NAME}"`);
+    console.log(
+      `[R3EReader] tryConnect — platform=${process.platform} SHM_NAME="${SHM_NAME}"`,
+    );
 
     try {
       if (!kernel32) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        koffi = require('koffi');
-        const lib = koffi.load('kernel32.dll');
-        console.log('[R3EReader] kernel32.dll loaded');
+        koffi = require("koffi");
+        const lib = koffi.load("kernel32.dll");
+        console.log("[R3EReader] kernel32.dll loaded");
 
         kernel32 = {
-          OpenFileMappingA: lib.func('void* __stdcall OpenFileMappingA(uint32 dwDesiredAccess, int bInheritHandle, const char* lpName)'),
-          MapViewOfFile: lib.func('void* __stdcall MapViewOfFile(void* hFileMappingObject, uint32 dwDesiredAccess, uint32 dwFileOffsetHigh, uint32 dwFileOffsetLow, size_t dwNumberOfBytesToMap)'),
-          UnmapViewOfFile: lib.func('bool __stdcall UnmapViewOfFile(const void* lpBaseAddress)'),
-          CloseHandle: lib.func('bool __stdcall CloseHandle(void* hObject)'),
+          OpenFileMappingA: lib.func(
+            "void* __stdcall OpenFileMappingA(uint32 dwDesiredAccess, int bInheritHandle, const char* lpName)",
+          ),
+          MapViewOfFile: lib.func(
+            "void* __stdcall MapViewOfFile(void* hFileMappingObject, uint32 dwDesiredAccess, uint32 dwFileOffsetHigh, uint32 dwFileOffsetLow, size_t dwNumberOfBytesToMap)",
+          ),
+          UnmapViewOfFile: lib.func(
+            "bool __stdcall UnmapViewOfFile(const void* lpBaseAddress)",
+          ),
+          CloseHandle: lib.func("bool __stdcall CloseHandle(void* hObject)"),
         } as Kernel32;
       }
 
       const handle = kernel32.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
-      console.log(`[R3EReader] OpenFileMappingA("${SHM_NAME}") → handle=${ptrStr(handle)}`);
+      console.log(
+        `[R3EReader] OpenFileMappingA("${SHM_NAME}") → handle=${ptrStr(handle)}`,
+      );
       if (isNullPtr(handle)) {
-        console.log('[R3EReader] handle is null — game not running or SHM not created yet');
+        console.log(
+          "[R3EReader] handle is null — game not running or SHM not created yet",
+        );
         scheduleReconnect();
         return;
       }
@@ -277,7 +344,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       const view = kernel32.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 0); // 0 = map entire file
       console.log(`[R3EReader] MapViewOfFile → view=${ptrStr(view)}`);
       if (isNullPtr(view)) {
-        console.log('[R3EReader] MapViewOfFile failed');
+        console.log("[R3EReader] MapViewOfFile failed");
         kernel32.CloseHandle(handle);
         scheduleReconnect();
         return;
@@ -286,10 +353,10 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       mapHandle = handle;
       viewPtr = view;
       connected = true;
-      emitter.emit('connected');
+      emitter.emit("connected");
       poll();
     } catch (err) {
-      console.error('[R3EReader] tryConnect error:', err);
+      console.error("[R3EReader] tryConnect error:", err);
       scheduleReconnect();
     }
   };
@@ -314,8 +381,8 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       gameInReplay: false,
       trackId: 1,
       layoutId: 1,
-      trackName: 'Zolder',
-      layoutName: 'GP',
+      trackName: "Zolder",
+      layoutName: "GP",
       layoutLength: trackLength,
       sessionType: 1,
       sessionPhase: 5,
@@ -330,7 +397,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       lapTimeCurrentSelf: fraction * 93,
       sectorTimesCurrentSelf: [30.1, 31.2, 31.2],
       carModelId: 7011,
-      carName: 'Porsche 911 GT3 R',
+      carName: "Porsche 911 GT3 R",
       carSpeed: isBraking ? 120 + Math.random() * 20 : 200 + Math.random() * 30,
       gear: isBraking ? 3 : 5,
       engineRpm: isBraking ? 5500 : 7200,
@@ -374,7 +441,12 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         gear: isBraking ? 3 : 5,
         abs: isBraking ? (Math.random() > 0.7 ? 1 : 0) : 0,
         tc: !isBraking ? (Math.random() > 0.9 ? 1 : 0) : 0,
-        bt: [520 + Math.random() * 80, 525 + Math.random() * 80, 420 + Math.random() * 60, 415 + Math.random() * 60],
+        bt: [
+          520 + Math.random() * 80,
+          525 + Math.random() * 80,
+          420 + Math.random() * 60,
+          415 + Math.random() * 60,
+        ],
         ts: Date.now(),
       });
     }
@@ -396,32 +468,36 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         lapTime: 92.5 + Math.random() * 3,
         sectorTimes: [30.1, 31.2, 31.2],
         frames: generateMockFrames(trackLength),
-        car: 'Porsche 911 GT3 R',
-        track: 'Zolder',
-        layout: 'GP',
+        car: "Porsche 911 GT3 R",
+        track: "Zolder",
+        layout: "GP",
         layoutLength: trackLength,
         valid: true,
       };
-      emitter.emit('lapComplete', lapData);
+      emitter.emit("lapComplete", lapData);
     }
 
-    const newSector = mockLapDist < trackLength * 0.33 ? 0
-      : mockLapDist < trackLength * 0.66 ? 1 : 2;
+    const newSector =
+      mockLapDist < trackLength * 0.33
+        ? 0
+        : mockLapDist < trackLength * 0.66
+          ? 1
+          : 2;
     if (newSector !== mockSector) {
-      emitter.emit('sectorComplete', mockSector, 30 + Math.random() * 2);
+      emitter.emit("sectorComplete", mockSector, 30 + Math.random() * 2);
       mockSector = newSector;
     }
 
     const frame = generateMockFrame(mockLapDist, trackLength);
-    emitter.emit('frame', frame);
+    emitter.emit("frame", frame);
 
     pollTimer = setTimeout(() => pollMock(), POLL_INTERVAL_MS);
   };
 
   const startMock = (): void => {
     connected = true;
-    emitter.emit('connected');
-    console.log('[R3EReader] Mock mode active');
+    emitter.emit("connected");
+    console.log("[R3EReader] Mock mode active");
     pollMock();
   };
 
@@ -434,8 +510,14 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 
     stop: () => {
       stopped = true;
-      if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
-      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      if (pollTimer) {
+        clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
       cleanup();
     },
 
@@ -446,17 +528,17 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 // Standalone test
 if (require.main === module) {
   const reader = createR3EReader();
-  reader.on('connected', () => console.log('[R3EReader] Connected'));
-  reader.on('disconnected', () => console.log('[R3EReader] Disconnected'));
-  reader.on('frame', (f: R3EFrame) => {
+  reader.on("connected", () => console.log("[R3EReader] Connected"));
+  reader.on("disconnected", () => console.log("[R3EReader] Disconnected"));
+  reader.on("frame", (f: R3EFrame) => {
     console.log(
       `[Frame] speed=${f.carSpeed.toFixed(1)}km/h gear=${f.gear} thr=${f.throttle.toFixed(2)} brk=${f.brake.toFixed(2)} dist=${f.lapDistance.toFixed(0)}m`,
     );
   });
-  reader.on('lapComplete', (lap: unknown) => console.log('[LapComplete]', lap));
-  reader.on('sectorComplete', (n: number, t: number) =>
+  reader.on("lapComplete", (lap: unknown) => console.log("[LapComplete]", lap));
+  reader.on("sectorComplete", (n: number, t: number) =>
     console.log(`[Sector ${n}] ${t.toFixed(3)}s`),
   );
   reader.start();
-  console.log('[R3EReader] Started. Press Ctrl+C to stop.');
+  console.log("[R3EReader] Started. Press Ctrl+C to stop.");
 }

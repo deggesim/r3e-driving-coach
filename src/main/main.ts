@@ -264,11 +264,10 @@ const setupPipeline = (): void => {
       });
 
       if (!calibrating) {
-        const apiKey = ipcMain.emit(
-          "config:get",
-          null,
-          "anthropicApiKey",
-        ) as unknown as string;
+        const apiKeyRow = db
+          .prepare("SELECT value FROM app_config WHERE key = ?")
+          .get("anthropicApiKey") as { value: string } | undefined;
+        const apiKey = apiKeyRow?.value;
         if (apiKey) coachEngine.updateApiKey(apiKey);
         coachEngine.analyzeLap(lap, deviations).catch(console.error);
       }
