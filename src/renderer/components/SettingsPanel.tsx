@@ -1,5 +1,13 @@
 import { useEffect, useCallback, useState } from "react";
-import { Button, Form, Spinner, Container, Row, Col } from "react-bootstrap";
+import {
+  Button,
+  Form,
+  Spinner,
+  Container,
+  Row,
+  Col,
+  Badge,
+} from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import { useConfig } from "../hooks/useIPC";
@@ -179,11 +187,7 @@ const SettingsPanel = () => {
                 />
               </Col>
               <Col xs="auto">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleSaveApiKey}
-                >
+                <Button variant="danger" onClick={handleSaveApiKey}>
                   {settingSaved === "apiKey" ? (
                     <>
                       <FontAwesomeIcon icon={faCheck} /> Salvata
@@ -200,27 +204,7 @@ const SettingsPanel = () => {
             </Form.Text>
           </Form.Group>
 
-          {/* Voce TTS */}
-          <Form.Group className="mb-4">
-            <Form.Label className="setting-section-label">
-              Voce TTS
-            </Form.Label>
-            <Row className="g-2 align-items-center">
-              <Col xs="auto">
-                <Button
-                  variant={ttsEnabled ? "success" : "secondary"}
-                  size="sm"
-                  onClick={() => setTtsEnabled(!ttsEnabled)}
-                >
-                  {ttsEnabled ? "Attiva" : "Disattiva"}
-                </Button>
-              </Col>
-            </Row>
-            <Form.Text>
-              Attiva/disattiva tutti gli output vocali (alert, debriefing,
-              coach).
-            </Form.Text>
-          </Form.Group>
+          <hr className="mb-4" />
 
           {/* Assistente Vocale */}
           <Form.Group className="mb-4">
@@ -233,17 +217,29 @@ const SettingsPanel = () => {
                   Nome assistente
                 </Form.Label>
               </Col>
-              <Col xs={4}>
+              <Col xs={3}>
                 <Form.Control
                   id="assistant-name"
                   type="text"
                   value={assistantName}
                   onChange={(e) => setAssistantName(e.target.value)}
                   placeholder="Aria"
-                  maxLength={32}
+                  maxLength={16}
                 />
               </Col>
+              <Col xs="auto">
+                <Button variant="danger" onClick={handleSaveAssistant}>
+                  {settingSaved === "assistant" ? (
+                    <>
+                      <FontAwesomeIcon icon={faCheck} /> Salvato
+                    </>
+                  ) : (
+                    "Salva"
+                  )}
+                </Button>
+              </Col>
             </Row>
+
             <Row className="g-2 align-items-center mb-2">
               <Col xs="auto">
                 <Form.Label className="mb-0">Tasto controller</Form.Label>
@@ -251,17 +247,12 @@ const SettingsPanel = () => {
               <Col xs="auto">
                 {isCapturingButton ? (
                   <>
-                    <Spinner
-                      animation="border"
-                      size="sm"
-                      className="me-2"
-                    />
+                    <Spinner animation="border" className="me-2" />
                     <span className="text-warning me-2">
                       Premi un tasto sul controller…
                     </span>
                     <Button
                       variant="secondary"
-                      size="sm"
                       onClick={() => setIsCapturingButton(false)}
                     >
                       Annulla
@@ -269,15 +260,13 @@ const SettingsPanel = () => {
                   </>
                 ) : (
                   <>
-                    <span className="badge bg-secondary me-2 fs-6 fw-normal">
-                      {getButtonLabel(gamepadButton)}{" "}
-                      <span className="text-white-50">
-                        ({gamepadButton})
-                      </span>
-                    </span>
+                    <Badge bg="secondary" className="me-2">
+                      {gamepadButton !== null
+                        ? getButtonLabel(gamepadButton)
+                        : "Nessun tasto assegnato"}
+                    </Badge>
                     <Button
                       variant="outline-light"
-                      size="sm"
                       onClick={() => setIsCapturingButton(true)}
                     >
                       Assegna
@@ -291,29 +280,14 @@ const SettingsPanel = () => {
                 )}
               </Col>
             </Row>
-            <Row className="g-2 align-items-center">
-              <Col xs="auto">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleSaveAssistant}
-                >
-                  {settingSaved === "assistant" ? (
-                    <>
-                      <FontAwesomeIcon icon={faCheck} /> Salvato
-                    </>
-                  ) : (
-                    "Salva"
-                  )}
-                </Button>
-              </Col>
-            </Row>
             <Form.Text>
               Premi il tasto configurato sul controller per attivare il
-              microfono e fare domande al coach. Il tasto 0 corrisponde al
-              tasto A su controller Xbox.
+              microfono e fare domande al coach. Il tasto 0 corrisponde al tasto
+              A su controller Xbox.
             </Form.Text>
           </Form.Group>
+
+          <hr className="mb-4" />
 
           {/* Azure TTS */}
           <Form.Group className="mb-4">
@@ -324,7 +298,6 @@ const SettingsPanel = () => {
               <Col xs="auto">
                 <Button
                   variant={azureTtsEnabled ? "success" : "secondary"}
-                  size="sm"
                   onClick={handleToggleAzure}
                 >
                   {azureTtsEnabled ? "Attivo" : "Disattivo"}
@@ -367,11 +340,7 @@ const SettingsPanel = () => {
                 </Form.Select>
               </Col>
               <Col xs="auto">
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleSaveAzureKey}
-                >
+                <Button variant="danger" onClick={handleSaveAzureKey}>
                   {settingSaved === "azureKey" ? "✓ Salvata" : "Salva"}
                 </Button>
               </Col>
@@ -380,13 +349,12 @@ const SettingsPanel = () => {
               <Col xs="auto">
                 <Button
                   variant="secondary"
-                  size="sm"
                   onClick={handleLoadVoices}
                   disabled={voicesLoading || !azureSpeechKey}
                 >
                   {voicesLoading ? (
                     <>
-                      <Spinner size="sm" className="me-1" />
+                      <Spinner className="me-1" />
                       Caricamento...
                     </>
                   ) : (
@@ -425,6 +393,25 @@ const SettingsPanel = () => {
               &quot;Ciao, sono {assistantName} e oggi sono il tuo insegnante
               virtuale&quot;. Richiede una sottoscrizione Azure Cognitive
               Services.
+            </Form.Text>
+          </Form.Group>
+
+          {/* Voce TTS */}
+          <Form.Group className="mb-4">
+            <Form.Label className="setting-section-label">Voce TTS</Form.Label>
+            <Row className="g-2 align-items-center">
+              <Col xs="auto">
+                <Button
+                  variant={ttsEnabled ? "success" : "secondary"}
+                  onClick={() => setTtsEnabled(!ttsEnabled)}
+                >
+                  {ttsEnabled ? "Attiva" : "Disattiva"}
+                </Button>
+              </Col>
+            </Row>
+            <Form.Text>
+              Attiva/disattiva tutti gli output vocali (alert, debriefing,
+              coach).
             </Form.Text>
           </Form.Group>
 
