@@ -43,6 +43,73 @@ const toArrayBuffer = (data: unknown): ArrayBuffer => {
 /** Max recording duration in ms before auto-stopping. */
 const MAX_RECORD_MS = 8000;
 
+/**
+ * Play a short activation beep (two ascending tones) to signal mic is live.
+ * Uses a throw-away AudioContext so it never interferes with TTS playback.
+ */
+const playActivationSound = (): void => {
+  try {
+    const ctx = new AudioContext();
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+
+    // Two short tones: 660 Hz then 880 Hz
+    const tones = [
+      { freq: 660, start: 0, duration: 0.08 },
+      { freq: 880, start: 0.1, duration: 0.1 },
+    ];
+
+    for (const { freq, start, duration } of tones) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.25, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + duration + 0.01);
+    }
+
+    // Close context shortly after playback ends
+    setTimeout(() => ctx.close(), 400);
+  } catch {
+    // Non-critical — ignore if AudioContext is unavailable
+  }
+};
+
+/**
+ * Play a short deactivation sound (two descending tones) to signal mic has stopped.
+ */
+const playDeactivationSound = (): void => {
+  try {
+    const ctx = new AudioContext();
+
+    const tones = [
+      { freq: 880, start: 0, duration: 0.08 },
+      { freq: 660, start: 0.1, duration: 0.1 },
+    ];
+
+    for (const { freq, start, duration } of tones) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.25, ctx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(ctx.currentTime + start);
+      osc.stop(ctx.currentTime + start + duration + 0.01);
+    }
+
+    setTimeout(() => ctx.close(), 400);
+  } catch {
+    // Non-critical — ignore if AudioContext is unavailable
+  }
+};
+
 /** Pick the best supported MIME type for MediaRecorder. */
 const pickMimeType = (): string => {
   for (const type of [
@@ -144,6 +211,7 @@ export const useVoiceCoach = ({
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
 
+    playActivationSound();
     setState("listening");
     setTranscript("");
     setAnswer("");
@@ -171,6 +239,7 @@ export const useVoiceCoach = ({
         };
 
         recorder.onstop = () => {
+          playDeactivationSound();
           // Release mic
           stream.getTracks().forEach((t) => t.stop());
           streamRef.current = null;
