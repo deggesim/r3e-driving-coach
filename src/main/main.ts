@@ -64,7 +64,12 @@ const createWindow = (): void => {
     },
   });
 
-  // Allow microphone access for Web Speech API (SpeechRecognition)
+  // Allow microphone access (needed for getUserMedia in sandboxed renderer).
+  // setPermissionCheckHandler is the synchronous guard that runs before the
+  // async setPermissionRequestHandler — both must allow "media".
+  mainWindow.webContents.session.setPermissionCheckHandler(
+    (_wc, permission) => permission === "media",
+  );
   mainWindow.webContents.session.setPermissionRequestHandler(
     (_wc, permission, callback) => {
       callback(permission === "media");
@@ -235,6 +240,8 @@ const setupPipeline = (): void => {
   recorder.on(
     "lapRecorded",
     async (lap: LapRecord, { calibrating }: { calibrating: boolean }) => {
+      console.log("lap", lap);
+
       pushToRenderer("r3e:lapComplete", lap);
       pushStatus(recorder);
 
@@ -268,8 +275,11 @@ const setupPipeline = (): void => {
           .prepare("SELECT value FROM app_config WHERE key = ?")
           .get("anthropicApiKey") as { value: string } | undefined;
         const apiKey = apiKeyRow?.value;
+        console.log("apiKey", apiKey);
         if (apiKey) coachEngine.updateApiKey(apiKey);
-        coachEngine.analyzeLap(lap, deviations).catch(console.error);
+        coachEngine.analyzeLap(lap, deviations).catch((err) => {
+          console.error("[CoachEngine] Analysis error:", err);
+        });
       }
     },
   );
@@ -384,28 +394,35 @@ const setupPipeline = (): void => {
   });
 
   // ─── Azure STT IPC
-  ipcMain.handle("stt:transcribe", async (_event, audioBuffer: ArrayBuffer) => {
-    const keyRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureSpeechKey") as { value: string } | undefined;
-    const regionRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureRegion") as { value: string } | undefined;
+  ipcMain.handle(
+    "stt:transcribe",
+    async (_event, audioBuffer: ArrayBuffer, mimeType?: string) => {
+      const keyRow = db
+        .prepare("SELECT value FROM app_config WHERE key = ?")
+        .get("azureSpeechKey") as { value: string } | undefined;
+      const regionRow = db
+        .prepare("SELECT value FROM app_config WHERE key = ?")
+        .get("azureRegion") as { value: string } | undefined;
 
-    const key = keyRow?.value;
-    const region = regionRow?.value;
+      const key = keyRow?.value;
+      const region = regionRow?.value;
 
-    if (!key || !region) {
-      throw new Error(
-        "Azure Speech Key e Region non configurati nelle impostazioni",
-      );
-    }
+      if (!key || !region) {
+        throw new Error(
+          "Azure Speech Key e Region non configurati nelle impostazioni",
+        );
+      }
 
-    return transcribeAzure(Buffer.from(audioBuffer), key, region);
-  });
+      const buf = Buffer.from(audioBuffer);
+      console.log(`[STT IPC] Received ${buf.byteLength} bytes, mimeType=${mimeType ?? "(default)"}`);
+      return transcribeAzure(buf, key, region, mimeType);
+    },
+  );
 
   // ─── Voice Query IPC
   ipcMain.handle("coach:voiceQuery", async (_event, question: string) => {
+    console.log("question", question);
+
     const coach = getVoiceCoach();
     if (!coach) {
       pushToRenderer("coach:voiceDone", {

@@ -69,16 +69,22 @@ export const synthesizeAzure = async (
  * @param audioBuffer  Raw audio bytes (WebM/Opus from MediaRecorder)
  * @param key          Azure Speech subscription key
  * @param region       Azure region (e.g. "westeurope")
+ * @param mimeType     MIME type of the audio (must match what MediaRecorder produced)
  * @returns            Recognized text, or empty string if nothing was heard
  */
 export const transcribeAzure = async (
   audioBuffer: Buffer,
   key: string,
   region: string,
+  mimeType = "audio/wav",
 ): Promise<string> => {
   const url =
     `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation` +
     `/cognitiveservices/v1?language=it-IT&format=simple`;
+
+  console.log(
+    `[Azure STT] Sending ${audioBuffer.byteLength} bytes as ${mimeType}`,
+  );
 
   const { data } = await axios.post<{ RecognitionStatus: string; DisplayText?: string }>(
     url,
@@ -86,13 +92,17 @@ export const transcribeAzure = async (
     {
       headers: {
         "Ocp-Apim-Subscription-Key": key,
-        "Content-Type": "audio/webm;codecs=opus",
+        "Content-Type": mimeType,
       },
     },
   );
 
+  console.log("[Azure STT] Status:", data.RecognitionStatus, "| Text:", data.DisplayText ?? "(none)");
+
   if (data.RecognitionStatus === "Success") {
     return data.DisplayText ?? "";
   }
-  return "";
+
+  // Surface the Azure status so callers can distinguish "silence" from errors
+  throw new Error(`Azure STT: ${data.RecognitionStatus}`);
 };
