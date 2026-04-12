@@ -74,6 +74,18 @@ const initSchema = (db: Database.Database): void => {
       value TEXT NOT NULL
     );
   `);
+
+  // Migrations: add setup columns if they don't exist yet
+  const lapCols = db
+    .prepare("PRAGMA table_info(laps)")
+    .all() as Array<{ name: string }>;
+  const colNames = lapCols.map((c) => c.name);
+  if (!colNames.includes("setup_json")) {
+    db.exec("ALTER TABLE laps ADD COLUMN setup_json TEXT");
+  }
+  if (!colNames.includes("setup_screenshots")) {
+    db.exec("ALTER TABLE laps ADD COLUMN setup_screenshots TEXT");
+  }
 };
 
 export const getDb = (userDataPath: string): Database.Database => {

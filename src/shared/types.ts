@@ -133,7 +133,25 @@ export type LapRow = {
   valid: boolean;
   analysis_json: string | null;
   pdf_path: string | null;
+  setup_json: string | null;
+  setup_screenshots: string | null;
   recorded_at: string;
+};
+
+// --- Setup decoding ---
+
+export type SetupParam = {
+  category: string;
+  parameter: string;
+  value: string;
+};
+
+export type SetupData = {
+  carVerified: boolean;
+  carFound: string;
+  setupText: string;          // free-form markdown summary
+  params: SetupParam[];       // structured list of parameters
+  screenshots: string[];      // filenames used
 };
 
 // --- Analysis result from Claude API ---
@@ -288,6 +306,12 @@ export type ElectronAPI = {
   windowMinimize: () => void;
   windowMaximize: () => void;
   removeAllListeners: (channel: string) => void;
+
+  // Setup analysis
+  listScreenshots: () => Promise<Array<{ name: string; thumbnailB64: string }>>;
+  decodeSetup: (params: { filenames: string[]; expectedCar: string }) => Promise<SetupData>;
+  saveSetup: (params: { lapId: number; setup: SetupData }) => Promise<void>;
+  exportPdf: (params: { lapId: number }) => Promise<string | null>;
 };
 
 declare global {

@@ -69,4 +69,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);
   },
+
+  // Setup analysis
+  listScreenshots: () =>
+    ipcRenderer.invoke('setup:listScreenshots'),
+  decodeSetup: (params: { filenames: string[]; expectedCar: string }) =>
+    ipcRenderer.invoke('setup:decodeSetup', params),
+  saveSetup: (params: { lapId: number; setup: unknown }) =>
+    ipcRenderer.invoke('setup:saveSetup', params),
+  exportPdf: (params: { lapId: number }) =>
+    ipcRenderer.invoke('setup:exportPdf', params),
 });
