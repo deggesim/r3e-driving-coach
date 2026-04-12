@@ -12,7 +12,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import { createR3EReader, type R3EReader } from "./r3e/r3e-reader";
-import { createLapRecorder, type LapRecorder } from "./r3e/lap-recorder";
+import { createLapRecorder } from "./r3e/lap-recorder";
 import { createZoneTracker } from "./r3e/zone-tracker";
 import {
   createAdaptiveBaseline,
@@ -132,6 +132,7 @@ const setupPipeline = (): void => {
     >,
   );
 
+  let currentCar = "";
   let currentTrack = "";
   let currentLayout = "";
   let lastDeviations: Deviation[] | null = null;
@@ -161,6 +162,18 @@ const setupPipeline = (): void => {
   let ruleEngine = createRuleEngine(dispatcher, baseline, lookupCorner);
 
   const recorder = createLapRecorder(baseline.isReady());
+
+  const pushStatus = (): void => {
+    const status: R3EStatus = {
+      connected: reader !== null,
+      calibrating: recorder.isCalibrating(),
+      lapsToCalibration: recorder.lapsToCalibration(),
+      car: currentCar || null,
+      track: currentTrack || null,
+      layout: currentLayout || null,
+    };
+    pushToRenderer("r3e:status", status);
+  };
 
   const coachEngine = createCoachEngine({
     db,
@@ -197,14 +210,15 @@ const setupPipeline = (): void => {
   reader = createR3EReader();
 
   reader.on("connected", () => {
-    pushStatus(recorder);
+    pushStatus();
   });
 
   reader.on("disconnected", () => {
-    pushStatus(recorder);
+    pushStatus();
   });
 
   reader.on("frame", (frame: R3EFrame) => {
+    if (frame.carName) currentCar = frame.carName;
     if (frame.trackName) currentTrack = frame.trackName;
     if (frame.layoutName) currentLayout = frame.layoutName;
 
@@ -243,7 +257,7 @@ const setupPipeline = (): void => {
       console.log("lap", lap);
 
       pushToRenderer("r3e:lapComplete", lap);
-      pushStatus(recorder);
+      pushStatus();
 
       const deviations = baseline.ingestLap(
         lap.zones,
@@ -285,7 +299,7 @@ const setupPipeline = (): void => {
   );
 
   recorder.on("calibrationComplete", () => {
-    pushStatus(recorder);
+    pushStatus();
   });
 
   // ─── Config IPC (API key)
@@ -486,31 +500,15 @@ const setupPipeline = (): void => {
   // Start reader
   reader.start();
 
-  pushStatus(recorder);
+  pushStatus();
 
   // Re-push status once the renderer has finished loading its IPC listeners.
   // reader.start() is synchronous — the 'connected' event fires before the
   // renderer mounts useIPC, so the first pushStatus is lost. This ensures the
   // renderer receives the correct state after load.
   mainWindow?.webContents.once("did-finish-load", () => {
-    pushStatus(recorder);
+    pushStatus();
   });
-};
-
-// ──────────────────────────────────────────────
-// Status push
-// ──────────────────────────────────────────────
-
-const pushStatus = (recorder: LapRecorder): void => {
-  const status: R3EStatus = {
-    connected: reader !== null,
-    calibrating: recorder.isCalibrating(),
-    lapsToCalibration: recorder.lapsToCalibration(),
-    car: null,
-    track: null,
-    layout: null,
-  };
-  pushToRenderer("r3e:status", status);
 };
 
 // ──────────────────────────────────────────────
