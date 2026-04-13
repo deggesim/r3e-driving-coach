@@ -52,8 +52,8 @@ export const buildPrompt = (
 
   // Header
   parts.push(`## Dati Giro ${lap.lapNumber}`);
-  parts.push(`- **Auto**: ${lap.car}`);
-  parts.push(`- **Circuito**: ${lap.track} (${lap.layout})`);
+  parts.push(`- **Auto**: ${lap.carName ?? lap.car}`);
+  parts.push(`- **Circuito**: ${lap.trackName ?? lap.track} (${lap.layoutName ?? lap.layout})`);
   parts.push(`- **Lunghezza**: ${lap.layoutLength.toFixed(0)}m`);
   parts.push(`- **Tempo giro**: ${formatLapTime(lap.lapTime)}`);
   parts.push(`- **Settori**: ${lap.sectorTimes.map(formatLapTime).join(' | ')}`);

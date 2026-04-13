@@ -31,6 +31,12 @@ import {
   transcribeAzure,
 } from "./tts/azure-tts";
 import { getDb, seedCornerNames, getCornerName } from "./db/db";
+import {
+  loadR3EData,
+  getCarName,
+  getTrackName,
+  getLayoutName,
+} from "./r3e/r3e-data-loader";
 import type {
   LapRecord,
   LapAnalysis,
@@ -125,6 +131,9 @@ const setupPipeline = (): void => {
   const userDataPath = app.getPath("userData");
   const db = getDb(userDataPath);
 
+  // Load r3e-data.json for ID → name resolution. Non-fatal if missing.
+  loadR3EData();
+
   seedCornerNames(
     db,
     cornerNamesData as Record<
@@ -138,8 +147,14 @@ const setupPipeline = (): void => {
   let currentLayout = "";
   let lastDeviations: Deviation[] | null = null;
 
+  // corner_names seed data uses track/layout names, so resolve IDs before lookup
   const lookupCorner = (dist: number): string | null =>
-    getCornerName(db, currentTrack, currentLayout, dist);
+    getCornerName(
+      db,
+      currentTrack ? getTrackName(Number(currentTrack)) : currentTrack,
+      currentLayout ? getLayoutName(Number(currentLayout)) : currentLayout,
+      dist,
+    );
 
   const buildCornerMap = (): Map<number, string> => {
     const map = new Map<number, string>();
@@ -165,13 +180,14 @@ const setupPipeline = (): void => {
   const recorder = createLapRecorder(baseline.isReady());
 
   const pushStatus = (): void => {
+    // IDs are stored internally; resolve to names for UI display
     const status: R3EStatus = {
       connected: reader !== null,
       calibrating: recorder.isCalibrating(),
       lapsToCalibration: recorder.lapsToCalibration(),
-      car: currentCar || null,
-      track: currentTrack || null,
-      layout: currentLayout || null,
+      car: currentCar ? getCarName(Number(currentCar)) : null,
+      track: currentTrack ? getTrackName(Number(currentTrack)) : null,
+      layout: currentLayout ? getLayoutName(Number(currentLayout)) : null,
     };
     pushToRenderer("r3e:status", status);
   };
@@ -219,9 +235,9 @@ const setupPipeline = (): void => {
   });
 
   reader.on("frame", (frame: R3EFrame) => {
-    if (frame.carName) currentCar = frame.carName;
-    if (frame.trackName) currentTrack = frame.trackName;
-    if (frame.layoutName) currentLayout = frame.layoutName;
+    if (frame.carModelId > 0) currentCar = String(frame.carModelId);
+    if (frame.trackId > 0) currentTrack = String(frame.trackId);
+    if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
 
     zoneTracker.update(frame);
     ruleEngine.processFrame(frame);
@@ -273,13 +289,24 @@ const setupPipeline = (): void => {
       // Keep last deviations for voice coach context
       lastDeviations = deviations;
 
+      // Annotate lap with resolved display names before passing to coach/voice
+      const lapWithNames: LapRecord = {
+        ...lap,
+        carName: getCarName(Number(lap.car)),
+        trackName: getTrackName(Number(lap.track)),
+        layoutName: getLayoutName(Number(lap.layout)),
+      };
+
       // Update voice coach context with the completed lap
-      const zonesJson = JSON.stringify(lap.zones);
+      const zonesJson = JSON.stringify(lapWithNames.zones);
       const cornerMap = buildCornerMap();
       voiceCoach?.updateContext({
-        car: lap.car,
-        track: lap.track,
-        layout: lap.layout,
+        car: lapWithNames.car,
+        track: lapWithNames.track,
+        layout: lapWithNames.layout,
+        carName: lapWithNames.carName,
+        trackName: lapWithNames.trackName,
+        layoutName: lapWithNames.layoutName,
         lastLapZones: zonesJson,
         deviations: lastDeviations,
         cornerMap,
@@ -292,7 +319,7 @@ const setupPipeline = (): void => {
         const apiKey = apiKeyRow?.value;
         console.log("apiKey", apiKey);
         if (apiKey) coachEngine.updateApiKey(apiKey);
-        coachEngine.analyzeLap(lap, deviations).catch((err) => {
+        coachEngine.analyzeLap(lapWithNames, deviations).catch((err) => {
           console.error("[CoachEngine] Analysis error:", err);
         });
       }
@@ -670,7 +697,7 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
 
     const { canceled, filePath } = await dialog.showSaveDialog({
       title: "Salva analisi PDF",
-      defaultPath: `giro${lap.lap_number}_${lap.car.replace(/\s+/g, "_")}.pdf`,
+      defaultPath: `giro${lap.lap_number}_car${lap.car}_track${lap.track}.pdf`,
       filters: [{ name: "PDF", extensions: ["pdf"] }],
     });
 

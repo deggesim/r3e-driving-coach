@@ -89,9 +89,12 @@ export type LapRecord = {
   lapTime: number;      // seconds
   sectorTimes: number[]; // [s1, s2, s3] seconds
   valid: boolean;
-  car: string;
-  track: string;
-  layout: string;
+  car: string;          // numeric ID as string (e.g. "6349")
+  track: string;        // numeric ID as string (e.g. "1683")
+  layout: string;       // numeric ID as string (e.g. "1684")
+  carName?: string;     // resolved display name (e.g. "Porsche 911 GT3 R")
+  trackName?: string;   // resolved display name (e.g. "Circuit Zolder")
+  layoutName?: string;  // resolved display name (e.g. "Grand Prix")
   layoutLength: number; // meters
   frames: CompactFrame[];
   zones: ZoneData[];

@@ -15,9 +15,12 @@ Il pilota sta guidando in questo momento — sii pratico, usa dati numerici, cit
 Non ripetere la domanda. Non usare elenchi puntati. Rispondi come se stessi parlando al pilota in diretta radio.`;
 
 type SessionContext = {
-  car: string;
-  track: string;
-  layout: string;
+  car: string;      // numeric ID as string, used for DB queries
+  track: string;    // numeric ID as string, used for DB queries
+  layout: string;   // numeric ID as string, used for DB queries
+  carName: string;  // resolved display name
+  trackName: string;
+  layoutName: string;
   laps: LapRow[];
   lastLapZones: string | null;
   deviations: Deviation[] | null;
@@ -40,8 +43,8 @@ const buildVoiceContext = (ctx: SessionContext): string => {
   const parts: string[] = [];
 
   parts.push(`## Sessione corrente`);
-  parts.push(`- Auto: ${ctx.car}`);
-  parts.push(`- Circuito: ${ctx.track} (${ctx.layout})`);
+  parts.push(`- Auto: ${ctx.carName}`);
+  parts.push(`- Circuito: ${ctx.trackName} (${ctx.layoutName})`);
   parts.push(`- Numero giri completati: ${ctx.laps.length}`);
 
   if (ctx.laps.length > 0) {
@@ -134,9 +137,12 @@ export const createVoiceCoachEngine = (
 ): VoiceCoachEngine => {
   const client = new Anthropic({ apiKey });
   const currentContext: SessionContext = {
-    car: "Sconosciuta",
-    track: "Sconosciuto",
+    car: "",
+    track: "",
     layout: "",
+    carName: "Sconosciuta",
+    trackName: "Sconosciuto",
+    layoutName: "",
     laps: [],
     lastLapZones: null,
     deviations: null,
@@ -147,7 +153,7 @@ export const createVoiceCoachEngine = (
    * Refresh laps from DB for the current car/track.
    */
   const refreshLaps = (): void => {
-    if (currentContext.car === "Sconosciuta") return;
+    if (!currentContext.car) return;
     try {
       const rows = db
         .prepare(
@@ -168,6 +174,9 @@ export const createVoiceCoachEngine = (
       if (ctx.car !== undefined) currentContext.car = ctx.car;
       if (ctx.track !== undefined) currentContext.track = ctx.track;
       if (ctx.layout !== undefined) currentContext.layout = ctx.layout;
+      if (ctx.carName !== undefined) currentContext.carName = ctx.carName;
+      if (ctx.trackName !== undefined) currentContext.trackName = ctx.trackName;
+      if (ctx.layoutName !== undefined) currentContext.layoutName = ctx.layoutName;
       if (ctx.lastLapZones !== undefined)
         currentContext.lastLapZones = ctx.lastLapZones;
       if (ctx.deviations !== undefined)

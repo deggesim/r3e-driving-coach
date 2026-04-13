@@ -201,9 +201,9 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
   };
 
   const detectBoundaries = (frame: R3EFrame): void => {
-    if (frame.carName) currentCar = frame.carName;
-    if (frame.trackName) currentTrack = frame.trackName;
-    if (frame.layoutName) currentLayout = frame.layoutName;
+    if (frame.carModelId > 0) currentCar = String(frame.carModelId);
+    if (frame.trackId > 0) currentTrack = String(frame.trackId);
+    if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
     if (frame.layoutLength > 0) currentLayoutLength = frame.layoutLength;
 
     if (!frame.gamePaused && !frame.gameInMenus && !frame.inPitlane) {
@@ -379,10 +379,10 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       gamePaused: false,
       gameInMenus: false,
       gameInReplay: false,
-      trackId: 1,
-      layoutId: 1,
-      trackName: "Zolder",
-      layoutName: "GP",
+      trackId: 1683,
+      layoutId: 1684,
+      trackName: "Circuit Zolder",
+      layoutName: "Grand Prix",
       layoutLength: trackLength,
       sessionType: 1,
       sessionPhase: 5,
@@ -396,7 +396,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       lapTimePreviousSelf: 93.0,
       lapTimeCurrentSelf: fraction * 93,
       sectorTimesCurrentSelf: [30.1, 31.2, 31.2],
-      carModelId: 7011,
+      carModelId: 6349,
       carName: "Porsche 911 GT3 R",
       carSpeed: isBraking ? 120 + Math.random() * 20 : 200 + Math.random() * 30,
       gear: isBraking ? 3 : 5,
@@ -468,9 +468,9 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         lapTime: 92.5 + Math.random() * 3,
         sectorTimes: [30.1, 31.2, 31.2],
         frames: generateMockFrames(trackLength),
-        car: "Porsche 911 GT3 R",
-        track: "Zolder",
-        layout: "GP",
+        car: "6349",
+        track: "1683",
+        layout: "1684",
         layoutLength: trackLength,
         valid: true,
       };
