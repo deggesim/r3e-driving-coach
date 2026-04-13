@@ -79,4 +79,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('setup:saveSetup', params),
   exportPdf: (params: { lapId: number }) =>
     ipcRenderer.invoke('setup:exportPdf', params),
+  exportPdfFromData: (params: {
+    lapNumber: number;
+    lapTime: number;
+    sector1: number | null;
+    sector2: number | null;
+    sector3: number | null;
+    car: string;
+    track: string;
+    layout: string;
+    recordedAt: string;
+    analysisJson: string | null;
+    setupJson: string | null;
+  }) => ipcRenderer.invoke('setup:exportPdfFromData', params),
 });

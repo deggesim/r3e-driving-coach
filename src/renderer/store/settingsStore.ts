@@ -21,6 +21,9 @@ type SettingsStore = {
   // UI state
   settingSaved: string | null;
 
+  // Dev / test
+  mockHistoryMode: boolean;
+
   // Setters
   setApiKey: (v: string) => void;
   setAssistantName: (v: string) => void;
@@ -30,6 +33,7 @@ type SettingsStore = {
   setAzureSpeechKey: (v: string) => void;
   setAzureRegion: (v: string) => void;
   setAzureVoiceName: (v: string) => void;
+  setMockHistoryMode: (v: boolean) => void;
   showSaved: (key: string) => void;
   clearSaved: () => void;
 };
@@ -44,6 +48,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   azureRegion: "westeurope",
   azureVoiceName: "",
   settingSaved: null,
+  mockHistoryMode: false,
 
   setApiKey: (apiKey) => set({ apiKey }),
   setAssistantName: (assistantName) => set({ assistantName }),
@@ -53,6 +58,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   setAzureSpeechKey: (azureSpeechKey) => set({ azureSpeechKey }),
   setAzureRegion: (azureRegion) => set({ azureRegion }),
   setAzureVoiceName: (azureVoiceName) => set({ azureVoiceName }),
+  setMockHistoryMode: (mockHistoryMode) => set({ mockHistoryMode }),
   showSaved: (key) => {
     set({ settingSaved: key });
     setTimeout(() => set({ settingSaved: null }), 2000);

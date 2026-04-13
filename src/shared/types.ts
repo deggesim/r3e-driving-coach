@@ -312,6 +312,19 @@ export type ElectronAPI = {
   decodeSetup: (params: { filenames: string[]; expectedCar: string }) => Promise<SetupData>;
   saveSetup: (params: { lapId: number; setup: SetupData }) => Promise<void>;
   exportPdf: (params: { lapId: number }) => Promise<string | null>;
+  exportPdfFromData: (params: {
+    lapNumber: number;
+    lapTime: number;
+    sector1: number | null;
+    sector2: number | null;
+    sector3: number | null;
+    car: string;
+    track: string;
+    layout: string;
+    recordedAt: string;
+    analysisJson: string | null;
+    setupJson: string | null;
+  }) => Promise<string | null>;
 };
 
 declare global {

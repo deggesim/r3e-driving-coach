@@ -1,7 +1,7 @@
 /**
  * CoachEngine — calls Claude API per lap, saves analysis to SQLite, generates PDF.
  *
- * Uses claude-sonnet-4-6 with streaming (as per project spec).
+ * Uses claude-haiku-4-5-20251001 with streaming (as per project spec).
  * Emits the Template v3 analysis via the onAnalysis callback.
  */
 
@@ -43,7 +43,7 @@ const formatLapTime = (seconds: number): string => {
 export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
   const db = options.db;
   const onAnalysis = options.onAnalysis;
-  const model = options.model ?? "claude-sonnet-4-6";
+  const model = options.model ?? "claude-haiku-4-5-20251001";
   let client = new Anthropic({ apiKey: options.apiKey ?? process.env.ANTHROPIC_API_KEY });
   let cornerNames = new Map<number, string>();
 

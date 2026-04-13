@@ -284,7 +284,7 @@ const setupPipeline = (): void => {
         cornerMap,
       });
 
-      if (!calibrating) {
+      if (!calibrating && lap.valid) {
         const apiKeyRow = db
           .prepare("SELECT value FROM app_config WHERE key = ?")
           .get("anthropicApiKey") as { value: string } | undefined;
@@ -564,7 +564,7 @@ Estrai TUTTI i parametri di setup visibili: sospensioni, freni, aerodinamica, tr
 Restituisci solo il JSON, senza testo aggiuntivo.`;
 
       const response = await client.messages.create({
-        model: "claude-sonnet-4-6",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 4000,
         system: systemPrompt,
         messages: [
@@ -799,6 +799,182 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
     fs.writeFileSync(filePath, pdfBuffer);
     return filePath;
   });
+
+  // ─── Setup: export PDF from raw data (used by mock lap in dev/test mode)
+  ipcMain.handle(
+    "setup:exportPdfFromData",
+    async (
+      _event,
+      data: {
+        lapNumber: number;
+        lapTime: number;
+        sector1: number | null;
+        sector2: number | null;
+        sector3: number | null;
+        car: string;
+        track: string;
+        layout: string;
+        recordedAt: string;
+        analysisJson: string | null;
+        setupJson: string | null;
+      },
+    ) => {
+      const { dialog } = await import("electron");
+      const fs = await import("fs");
+      const { jsPDF } = await import("jspdf");
+
+      const analysis = data.analysisJson ? JSON.parse(data.analysisJson) : null;
+      const setup = data.setupJson ? JSON.parse(data.setupJson) : null;
+
+      const fmtTime = (s: number | null): string => {
+        if (!s || s <= 0) return "--:--";
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return m > 0 ? `${m}:${sec.toFixed(3).padStart(6, "0")}` : `${sec.toFixed(3)}s`;
+      };
+
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+      const ml = 15;
+      const mr = 15;
+      const cw = W - ml - mr;
+      let y = 0;
+
+      const checkPage = (needed = 10): void => {
+        if (y + needed > H - 15) {
+          doc.addPage();
+          y = 15;
+        }
+      };
+
+      // Header
+      doc.setFillColor(15, 15, 15);
+      doc.rect(0, 0, W, 30, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(232, 69, 26);
+      doc.text(`${data.car}`, ml, 12);
+      doc.setFontSize(10);
+      doc.setTextColor(200, 200, 200);
+      doc.text(`${data.track}${data.layout ? " " + data.layout : ""} | Giro ${data.lapNumber}: ${fmtTime(data.lapTime)}`, ml, 19);
+      const sessionDate = new Date(data.recordedAt).toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric" });
+      doc.text(`${sessionDate} | Mock`, ml, 25);
+      y = 38;
+
+      // Sector row
+      doc.setFillColor(36, 36, 36);
+      doc.rect(0, 30, W, 10, "F");
+      doc.setFontSize(9);
+      doc.setTextColor(136, 136, 136);
+      const sectors = `S1: ${fmtTime(data.sector1)}   S2: ${fmtTime(data.sector2)}   S3: ${fmtTime(data.sector3)}`;
+      doc.text(sectors, ml, 36);
+      doc.setTextColor(232, 69, 26);
+      doc.text(`Tempo: ${fmtTime(data.lapTime)}`, W - mr - 40, 36);
+      y = 46;
+
+      const drawSectionHeader = (title: string): void => {
+        checkPage(12);
+        doc.setFillColor(36, 36, 36);
+        doc.rect(ml - 2, y - 4, cw + 4, 8, "F");
+        doc.setDrawColor(232, 69, 26);
+        doc.setLineWidth(0.5);
+        doc.line(ml - 2, y - 4, ml - 2, y + 4);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(232, 69, 26);
+        doc.text(title, ml + 2, y + 0.5);
+        y += 7;
+        doc.setTextColor(220, 220, 220);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+      };
+
+      if (analysis?.templateV3) {
+        const sections = analysis.templateV3.split(/(?=\[(\d)\])/);
+        for (const sect of sections) {
+          const headerMatch = sect.match(/^\[(\d)\]\s*([^\n]*)/);
+          if (headerMatch) {
+            drawSectionHeader(`[${headerMatch[1]}] ${headerMatch[2]}`);
+            const body = sect.replace(/^\[(\d)\][^\n]*\n?/, "").trim();
+            const lines = doc.splitTextToSize(body, cw);
+            for (const line of lines) {
+              checkPage(5);
+              doc.setFont("helvetica", "normal");
+              doc.setTextColor(200, 200, 200);
+              doc.setFontSize(8.5);
+              doc.text(line, ml, y);
+              y += 4.5;
+            }
+            y += 3;
+          }
+        }
+      }
+
+      if (setup?.params?.length) {
+        checkPage(14);
+        drawSectionHeader("Setup Auto");
+        doc.setFillColor(50, 50, 50);
+        doc.rect(ml, y - 3, cw, 7, "F");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(180, 180, 180);
+        const colW = [40, 80, cw - 120];
+        doc.text("Categoria", ml + 2, y + 1);
+        doc.text("Parametro", ml + colW[0] + 2, y + 1);
+        doc.text("Valore", ml + colW[0] + colW[1] + 2, y + 1);
+        y += 7;
+        let rowAlt = false;
+        for (const p of setup.params as Array<{ category: string; parameter: string; value: string }>) {
+          checkPage(6);
+          if (rowAlt) {
+            doc.setFillColor(28, 28, 28);
+            doc.rect(ml, y - 3, cw, 5.5, "F");
+          }
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(190, 190, 190);
+          doc.text(String(p.category ?? ""), ml + 2, y + 0.5, { maxWidth: colW[0] - 4 });
+          doc.text(String(p.parameter ?? ""), ml + colW[0] + 2, y + 0.5, { maxWidth: colW[1] - 4 });
+          doc.setTextColor(232, 200, 26);
+          doc.text(String(p.value ?? ""), ml + colW[0] + colW[1] + 2, y + 0.5, { maxWidth: colW[2] - 4 });
+          y += 5.5;
+          rowAlt = !rowAlt;
+        }
+        y += 4;
+      }
+
+      // Footer
+      const totalPages = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(46, 46, 46);
+        doc.setLineWidth(0.3);
+        doc.line(ml, H - 10, W - mr, H - 10);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(100, 100, 100);
+        doc.text(
+          "Analisi generata da R3E Driving Coach • Simulatore: RaceRoom Racing Experience • Telemetria: Second Monitor",
+          ml,
+          H - 6,
+        );
+        doc.text(`${i} / ${totalPages}`, W - mr, H - 6, { align: "right" });
+      }
+
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: "Salva analisi PDF (mock)",
+        defaultPath: `giro${data.lapNumber}_${data.car.replace(/\s+/g, "_")}_mock.pdf`,
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      });
+
+      if (canceled || !filePath) return null;
+
+      const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
+      fs.writeFileSync(filePath, pdfBuffer);
+      return filePath;
+    },
+  );
 
   // Start reader
   reader.start();

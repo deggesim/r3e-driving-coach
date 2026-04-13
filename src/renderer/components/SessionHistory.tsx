@@ -5,12 +5,14 @@
  * "Esporta PDF" calls the main-process PDF generator with a native save dialog.
  */
 
-import { faCheck, faFilePdf, faGear, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faFilePdf, faFlask, faGear, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
 import { useEffect, useState } from "react";
 import { Badge, Button, Col, Row, Spinner } from "react-bootstrap";
 import type { LapRow, R3EStatus, SetupData, SetupParam } from "../../shared/types";
+import { MOCK_CAR, MOCK_LAP, MOCK_TRACK } from "../mocks/mockLap";
+import { useSettingsStore } from "../store/settingsStore";
 import ScreenshotPicker from "./ScreenshotPicker";
 
 type SessionHistoryProps = {
@@ -32,11 +34,12 @@ const renderMarkdown = (md: string): string =>
 type DetailPanelProps = {
   lap: LapRow;
   car: string;
+  track: string;
   onClose: () => void;
   onSetupSaved: (lapId: number, setup: SetupData) => void;
 };
 
-const DetailPanel = ({ lap, car, onClose, onSetupSaved }: DetailPanelProps) => {
+const DetailPanel = ({ lap, car, track, onClose, onSetupSaved }: DetailPanelProps) => {
   const [showPicker, setShowPicker] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
@@ -55,7 +58,25 @@ const DetailPanel = ({ lap, car, onClose, onSetupSaved }: DetailPanelProps) => {
     setExporting(true);
     setExportMsg(null);
     try {
-      const path = await window.electronAPI.exportPdf({ lapId: lap.id });
+      let path: string | null;
+      if (lap.id === -1) {
+        // Mock lap: passa i dati grezzi invece di un lapId reale
+        path = await window.electronAPI.exportPdfFromData({
+          lapNumber: lap.lap_number,
+          lapTime: lap.lap_time,
+          sector1: lap.sector1,
+          sector2: lap.sector2,
+          sector3: lap.sector3,
+          car,
+          track,
+          layout: "",
+          recordedAt: lap.recorded_at,
+          analysisJson: lap.analysis_json,
+          setupJson: lap.setup_json,
+        });
+      } else {
+        path = await window.electronAPI.exportPdf({ lapId: lap.id });
+      }
       setExportMsg(path ? `Salvato: ${path}` : null);
     } catch {
       setExportMsg("Errore durante l'esportazione.");
@@ -201,11 +222,17 @@ const DetailPanel = ({ lap, car, onClose, onSetupSaved }: DetailPanelProps) => {
 };
 
 const SessionHistory = ({ status }: SessionHistoryProps) => {
+  const mockHistoryMode = useSettingsStore((s) => s.mockHistoryMode);
   const [laps, setLaps] = useState<LapRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedLap, setSelectedLap] = useState<LapRow | null>(null);
 
   useEffect(() => {
+    if (mockHistoryMode) {
+      setLaps([MOCK_LAP]);
+      setSelectedLap(null);
+      return;
+    }
     if (!status.car || !status.track || !window.electronAPI) return;
 
     // eslint-disable-next-line @eslint-react/set-state-in-effect
@@ -219,7 +246,7 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [status.car, status.track]);
+  }, [status.car, status.track, mockHistoryMode]);
 
   const handleSetupSaved = (lapId: number, setup: SetupData): void => {
     // Update the local laps list so the detail panel reflects the new setup
@@ -237,13 +264,16 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
     );
   };
 
-  if (!status.car) {
+  if (!mockHistoryMode && !status.car) {
     return (
       <div className="session-history d-flex align-items-center justify-content-center text-secondary h-100">
         <span>Nessuna sessione attiva</span>
       </div>
     );
   }
+
+  const activeCar = mockHistoryMode ? MOCK_CAR : (status.car ?? "");
+  const activeTrack = mockHistoryMode ? MOCK_TRACK : (status.track ?? "");
 
   return (
     <div className="session-history h-100 d-flex flex-column overflow-hidden">
@@ -253,7 +283,15 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
         <div className={`sh-list ${selectedLap ? "sh-list--narrow" : ""} d-flex flex-column overflow-hidden`}>
           <Row className="mb-2 align-items-baseline g-0 flex-shrink-0 px-3 pt-3">
             <Col xs="auto" className="sh-title me-2">Storico giri</Col>
-            <Col className="sh-subtitle">{status.car} · {status.track}</Col>
+            <Col className="sh-subtitle">
+              {activeCar} · {activeTrack}
+              {mockHistoryMode && (
+                <Badge bg="warning" text="dark" className="ms-2" style={{ fontSize: 10 }}>
+                  <FontAwesomeIcon icon={faFlask} className="me-1" />
+                  Mock
+                </Badge>
+              )}
+            </Col>
           </Row>
 
           <div className="overflow-y-auto flex-grow-1 px-3 pb-3">
@@ -315,7 +353,8 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
           <div className="sh-detail flex-grow-1 overflow-hidden border-start border-secondary">
             <DetailPanel
               lap={selectedLap}
-              car={status.car ?? ""}
+              car={activeCar}
+              track={activeTrack}
               onClose={() => setSelectedLap(null)}
               onSetupSaved={handleSetupSaved}
             />

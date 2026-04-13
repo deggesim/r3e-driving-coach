@@ -66,6 +66,8 @@ const SettingsPanel = () => {
     setAzureRegion,
     azureVoiceName,
     setAzureVoiceName,
+    mockHistoryMode,
+    setMockHistoryMode,
     settingSaved,
     showSaved,
   } = useSettingsStore();
@@ -438,6 +440,33 @@ const SettingsPanel = () => {
               </pre>
             </div>
           )}
+
+          {/* Dev / Test */}
+          <div className="mt-4 pt-4 border-top">
+            <Form.Label className="setting-section-label">
+              Test &amp; sviluppo
+            </Form.Label>
+            <Row className="g-2 align-items-center mb-1">
+              <Col xs="auto">
+                <Button
+                  variant={mockHistoryMode ? "warning" : "outline-secondary"}
+                  onClick={() => setMockHistoryMode(!mockHistoryMode)}
+                >
+                  {mockHistoryMode ? "Mock attivo" : "Mock disattivo"}
+                </Button>
+              </Col>
+              <Col>
+                <span className="text-secondary" style={{ fontSize: 12 }}>
+                  Mostra analisi mock nello storico
+                </span>
+              </Col>
+            </Row>
+            <Form.Text>
+              Quando attivo, lo storico mostra un giro fittizio con analisi e
+              setup precompilati. Utile per testare la selezione screenshot e
+              l&apos;esportazione PDF senza una sessione reale.
+            </Form.Text>
+          </div>
         </Col>
       </Row>
     </Container>
