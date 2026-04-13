@@ -5,7 +5,7 @@
  * "Esporta PDF" calls the main-process PDF generator with a native save dialog.
  */
 
-import { faCheck, faFilePdf, faFlask, faGear, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheck, faFilePdf, faFlask, faGear, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
 import { useEffect, useState } from "react";
@@ -14,6 +14,8 @@ import type { LapRow, R3EStatus, SetupData, SetupParam } from "../../shared/type
 import { MOCK_CAR, MOCK_LAP, MOCK_TRACK } from "../mocks/mockLap";
 import { useSettingsStore } from "../store/settingsStore";
 import ScreenshotPicker from "./ScreenshotPicker";
+
+const PAGE_SIZE = 10;
 
 type SessionHistoryProps = {
   status: R3EStatus;
@@ -35,11 +37,12 @@ type DetailPanelProps = {
   lap: LapRow;
   car: string;
   track: string;
-  onClose: () => void;
+  fromPage: number;
+  onBack: () => void;
   onSetupSaved: (lapId: number, setup: SetupData) => void;
 };
 
-const DetailPanel = ({ lap, car, track, onClose, onSetupSaved }: DetailPanelProps) => {
+const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: DetailPanelProps) => {
   const [showPicker, setShowPicker] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
@@ -89,6 +92,11 @@ const DetailPanel = ({ lap, car, track, onClose, onSetupSaved }: DetailPanelProp
     <div className="detail-panel d-flex flex-column h-100">
       {/* Panel header */}
       <div className="detail-header d-flex align-items-center gap-2">
+        <Button variant="link" size="sm" className="detail-back-btn" onClick={onBack}>
+          <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
+          Pag. {fromPage}
+        </Button>
+        <span className="deb-sep">·</span>
         <span className="detail-lap">Giro {lap.lap_number}</span>
         <span className="deb-sep">·</span>
         <span className="detail-time">{formatLapTime(lap.lap_time)}</span>
@@ -126,9 +134,6 @@ const DetailPanel = ({ lap, car, track, onClose, onSetupSaved }: DetailPanelProp
               Esporta PDF
             </Button>
           )}
-          <Button variant="link" size="sm" className="detail-close-btn" onClick={onClose}>
-            <FontAwesomeIcon icon={faXmark} />
-          </Button>
         </div>
       </div>
 
@@ -226,11 +231,13 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
   const [laps, setLaps] = useState<LapRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedLap, setSelectedLap] = useState<LapRow | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (mockHistoryMode) {
       setLaps([MOCK_LAP]);
       setSelectedLap(null);
+      setCurrentPage(1);
       return;
     }
     if (!status.car || !status.track || !window.electronAPI) return;
@@ -239,6 +246,8 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
     setLoading(true);
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setSelectedLap(null);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
+    setCurrentPage(1);
     window.electronAPI
       .getLaps({ car: status.car, track: status.track })
       .then((data) => {
@@ -275,92 +284,127 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
   const activeCar = mockHistoryMode ? MOCK_CAR : (status.car ?? "");
   const activeTrack = mockHistoryMode ? MOCK_TRACK : (status.track ?? "");
 
+  const totalPages = Math.max(1, Math.ceil(laps.length / PAGE_SIZE));
+  const pagedLaps = laps.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Full-page detail view
+  if (selectedLap) {
+    return (
+      <div className="session-history h-100 d-flex flex-column overflow-hidden">
+        <DetailPanel
+          lap={selectedLap}
+          car={activeCar}
+          track={activeTrack}
+          fromPage={currentPage}
+          onBack={() => setSelectedLap(null)}
+          onSetupSaved={handleSetupSaved}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="session-history h-100 d-flex flex-column overflow-hidden">
-      {/* List / detail split */}
-      <div className="sh-split flex-grow-1 d-flex overflow-hidden">
-        {/* Left: lap list */}
-        <div className={`sh-list ${selectedLap ? "sh-list--narrow" : ""} d-flex flex-column overflow-hidden`}>
-          <Row className="mb-2 align-items-baseline g-0 flex-shrink-0 px-3 pt-3">
-            <Col xs="auto" className="sh-title me-2">Storico giri</Col>
-            <Col className="sh-subtitle">
-              {activeCar} · {activeTrack}
-              {mockHistoryMode && (
-                <Badge bg="warning" text="dark" className="ms-2" style={{ fontSize: 10 }}>
-                  <FontAwesomeIcon icon={faFlask} className="me-1" />
-                  Mock
-                </Badge>
-              )}
-            </Col>
-          </Row>
+      <Row className="mb-2 align-items-baseline g-0 flex-shrink-0 px-3 pt-3">
+        <Col xs="auto" className="sh-title me-2">Storico giri</Col>
+        <Col className="sh-subtitle">
+          {activeCar} · {activeTrack}
+          {mockHistoryMode && (
+            <Badge bg="warning" text="dark" className="ms-2" style={{ fontSize: 10 }}>
+              <FontAwesomeIcon icon={faFlask} className="me-1" />
+              Mock
+            </Badge>
+          )}
+        </Col>
+      </Row>
 
-          <div className="overflow-y-auto flex-grow-1 px-3 pb-3">
-            {loading ? (
-              <div className="d-flex align-items-center gap-2 text-secondary py-3">
-                <Spinner size="sm" variant="danger" /> Caricamento...
-              </div>
-            ) : laps.length === 0 ? (
-              <p className="text-secondary py-2 mb-0">
-                Nessun giro registrato per questa combinazione.
-              </p>
-            ) : (
-              <table className="sh-table w-100">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Tempo</th>
-                    <th>S1</th>
-                    <th>S2</th>
-                    <th>S3</th>
-                    <th>V</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {laps.map((lap) => (
-                    <tr
-                      key={lap.id}
-                      className={`sh-row ${!lap.valid ? "invalid" : ""} ${selectedLap?.id === lap.id ? "active" : ""}`}
-                      onClick={() => setSelectedLap(lap.id === selectedLap?.id ? null : lap)}
-                    >
-                      <td>{lap.lap_number}</td>
-                      <td className="sh-laptime">{formatLapTime(lap.lap_time)}</td>
-                      <td>{formatLapTime(lap.sector1)}</td>
-                      <td>{formatLapTime(lap.sector2)}</td>
-                      <td>{formatLapTime(lap.sector3)}</td>
-                      <td>
-                        {lap.valid ? (
-                          <Badge bg="success" pill><FontAwesomeIcon icon={faCheck} /></Badge>
-                        ) : (
-                          <Badge bg="secondary" pill><FontAwesomeIcon icon={faXmark} /></Badge>
-                        )}
-                      </td>
-                      <td>
-                        {lap.setup_json && (
-                          <FontAwesomeIcon icon={faGear} className="sh-has-setup" title="Setup disponibile" />
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+      <div className="overflow-y-auto flex-grow-1 px-3">
+        {loading ? (
+          <div className="d-flex align-items-center gap-2 text-secondary py-3">
+            <Spinner size="sm" variant="danger" /> Caricamento...
           </div>
-        </div>
-
-        {/* Right: detail panel */}
-        {selectedLap && (
-          <div className="sh-detail flex-grow-1 overflow-hidden border-start border-secondary">
-            <DetailPanel
-              lap={selectedLap}
-              car={activeCar}
-              track={activeTrack}
-              onClose={() => setSelectedLap(null)}
-              onSetupSaved={handleSetupSaved}
-            />
-          </div>
+        ) : laps.length === 0 ? (
+          <p className="text-secondary py-2 mb-0">
+            Nessun giro registrato per questa combinazione.
+          </p>
+        ) : (
+          <table className="sh-table w-100">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Tempo</th>
+                <th>S1</th>
+                <th>S2</th>
+                <th>S3</th>
+                <th>V</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagedLaps.map((lap) => (
+                <tr
+                  key={lap.id}
+                  className={`sh-row ${!lap.valid ? "invalid" : ""}`}
+                  onClick={() => setSelectedLap(lap)}
+                >
+                  <td>{lap.lap_number}</td>
+                  <td className="sh-laptime">{formatLapTime(lap.lap_time)}</td>
+                  <td>{formatLapTime(lap.sector1)}</td>
+                  <td>{formatLapTime(lap.sector2)}</td>
+                  <td>{formatLapTime(lap.sector3)}</td>
+                  <td>
+                    {lap.valid ? (
+                      <Badge bg="success" pill><FontAwesomeIcon icon={faCheck} /></Badge>
+                    ) : (
+                      <Badge bg="secondary" pill><FontAwesomeIcon icon={faXmark} /></Badge>
+                    )}
+                  </td>
+                  <td>
+                    {lap.setup_json && (
+                      <FontAwesomeIcon icon={faGear} className="sh-has-setup" title="Setup disponibile" />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="sh-pagination d-flex align-items-center gap-2 px-3 py-2 flex-shrink-0">
+          <Button
+            variant="link"
+            size="sm"
+            className="sh-page-btn"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
+          >
+            ‹ Prec
+          </Button>
+          <div className="sh-page-numbers d-flex gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                className={`sh-page-num ${page === currentPage ? "active" : ""}`}
+                onClick={() => setCurrentPage(page)}
+                type="button"
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+          <Button
+            variant="link"
+            size="sm"
+            className="sh-page-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
+            Succ ›
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

@@ -229,8 +229,30 @@ body {
 .detail-action-btn { font-size: 11px; padding: 2px 8px; }
 .detail-close-btn { color: var(--text-dim); padding: 2px 6px; text-decoration: none; }
 .detail-close-btn:hover { color: var(--text); }
+.detail-back-btn { color: var(--accent); padding: 2px 6px; text-decoration: none; font-size: 12px; font-weight: 600; }
+.detail-back-btn:hover { color: var(--accent); opacity: 0.8; }
 .detail-export-msg { font-size: 11px; background: var(--bg3); border-bottom: 1px solid var(--border); color: var(--text-dim); }
 .detail-body { min-height: 0; }
+
+/* ── Pagination ── */
+.sh-pagination { border-top: 1px solid var(--border); background: var(--bg2); }
+.sh-page-btn { color: var(--text-dim); font-size: 12px; padding: 2px 6px; text-decoration: none; }
+.sh-page-btn:hover:not(:disabled) { color: var(--accent); }
+.sh-page-btn:disabled { opacity: 0.3; pointer-events: none; }
+.sh-page-numbers { display: flex; gap: 2px; }
+.sh-page-num {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 11px;
+  min-width: 24px;
+  padding: 1px 5px;
+  text-align: center;
+}
+.sh-page-num:hover { border-color: var(--accent); color: var(--accent); }
+.sh-page-num.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
 
 /* ── Setup section ── */
 .setup-section { border-top: 1px solid var(--border); }

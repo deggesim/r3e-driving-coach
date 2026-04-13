@@ -9,6 +9,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type Database from "better-sqlite3";
 import { SYSTEM_PROMPT, buildPrompt } from "./prompt-builder";
 import type { LapRecord, Deviation, LapAnalysis } from "../../shared/types";
+import { generatePdfBuffer } from "../pdf-generator";
 
 type CoachEngineOptions = {
   db: Database.Database;
@@ -79,45 +80,23 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
 
   const generatePdf = async (lap: LapRecord, analysis: LapAnalysis): Promise<string | null> => {
     try {
-      // Dynamic import to avoid loading jsPDF in main process startup
-      const { jsPDF } = await import("jspdf");
       const path = await import("path");
       const fs = await import("fs");
 
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 15;
-      const contentWidth = pageWidth - margin * 2;
-      let y = 20;
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      doc.text(`R3E Driving Coach — Analisi Giro ${lap.lapNumber}`, margin, y);
-      y += 8;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.text(`${lap.car} | ${lap.track} ${lap.layout} | ${formatLapTime(lap.lapTime)}`, margin, y);
-      y += 6;
-      doc.text(`Generato: ${new Date(analysis.generatedAt).toLocaleString("it-IT")}`, margin, y);
-      y += 10;
-
-      doc.setDrawColor(100);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 8;
-
-      doc.setFontSize(10);
-      const lines = doc.splitTextToSize(analysis.templateV3, contentWidth);
-      for (const line of lines) {
-        if (y > 270) {
-          doc.addPage();
-          y = 20;
-        }
-        const isHeader = /^\[(\d)\]/.test(line);
-        doc.setFont("helvetica", isHeader ? "bold" : "normal");
-        doc.text(line, margin, y);
-        y += isHeader ? 7 : 5;
-      }
+      const pdfBuffer = await generatePdfBuffer({
+        car: lap.car,
+        track: lap.track,
+        layout: lap.layout,
+        lapNumber: lap.lapNumber,
+        lapTime: lap.lapTime,
+        sector1: lap.sectorTimes[0] ?? null,
+        sector2: lap.sectorTimes[1] ?? null,
+        sector3: lap.sectorTimes[2] ?? null,
+        condition: "Asciutto",
+        sessionType: "Sessione",
+        recordedAt: analysis.generatedAt,
+        templateV3: analysis.templateV3,
+      });
 
       const outputDir = path.join(process.env.APPDATA ?? ".", "r3e-coach", "reports");
       if (!fs.existsSync(outputDir)) {
@@ -126,7 +105,6 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
 
       const filename = `lap${lap.lapNumber}_${lap.car.replace(/\s+/g, "_")}_${Date.now()}.pdf`;
       const outputPath = path.join(outputDir, filename);
-      const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
       fs.writeFileSync(outputPath, pdfBuffer);
 
       return outputPath;
