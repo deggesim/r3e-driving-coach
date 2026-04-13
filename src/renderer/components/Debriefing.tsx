@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { Spinner, Badge } from "react-bootstrap";
 import { marked } from "marked";
 import type { LapRecord, LapAnalysis } from "../../shared/types";
+import { formatLapTime } from "../../shared/format";
 
 type DebriefingProps = {
   lastLap: LapRecord | null;
@@ -16,15 +17,6 @@ type DebriefingProps = {
 };
 
 type DebriefingState = "idle" | "loading" | "result";
-
-const formatLapTime = (seconds: number): string => {
-  if (!seconds || seconds <= 0) return "--:--";
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0
-    ? `${mins}:${secs.toFixed(3).padStart(6, "0")}`
-    : `${secs.toFixed(3)}s`;
-};
 
 const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
   const [state, setState] = useState<DebriefingState>("idle");

@@ -28,17 +28,17 @@ const extractSection5 = (text: string): string => {
   const match = text.match(/\[5\][^\n]*\n([\s\S]*?)(?:\[6\]|$)/);
   if (!match) return "";
   const raw = match[1].trim();
-  const sentences = raw.match(/[^.!?]+[.!?]+/g) ?? [];
-  return sentences.slice(0, 5).join(" ").trim();
-};
-
-const formatLapTime = (seconds: number): string => {
-  if (seconds <= 0 || !isFinite(seconds)) return "--:--";
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0
-    ? `${mins}:${secs.toFixed(3).padStart(6, "0")}`
-    : `${secs.toFixed(3)}s`;
+  // Strip markdown: bold/italic markers, headers, list bullets, inline code
+  const stripped = raw
+    .replace(/\*\*([^*]+)\*\*/g, "$1")   // **bold**
+    .replace(/\*([^*]+)\*/g, "$1")        // *italic*
+    .replace(/__([^_]+)__/g, "$1")        // __bold__
+    .replace(/_([^_]+)_/g, "$1")          // _italic_
+    .replace(/^#{1,6}\s+/gm, "")          // # headers
+    .replace(/^[-*+]\s+/gm, "")           // list bullets
+    .replace(/`([^`]+)`/g, "$1");         // `code`
+  const sentences = stripped.match(/[^.!?]+[.!?]+/g) ?? [];
+  return sentences.slice(0, 3).join(" ").trim();
 };
 
 export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {

@@ -8,6 +8,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type Database from "better-sqlite3";
 import type { Deviation, LapRow } from "../../shared/types";
+import { formatLapTime } from "../../shared/format";
 
 const VOICE_SYSTEM_PROMPT = `Sei un coach di guida esperto che risponde a domande specifiche di un pilota durante una sessione di guida.
 Rispondi SEMPRE in italiano, in modo conciso e diretto. Massimo 3-4 frasi.
@@ -25,15 +26,6 @@ type SessionContext = {
   lastLapZones: string | null;
   deviations: Deviation[] | null;
   cornerMap: Map<number, string>;
-};
-
-const formatLapTime = (seconds: number): string => {
-  if (!seconds || seconds <= 0 || !isFinite(seconds)) return "--:--";
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0
-    ? `${mins}:${secs.toFixed(3).padStart(6, "0")}`
-    : `${secs.toFixed(3)}s`;
 };
 
 /**

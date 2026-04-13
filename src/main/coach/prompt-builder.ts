@@ -12,6 +12,7 @@
 
 import { BRAKE_TEMP } from '../../shared/alert-types';
 import type { LapRecord, Deviation, ZoneData } from '../../shared/types';
+import { formatLapTime } from '../../shared/format';
 
 export const SYSTEM_PROMPT = `Sei un ingegnere di pista esperto che analizza la telemetria di gare automobilistiche.
 Rispondi SEMPRE in italiano con tono tecnico da ingegnere. Includi SEMPRE dati numerici nelle osservazioni.
@@ -31,7 +32,7 @@ Elenco dei problemi rilevati con dato numerico e marcatori @XXXm. Ordina per imp
 Azioni concrete che il pilota può applicare al prossimo giro, in ordine di priorità.
 
 [5] Sintesi e Prossimo Step
-Massimo 5 frasi. Questa sezione viene letta ad alta voce via TTS — deve essere concisa, chiara, con i dati più importanti.
+Massimo 3 frasi, senza markdown (no asterischi, no grassetto). Questa sezione viene letta ad alta voce — menziona SOLO il problema più critico del giro con il dato numerico e l'unica azione correttiva prioritaria per il giro successivo. Non elencare tutto: concentrati su un punto solo.
 
 Regole:
 - Usa il nome ufficiale delle curve quando disponibile
@@ -174,11 +175,3 @@ const getSignificantZones = (zones: ZoneData[], deviations: Deviation[] | null):
   );
 };
 
-const formatLapTime = (seconds: number): string => {
-  if (seconds <= 0 || !isFinite(seconds)) return '--:--';
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0
-    ? `${mins}:${secs.toFixed(3).padStart(6, '0')}`
-    : `${secs.toFixed(3)}s`;
-};

@@ -11,6 +11,7 @@ import { marked } from "marked";
 import { useEffect, useState } from "react";
 import { Badge, Button, Col, Row, Spinner } from "react-bootstrap";
 import type { LapRow, R3EStatus, SetupData, SetupParam } from "../../shared/types";
+import { formatLapTime } from "../../shared/format";
 import { MOCK_CAR, MOCK_LAP, MOCK_TRACK } from "../mocks/mockLap";
 import { useSettingsStore } from "../store/settingsStore";
 import ScreenshotPicker from "./ScreenshotPicker";
@@ -19,15 +20,6 @@ const PAGE_SIZE = 10;
 
 type SessionHistoryProps = {
   status: R3EStatus;
-};
-
-const formatLapTime = (seconds: number | null): string => {
-  if (!seconds || seconds <= 0) return "--:--";
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0
-    ? `${mins}:${secs.toFixed(3).padStart(6, "0")}`
-    : `${secs.toFixed(3)}s`;
 };
 
 const renderMarkdown = (md: string): string =>
