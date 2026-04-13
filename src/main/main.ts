@@ -245,7 +245,15 @@ const setupPipeline = (): void => {
   });
 
   reader.on("lapComplete", async (lapData) => {
+    console.log(
+      `[Main] reader:lapComplete — lap=${lapData.lapNumber} time=${lapData.lapTime.toFixed(3)}s ` +
+        `valid=${lapData.valid} car="${lapData.car}" track="${lapData.track}" layout="${lapData.layout}"`,
+    );
+
     if (lapData.car !== baseline.car || lapData.track !== baseline.track) {
+      console.log(
+        `[Main] car/track changed — recreating baseline (was car="${baseline.car}" track="${baseline.track}")`,
+      );
       baseline = createAdaptiveBaseline(lapData.car, lapData.track, db);
       ruleEngine = createRuleEngine(dispatcher, baseline, lookupCorner);
       coachEngine.updateCornerNames(buildCornerMap());
@@ -255,12 +263,21 @@ const setupPipeline = (): void => {
     ruleEngine.resetLap();
 
     if (!currentSessionId) {
-      currentSessionId = createSession(
-        db,
-        lapData.car,
-        lapData.track,
-        lapData.layout,
+      console.log(
+        `[Main] no session yet — creating for car="${lapData.car}" track="${lapData.track}" layout="${lapData.layout}"`,
       );
+      try {
+        currentSessionId = createSession(
+          db,
+          lapData.car,
+          lapData.track,
+          lapData.layout,
+        );
+        console.log(`[Main] session created: id=${currentSessionId}`);
+      } catch (err) {
+        console.error("[Main] createSession error:", err);
+        return;
+      }
     }
     saveLap(db, currentSessionId, lapData as LapRecord);
   });
@@ -271,9 +288,20 @@ const setupPipeline = (): void => {
   recorder.on(
     "lapRecorded",
     async (lap: LapRecord, { calibrating }: { calibrating: boolean }) => {
-      console.log("lap", lap);
+      console.log(
+        `[Main] recorder:lapRecorded — lap=${lap.lapNumber} time=${lap.lapTime.toFixed(3)}s ` +
+          `valid=${lap.valid} calibrating=${calibrating} zones=${lap.zones.length}`,
+      );
 
-      pushToRenderer("r3e:lapComplete", lap);
+      // Resolve display names before sending to renderer and coach
+      const lapWithNames: LapRecord = {
+        ...lap,
+        carName: getCarName(Number(lap.car)),
+        trackName: getTrackName(Number(lap.track)),
+        layoutName: getLayoutName(Number(lap.layout)),
+      };
+
+      pushToRenderer("r3e:lapComplete", lapWithNames);
       pushStatus();
 
       const deviations = baseline.ingestLap(
@@ -288,14 +316,6 @@ const setupPipeline = (): void => {
 
       // Keep last deviations for voice coach context
       lastDeviations = deviations;
-
-      // Annotate lap with resolved display names before passing to coach/voice
-      const lapWithNames: LapRecord = {
-        ...lap,
-        carName: getCarName(Number(lap.car)),
-        trackName: getTrackName(Number(lap.track)),
-        layoutName: getLayoutName(Number(lap.layout)),
-      };
 
       // Update voice coach context with the completed lap
       const zonesJson = JSON.stringify(lapWithNames.zones);
@@ -805,29 +825,48 @@ const saveLap = (
   sessionId: number,
   lap: LapRecord,
 ): void => {
-  db.prepare(
-    `
+  try {
+    const insertResult = db.prepare(
+      `
     INSERT OR IGNORE INTO laps (session_id, lap_number, lap_time, sector1, sector2, sector3, valid, recorded_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `,
-  ).run(
-    sessionId,
-    lap.lapNumber,
-    lap.lapTime,
-    lap.sectorTimes[0] ?? null,
-    lap.sectorTimes[1] ?? null,
-    lap.sectorTimes[2] ?? null,
-    lap.valid ? 1 : 0,
-  );
+    ).run(
+      sessionId,
+      lap.lapNumber,
+      lap.lapTime,
+      lap.sectorTimes[0] ?? null,
+      lap.sectorTimes[1] ?? null,
+      lap.sectorTimes[2] ?? null,
+      lap.valid ? 1 : 0,
+    );
 
-  db.prepare(
-    `
+    if (insertResult.changes === 0) {
+      console.warn(
+        `[Main] saveLap — INSERT OR IGNORE produced 0 changes (constraint violation?) ` +
+          `session=${sessionId} lap=${lap.lapNumber} time=${lap.lapTime}`,
+      );
+    } else {
+      console.log(
+        `[Main] saveLap — OK session=${sessionId} lap=${lap.lapNumber} time=${lap.lapTime.toFixed(3)}s ` +
+          `rowid=${insertResult.lastInsertRowid}`,
+      );
+    }
+
+    const updateResult = db.prepare(
+      `
     UPDATE sessions SET
       best_lap = CASE WHEN best_lap IS NULL OR ? < best_lap THEN ? ELSE best_lap END,
       lap_count = lap_count + 1
     WHERE id = ?
   `,
-  ).run(lap.lapTime, lap.lapTime, sessionId);
+    ).run(lap.lapTime, lap.lapTime, sessionId);
+    console.log(
+      `[Main] saveLap — session update changes=${updateResult.changes}`,
+    );
+  } catch (err) {
+    console.error("[Main] saveLap error:", err);
+  }
 };
 
 // ──────────────────────────────────────────────

@@ -50,7 +50,7 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
 
   const saveAnalysis = (lap: LapRecord, analysis: LapAnalysis): void => {
     try {
-      db.prepare(`
+      const result = db.prepare(`
         UPDATE laps SET analysis_json = ?
         WHERE session_id = (
           SELECT id FROM sessions
@@ -58,6 +58,16 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
           ORDER BY started_at DESC LIMIT 1
         ) AND lap_number = ?
       `).run(JSON.stringify(analysis), lap.car, lap.track, lap.layout, lap.lapNumber);
+      if (result.changes === 0) {
+        console.warn(
+          `[CoachEngine] saveAnalysis — 0 rows updated (lap not in DB?) ` +
+            `car="${lap.car}" track="${lap.track}" layout="${lap.layout}" lap=${lap.lapNumber}`,
+        );
+      } else {
+        console.log(
+          `[CoachEngine] saveAnalysis — OK lap=${lap.lapNumber} changes=${result.changes}`,
+        );
+      }
     } catch (err) {
       console.error("[CoachEngine] DB save error:", err);
     }

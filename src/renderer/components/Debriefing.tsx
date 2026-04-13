@@ -63,10 +63,11 @@ const Debriefing = ({ lastLap, lastAnalysis }: DebriefingProps) => {
       <div className="debriefing-header d-flex align-items-center gap-2 flex-shrink-0">
         {displayedLap ? (
           <>
-            <span className="deb-car">{displayedLap.car}</span>
+            <span className="deb-car">{displayedLap.carName ?? displayedLap.car}</span>
             <span className="deb-sep">·</span>
             <span className="deb-track">
-              {displayedLap.track} {displayedLap.layout}
+              {displayedLap.trackName ?? displayedLap.track}{" "}
+              {displayedLap.layoutName ?? displayedLap.layout}
             </span>
             <span className="deb-sep">·</span>
             <span className="deb-time">

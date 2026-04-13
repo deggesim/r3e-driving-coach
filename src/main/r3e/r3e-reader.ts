@@ -241,7 +241,17 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     lastTrackSector = frame.trackSector;
 
     // Lap boundary
+    if (frame.completedLaps !== lastCompletedLaps && lastCompletedLaps !== -1) {
+      console.log(
+        `[R3EReader] completedLaps changed: ${lastCompletedLaps} → ${frame.completedLaps}`,
+      );
+    }
     if (frame.completedLaps > lastCompletedLaps && lastCompletedLaps >= 0) {
+      console.log(
+        `[R3EReader] lapComplete — lap=${frame.completedLaps} lapTime=${frame.lapTimePreviousSelf.toFixed(3)}s ` +
+          `valid=${frame.currentLapValid} car="${currentCar}" track="${currentTrack}" layout="${currentLayout}" ` +
+          `layoutLength=${currentLayoutLength} frames=${lapFrames.length}`,
+      );
       const lapData = {
         lapNumber: frame.completedLaps,
         lapTime: frame.lapTimePreviousSelf,
