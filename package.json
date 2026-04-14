@@ -58,19 +58,24 @@
       "output": "release"
     },
     "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ],
-      "icon": "public/icon.png"
+      "target": "nsis",
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     },
     "files": [
-      "dist/**/*",
-      "node_modules/**/*"
+      "dist/main/**/*",
+      "dist/renderer/**/*",
+      "dist/shared/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/*.node"
     ]
   }
 }
