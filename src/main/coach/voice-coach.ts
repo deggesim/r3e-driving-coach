@@ -7,7 +7,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type Database from "better-sqlite3";
-import type { Deviation, LapRow } from "../../shared/types";
+import type { Deviation, LapAnalysis, LapRow, SetupData } from "../../shared/types";
 import { formatLapTime } from "../../shared/format";
 
 const VOICE_SYSTEM_PROMPT = `Sei un coach di guida esperto che risponde a domande specifiche di un pilota durante una sessione di guida.
@@ -26,6 +26,8 @@ type SessionContext = {
   lastLapZones: string | null;
   deviations: Deviation[] | null;
   cornerMap: Map<number, string>;
+  lastLapAnalysis: LapAnalysis | null;
+  lastLapSetup: SetupData | null;
 };
 
 /**
@@ -112,6 +114,26 @@ const buildVoiceContext = (ctx: SessionContext): string => {
     }
   }
 
+  // Full Template v3 analysis for the most recently analyzed lap
+  if (ctx.lastLapAnalysis) {
+    parts.push(`\n## Analisi tecnica giro ${ctx.lastLapAnalysis.lapNumber} (Coach Engine)`);
+    parts.push(ctx.lastLapAnalysis.templateV3);
+  }
+
+  // Setup decoded from screenshot (if the pilot added one)
+  if (ctx.lastLapSetup) {
+    parts.push(`\n## Setup vettura (decodificato da screenshot)`);
+    if (ctx.lastLapSetup.setupText) {
+      parts.push(ctx.lastLapSetup.setupText);
+    }
+    if (ctx.lastLapSetup.params.length > 0) {
+      parts.push(`\nParametri setup:`);
+      for (const p of ctx.lastLapSetup.params) {
+        parts.push(`- ${p.category} / ${p.parameter}: ${p.value}`);
+      }
+    }
+  }
+
   return parts.join("\n");
 };
 
@@ -139,10 +161,13 @@ export const createVoiceCoachEngine = (
     lastLapZones: null,
     deviations: null,
     cornerMap: new Map(),
+    lastLapAnalysis: null,
+    lastLapSetup: null,
   };
 
   /**
    * Refresh laps from DB for the current car/track.
+   * Also extracts the last available analysis and setup from the most recent lap.
    */
   const refreshLaps = (): void => {
     if (!currentContext.car) return;
@@ -156,6 +181,18 @@ export const createVoiceCoachEngine = (
         )
         .all(currentContext.car, currentContext.track) as LapRow[];
       currentContext.laps = rows;
+
+      // Pick analysis from the most recent lap that has one
+      const analyzedLap = rows.find((r) => r.analysis_json);
+      currentContext.lastLapAnalysis = analyzedLap?.analysis_json
+        ? (JSON.parse(analyzedLap.analysis_json) as LapAnalysis)
+        : null;
+
+      // Pick setup from the most recent lap that has one (any lap, not just latest)
+      const setupLap = rows.find((r) => r.setup_json);
+      currentContext.lastLapSetup = setupLap?.setup_json
+        ? (JSON.parse(setupLap.setup_json) as SetupData)
+        : null;
     } catch {
       // DB not ready yet
     }
@@ -175,6 +212,8 @@ export const createVoiceCoachEngine = (
         currentContext.deviations = ctx.deviations;
       if (ctx.cornerMap !== undefined) currentContext.cornerMap = ctx.cornerMap;
       if (ctx.laps !== undefined) currentContext.laps = ctx.laps;
+      if (ctx.lastLapAnalysis !== undefined) currentContext.lastLapAnalysis = ctx.lastLapAnalysis;
+      if (ctx.lastLapSetup !== undefined) currentContext.lastLapSetup = ctx.lastLapSetup;
 
       // Always refresh laps from DB on car/track update
       if (ctx.car !== undefined || ctx.track !== undefined) refreshLaps();
