@@ -219,8 +219,8 @@ const DetailPanel = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {setup.params.map((p: SetupParam, i: number) => (
-                    <tr key={i}>
+                  {setup.params.map((p: SetupParam) => (
+                    <tr key={`${p.category}-${p.parameter}`}>
                       <td className="text-dim">{p.category}</td>
                       <td>{p.parameter}</td>
                       <td className="setup-value">{p.value}</td>
@@ -298,7 +298,6 @@ const SessionHistory = () => {
     if (!mockHistoryMode && lastAnalysis) {
       loadLaps();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastAnalysis]);
 
   // Reset page when filters or sort change
@@ -459,7 +458,7 @@ const SessionHistory = () => {
           style={{ maxWidth: 160 }}
         >
           <option value="date">Data ↓</option>
-          <option value="laptime">Tempo sul giro</option>
+          <option value="laptime">Tempo sul giro </option>
         </Form.Select>
       </div>
 
