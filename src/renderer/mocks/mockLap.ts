@@ -4,7 +4,7 @@
  * Il lapId è -1 per distinguerlo da giri reali nel DB.
  */
 
-import type { LapAnalysis, LapRow, SetupData } from "../../shared/types";
+import type { LapAnalysis, LapRowFull, SetupData } from "../../shared/types";
 
 const MOCK_ANALYSIS: LapAnalysis = {
   lapNumber: 7,
@@ -63,7 +63,7 @@ const MOCK_SETUP: SetupData = {
   screenshots: [],
 };
 
-export const MOCK_LAP: LapRow = {
+export const MOCK_LAP: LapRowFull = {
   id: -1,
   session_id: -1,
   lap_number: 7,
@@ -77,7 +77,11 @@ export const MOCK_LAP: LapRow = {
   setup_json: JSON.stringify(MOCK_SETUP),
   setup_screenshots: JSON.stringify([]),
   recorded_at: "2026-04-13T10:28:00.000Z",
+  car: "0",
+  track: "0",
+  layout: "0",
+  car_name: "Porsche 911 GT3 Cup",
+  track_name: "Zandvoort",
+  layout_name: "Grand Prix",
+  car_class_name: "GT3 Cup",
 };
-
-export const MOCK_CAR = "Porsche 911 GT3 Cup";
-export const MOCK_TRACK = "Zandvoort";

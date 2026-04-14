@@ -212,7 +212,35 @@ body {
 .sh-row.active td { background: var(--bg3); }
 .sh-row.invalid { opacity: 0.5; }
 .sh-laptime { font-weight: 600; }
+.sh-date { color: var(--text-dim); font-size: 11px; white-space: nowrap; }
 .sh-has-setup { color: var(--text-dim); font-size: 10px; }
+
+/* ── Filter / sort bar ── */
+.sh-filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+}
+.sh-filter-select {
+  background-color: var(--bg3) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+  font-size: 11px !important;
+}
+.sh-filter-select:focus {
+  border-color: var(--accent) !important;
+  box-shadow: none !important;
+  background-color: var(--bg3) !important;
+  color: var(--text) !important;
+}
+.sh-filter-select option {
+  background: var(--bg3);
+  color: var(--text);
+}
 
 /* ── Detail Panel ── */
 .detail-panel { background: var(--bg); }

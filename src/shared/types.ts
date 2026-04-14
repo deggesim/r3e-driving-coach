@@ -141,6 +141,17 @@ export type LapRow = {
   recorded_at: string;
 };
 
+/** LapRow enriched with session info and resolved display names. */
+export type LapRowFull = LapRow & {
+  car: string;           // numeric ID from session
+  track: string;         // numeric ID from session
+  layout: string;        // numeric ID from session
+  car_name: string;      // resolved display name
+  track_name: string;    // resolved display name
+  layout_name: string;   // resolved display name
+  car_class_name: string; // resolved class name (may be empty)
+};
+
 // --- Setup decoding ---
 
 export type SetupParam = {
@@ -289,6 +300,7 @@ export type ElectronAPI = {
 
   // Request/response
   getLaps: (params: { car: string; track: string }) => Promise<LapRow[]>;
+  getAllLaps: () => Promise<LapRowFull[]>;
   getSession: (id: number) => Promise<SessionRow | null>;
   configGet: (key: string) => Promise<unknown>;
   configSet: (key: string, value: unknown) => Promise<void>;

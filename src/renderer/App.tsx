@@ -206,7 +206,7 @@ const App = () => {
         {tab === "debriefing" && (
           <Debriefing lastLap={lastLap} lastAnalysis={lastAnalysis} />
         )}
-        {tab === "history" && <SessionHistory status={status} />}
+        {tab === "history" && <SessionHistory />}
         {tab === "settings" && <SettingsPanel />}
       </div>
 

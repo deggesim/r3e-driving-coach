@@ -37,6 +37,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Renderer → Main (request/response)
   getLaps: (params: { car: string; track: string }) =>
     ipcRenderer.invoke('db:getLaps', params),
+  getAllLaps: () =>
+    ipcRenderer.invoke('db:getAllLaps'),
   getSession: (id: number) =>
     ipcRenderer.invoke('db:getSession', id),
   configGet: (key: string) =>

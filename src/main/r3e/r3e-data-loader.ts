@@ -32,10 +32,16 @@ type R3ETrackEntry = {
   layouts: R3ELayoutEntry[];
 };
 
+type R3EClassEntry = {
+  Id: number;
+  Name: string;
+};
+
 type R3EDataFile = {
   cars: Record<string, R3ECarEntry>;
   tracks: Record<string, R3ETrackEntry>;
   layouts: Record<string, R3ELayoutEntry>;
+  classes?: Record<string, R3EClassEntry>;
 };
 
 let data: R3EDataFile | null = null;
@@ -82,3 +88,13 @@ export const getTrackName = (id: number): string =>
  */
 export const getLayoutName = (id: number): string =>
   data?.layouts[String(id)]?.Name ?? String(id);
+
+/**
+ * Resolve a car's class ID to its display name.
+ * Falls back to an empty string if data not loaded or class not found.
+ */
+export const getCarClassName = (carId: number): string => {
+  const classId = data?.cars[String(carId)]?.Class;
+  if (classId === undefined) return "";
+  return data?.classes?.[String(classId)]?.Name ?? "";
+};

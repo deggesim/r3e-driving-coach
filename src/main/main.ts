@@ -36,6 +36,7 @@ import {
   getCarName,
   getTrackName,
   getLayoutName,
+  getCarClassName,
 } from "./r3e/r3e-data-loader";
 import type {
   LapRecord,
@@ -383,6 +384,34 @@ const setupPipeline = (): void => {
         .all(car, track);
     },
   );
+
+  ipcMain.handle("db:getAllLaps", () => {
+    const rows = db
+      .prepare(
+        `
+      SELECT l.*, s.car, s.track, s.layout
+      FROM laps l
+      JOIN sessions s ON l.session_id = s.id
+      ORDER BY l.recorded_at DESC
+      LIMIT 500
+    `,
+      )
+      .all() as Array<{
+        id: number; session_id: number; lap_number: number; lap_time: number;
+        sector1: number | null; sector2: number | null; sector3: number | null;
+        valid: number; analysis_json: string | null; pdf_path: string | null;
+        setup_json: string | null; setup_screenshots: string | null;
+        recorded_at: string; car: string; track: string; layout: string;
+      }>;
+
+    return rows.map((row) => ({
+      ...row,
+      car_name: getCarName(parseInt(row.car)),
+      track_name: getTrackName(parseInt(row.track)),
+      layout_name: getLayoutName(parseInt(row.layout)),
+      car_class_name: getCarClassName(parseInt(row.car)),
+    }));
+  });
 
   ipcMain.handle("db:getSession", (_event, id: number) => {
     return db.prepare("SELECT * FROM sessions WHERE id = ?").get(id);

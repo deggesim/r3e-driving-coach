@@ -1,47 +1,70 @@
 /**
  * SessionHistory — List of past laps + detail panel with setup and PDF export.
- * Clicking a lap row opens the detail panel (analysis markdown + setup table).
- * "Aggiungi Setup" opens the ScreenshotPicker modal.
- * "Esporta PDF" calls the main-process PDF generator with a native save dialog.
+ * Loads all laps from the DB (all cars/tracks, works offline).
+ * Filter dropdowns: car (name + class) and circuit/layout.
+ * Sortable by saved date (default, newest first) or lap time (fastest first).
  */
 
-import { faArrowLeft, faCheck, faFilePdf, faFlask, faGear, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowLeft,
+  faCheck,
+  faFilePdf,
+  faFlask,
+  faGear,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
-import { useEffect, useState } from "react";
-import { Badge, Button, Col, Row, Spinner } from "react-bootstrap";
-import type { LapRow, R3EStatus, SetupData, SetupParam } from "../../shared/types";
+import { useEffect, useMemo, useState } from "react";
+import { Badge, Button, Col, Form, Row, Spinner } from "react-bootstrap";
+import type { LapRowFull, SetupData, SetupParam } from "../../shared/types";
 import { formatLapTime } from "../../shared/format";
-import { MOCK_CAR, MOCK_LAP, MOCK_TRACK } from "../mocks/mockLap";
+import { MOCK_LAP } from "../mocks/mockLap";
 import { useSettingsStore } from "../store/settingsStore";
+import { useIPCStore } from "../store/ipcStore";
 import ScreenshotPicker from "./ScreenshotPicker";
 
 const PAGE_SIZE = 10;
 
-type SessionHistoryProps = {
-  status: R3EStatus;
-};
-
 const renderMarkdown = (md: string): string =>
   marked.parse(md, { async: false }) as string;
 
+const formatDate = (iso: string): string => {
+  // SQLite datetime('now') returns "YYYY-MM-DD HH:MM:SS" (UTC, no indicator).
+  // Without explicit UTC marker V8 parses it as local time — normalize first.
+  const normalized = iso.includes("T") ? iso : iso.replace(" ", "T") + "Z";
+  return new Date(normalized).toLocaleString("it-IT", {
+    timeZone: "Europe/Rome",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 type DetailPanelProps = {
-  lap: LapRow;
-  car: string;
-  track: string;
+  lap: LapRowFull;
   fromPage: number;
   onBack: () => void;
   onSetupSaved: (lapId: number, setup: SetupData) => void;
 };
 
-const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: DetailPanelProps) => {
+const DetailPanel = ({
+  lap,
+  fromPage,
+  onBack,
+  onSetupSaved,
+}: DetailPanelProps) => {
   const [showPicker, setShowPicker] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
 
   const analysis = lap.analysis_json ? JSON.parse(lap.analysis_json) : null;
-  const setup: SetupData | null = lap.setup_json ? JSON.parse(lap.setup_json) : null;
-  const screenshots: string[] = lap.setup_screenshots ? JSON.parse(lap.setup_screenshots) : [];
+  const setup: SetupData | null = lap.setup_json
+    ? JSON.parse(lap.setup_json)
+    : null;
+  const screenshots: string[] = lap.setup_screenshots
+    ? JSON.parse(lap.setup_screenshots)
+    : [];
 
   const handleSetupSaved = async (decoded: SetupData): Promise<void> => {
     setShowPicker(false);
@@ -55,16 +78,15 @@ const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: Detail
     try {
       let path: string | null;
       if (lap.id === -1) {
-        // Mock lap: passa i dati grezzi invece di un lapId reale
         path = await window.electronAPI.exportPdfFromData({
           lapNumber: lap.lap_number,
           lapTime: lap.lap_time,
           sector1: lap.sector1,
           sector2: lap.sector2,
           sector3: lap.sector3,
-          car,
-          track,
-          layout: "",
+          car: lap.car_name,
+          track: lap.track_name,
+          layout: lap.layout_name,
           recordedAt: lap.recorded_at,
           analysisJson: lap.analysis_json,
           setupJson: lap.setup_json,
@@ -84,7 +106,12 @@ const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: Detail
     <div className="detail-panel d-flex flex-column h-100">
       {/* Panel header */}
       <div className="detail-header d-flex align-items-center gap-2">
-        <Button variant="link" size="sm" className="detail-back-btn" onClick={onBack}>
+        <Button
+          variant="link"
+          size="sm"
+          className="detail-back-btn"
+          onClick={onBack}
+        >
           <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
           Pag. {fromPage}
         </Button>
@@ -94,11 +121,14 @@ const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: Detail
         <span className="detail-time">{formatLapTime(lap.lap_time)}</span>
         {lap.sector1 && (
           <span className="detail-sectors">
-            S1 {formatLapTime(lap.sector1)} · S2 {formatLapTime(lap.sector2)} · S3 {formatLapTime(lap.sector3)}
+            S1 {formatLapTime(lap.sector1)} · S2 {formatLapTime(lap.sector2)} ·
+            S3 {formatLapTime(lap.sector3)}
           </span>
         )}
         {!lap.valid && (
-          <Badge bg="warning" text="dark" className="ms-1">Non valido</Badge>
+          <Badge bg="warning" text="dark" className="ms-1">
+            Non valido
+          </Badge>
         )}
         <div className="ms-auto d-flex gap-2 align-items-center">
           <Button
@@ -144,16 +174,16 @@ const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: Detail
           </div>
         )}
 
-        {/* Analysis markdown */}
         {analysis?.templateV3 && (
           <div
             className="deb-content p-3"
             // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(analysis.templateV3) }}
+            dangerouslySetInnerHTML={{
+              __html: renderMarkdown(analysis.templateV3),
+            }}
           />
         )}
 
-        {/* Setup section */}
         {setup && (
           <div className="setup-section p-3 mt-2">
             <div className="setup-section-header d-flex align-items-center gap-2 mb-2">
@@ -170,7 +200,10 @@ const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: Detail
                 </Badge>
               )}
               {screenshots.length > 0 && (
-                <span className="text-secondary ms-auto" style={{ fontSize: 11 }}>
+                <span
+                  className="text-secondary ms-auto"
+                  style={{ fontSize: 11 }}
+                >
                   {screenshots.length} screenshot
                 </span>
               )}
@@ -200,7 +233,9 @@ const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: Detail
                 <div
                   className="deb-content"
                   // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(setup.setupText) }}
+                  dangerouslySetInnerHTML={{
+                    __html: renderMarkdown(setup.setupText),
+                  }}
                 />
               )
             )}
@@ -210,7 +245,7 @@ const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: Detail
 
       <ScreenshotPicker
         show={showPicker}
-        expectedCar={car}
+        expectedCar={lap.car_name}
         onClose={() => setShowPicker(false)}
         onConfirm={handleSetupSaved}
       />
@@ -218,75 +253,147 @@ const DetailPanel = ({ lap, car, track, fromPage, onBack, onSetupSaved }: Detail
   );
 };
 
-const SessionHistory = ({ status }: SessionHistoryProps) => {
+const SessionHistory = () => {
   const mockHistoryMode = useSettingsStore((s) => s.mockHistoryMode);
-  const [laps, setLaps] = useState<LapRow[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedLap, setSelectedLap] = useState<LapRow | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const lastAnalysis = useIPCStore((s) => s.lastAnalysis);
 
-  useEffect(() => {
+  const [allLaps, setAllLaps] = useState<LapRowFull[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedLap, setSelectedLap] = useState<LapRowFull | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [filterCar, setFilterCar] = useState("");
+  const [filterTrack, setFilterTrack] = useState("");
+  const [sortBy, setSortBy] = useState<"date" | "laptime">("date");
+
+  const loadLaps = (): void => {
     if (mockHistoryMode) {
-      setLaps([MOCK_LAP]);
+      setAllLaps([MOCK_LAP]);
       setSelectedLap(null);
       setCurrentPage(1);
       return;
     }
-    if (!status.car || !status.track || !window.electronAPI) return;
-
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
+    if (!window.electronAPI) return;
     setLoading(true);
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setSelectedLap(null);
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setCurrentPage(1);
     window.electronAPI
-      .getLaps({ car: status.car, track: status.track })
+      .getAllLaps()
       .then((data) => {
-        setLaps(data);
+        setAllLaps(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [status.car, status.track, mockHistoryMode]);
+  };
+
+  // Load on mount and when mock mode changes
+  useEffect(() => {
+    loadLaps();
+    // Reset filters when switching mode
+    setFilterCar("");
+    setFilterTrack("");
+    setCurrentPage(1);
+    setSelectedLap(null);
+  }, [mockHistoryMode]);
+
+  // Reload when a new lap analysis is saved
+  useEffect(() => {
+    if (!mockHistoryMode && lastAnalysis) {
+      loadLaps();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastAnalysis]);
+
+  // Reset page when filters or sort change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterCar, filterTrack, sortBy]);
+
+  // Distinct cars for the dropdown
+  const carOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const lap of allLaps) {
+      if (!seen.has(lap.car)) {
+        const label = lap.car_class_name
+          ? `${lap.car_name} (${lap.car_class_name})`
+          : lap.car_name;
+        seen.set(lap.car, label);
+      }
+    }
+    return Array.from(seen.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [allLaps]);
+
+  // Distinct track+layout combos for the dropdown
+  const trackOptions = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const lap of allLaps) {
+      const key = `${lap.track}|${lap.layout}`;
+      if (!seen.has(key)) {
+        seen.set(key, `${lap.track_name} (${lap.layout_name})`);
+      }
+    }
+    return Array.from(seen.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [allLaps]);
+
+  // Filtered + sorted laps
+  const filteredLaps = useMemo(() => {
+    let result = allLaps;
+    if (filterCar) result = result.filter((l) => l.car === filterCar);
+    if (filterTrack) {
+      const [trackId, layoutId] = filterTrack.split("|");
+      result = result.filter(
+        (l) => l.track === trackId && l.layout === layoutId,
+      );
+    }
+    if (sortBy === "laptime") {
+      return [...result].sort((a, b) => {
+        // Laps with no recorded time (out-lap, lap_time = -1) go to the bottom
+        const aValid = a.lap_time > 0;
+        const bValid = b.lap_time > 0;
+        if (aValid && !bValid) return -1;
+        if (!aValid && bValid) return 1;
+        return a.lap_time - b.lap_time;
+      });
+    }
+    // "date": already ordered DESC from the DB query
+    return result;
+  }, [allLaps, filterCar, filterTrack, sortBy]);
 
   const handleSetupSaved = (lapId: number, setup: SetupData): void => {
-    // Update the local laps list so the detail panel reflects the new setup
-    setLaps((prev) =>
+    setAllLaps((prev) =>
       prev.map((l) =>
         l.id === lapId
-          ? { ...l, setup_json: JSON.stringify(setup), setup_screenshots: JSON.stringify(setup.screenshots) }
+          ? {
+              ...l,
+              setup_json: JSON.stringify(setup),
+              setup_screenshots: JSON.stringify(setup.screenshots),
+            }
           : l,
       ),
     );
     setSelectedLap((prev) =>
       prev && prev.id === lapId
-        ? { ...prev, setup_json: JSON.stringify(setup), setup_screenshots: JSON.stringify(setup.screenshots) }
+        ? {
+            ...prev,
+            setup_json: JSON.stringify(setup),
+            setup_screenshots: JSON.stringify(setup.screenshots),
+          }
         : prev,
     );
   };
 
-  if (!mockHistoryMode && !status.car) {
-    return (
-      <div className="session-history d-flex align-items-center justify-content-center text-secondary h-100">
-        <span>Nessuna sessione attiva</span>
-      </div>
-    );
-  }
+  const totalPages = Math.max(1, Math.ceil(filteredLaps.length / PAGE_SIZE));
+  const pagedLaps = filteredLaps.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
-  const activeCar = mockHistoryMode ? MOCK_CAR : (status.car ?? "");
-  const activeTrack = mockHistoryMode ? MOCK_TRACK : (status.track ?? "");
-
-  const totalPages = Math.max(1, Math.ceil(laps.length / PAGE_SIZE));
-  const pagedLaps = laps.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  // Full-page detail view
   if (selectedLap) {
     return (
       <div className="session-history h-100 d-flex flex-column overflow-hidden">
         <DetailPanel
           lap={selectedLap}
-          car={activeCar}
-          track={activeTrack}
           fromPage={currentPage}
           onBack={() => setSelectedLap(null)}
           onSetupSaved={handleSetupSaved}
@@ -297,25 +404,75 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
 
   return (
     <div className="session-history h-100 d-flex flex-column overflow-hidden">
-      <Row className="mb-2 align-items-baseline g-0 flex-shrink-0 px-3 pt-3">
-        <Col xs="auto" className="sh-title me-2">Storico giri</Col>
-        <Col className="sh-subtitle">
-          {activeCar} · {activeTrack}
-          {mockHistoryMode && (
-            <Badge bg="warning" text="dark" className="ms-2" style={{ fontSize: 10 }}>
+      {/* Title row */}
+      <Row className="mb-0 align-items-baseline g-0 flex-shrink-0 px-3 pt-3 pb-2">
+        <Col xs="auto" className="sh-title me-2">
+          Storico giri
+        </Col>
+        {mockHistoryMode && (
+          <Col xs="auto">
+            <Badge bg="warning" text="dark" style={{ fontSize: 10 }}>
               <FontAwesomeIcon icon={faFlask} className="me-1" />
               Mock
             </Badge>
-          )}
-        </Col>
+          </Col>
+        )}
       </Row>
+
+      {/* Filter + sort bar */}
+      <div className="sh-filter-bar flex-shrink-0">
+        <Form.Select
+          size="sm"
+          className="sh-filter-select"
+          value={filterCar}
+          onChange={(e) => setFilterCar(e.target.value)}
+          style={{ maxWidth: 280 }}
+        >
+          <option value="">Tutte le auto</option>
+          {carOptions.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </Form.Select>
+
+        <Form.Select
+          size="sm"
+          className="sh-filter-select"
+          value={filterTrack}
+          onChange={(e) => setFilterTrack(e.target.value)}
+          style={{ maxWidth: 260 }}
+        >
+          <option value="">Tutti i circuiti</option>
+          {trackOptions.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </Form.Select>
+
+        <Form.Select
+          size="sm"
+          className="sh-filter-select ms-auto"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as "date" | "laptime")}
+          style={{ maxWidth: 160 }}
+        >
+          <option value="date">Data ↓</option>
+          <option value="laptime">Tempo sul giro</option>
+        </Form.Select>
+      </div>
 
       <div className="overflow-y-auto flex-grow-1 px-3">
         {loading ? (
           <div className="d-flex align-items-center gap-2 text-secondary py-3">
             <Spinner size="sm" variant="danger" /> Caricamento...
           </div>
-        ) : laps.length === 0 ? (
+        ) : !mockHistoryMode && (!filterCar || !filterTrack) ? (
+          <p className="text-secondary py-2 mb-0">
+            Seleziona auto e circuito per visualizzare i giri.
+          </p>
+        ) : filteredLaps.length === 0 ? (
           <p className="text-secondary py-2 mb-0">
             Nessun giro registrato per questa combinazione.
           </p>
@@ -328,7 +485,7 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
                 <th>S1</th>
                 <th>S2</th>
                 <th>S3</th>
-                <th>V</th>
+                <th>Data</th>
                 <th></th>
               </tr>
             </thead>
@@ -336,7 +493,7 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
               {pagedLaps.map((lap) => (
                 <tr
                   key={lap.id}
-                  className={`sh-row ${!lap.valid ? "invalid" : ""}`}
+                  className="sh-row"
                   onClick={() => setSelectedLap(lap)}
                 >
                   <td>{lap.lap_number}</td>
@@ -344,16 +501,14 @@ const SessionHistory = ({ status }: SessionHistoryProps) => {
                   <td>{formatLapTime(lap.sector1)}</td>
                   <td>{formatLapTime(lap.sector2)}</td>
                   <td>{formatLapTime(lap.sector3)}</td>
-                  <td>
-                    {lap.valid ? (
-                      <Badge bg="success" pill><FontAwesomeIcon icon={faCheck} /></Badge>
-                    ) : (
-                      <Badge bg="secondary" pill><FontAwesomeIcon icon={faXmark} /></Badge>
-                    )}
-                  </td>
+                  <td className="sh-date">{formatDate(lap.recorded_at)}</td>
                   <td>
                     {lap.setup_json && (
-                      <FontAwesomeIcon icon={faGear} className="sh-has-setup" title="Setup disponibile" />
+                      <FontAwesomeIcon
+                        icon={faGear}
+                        className="sh-has-setup"
+                        aria-label="Setup disponibile"
+                      />
                     )}
                   </td>
                 </tr>
