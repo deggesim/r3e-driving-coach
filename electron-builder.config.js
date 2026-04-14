@@ -7,6 +7,7 @@ module.exports = {
   },
   win: {
     target: "nsis",
+    icon: "build/icon.png",
   },
   nsis: {
     oneClick: false,
