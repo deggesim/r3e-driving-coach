@@ -52,6 +52,7 @@ const App = () => {
     setAzureSpeechKey,
     setAzureRegion,
     setAzureVoiceName,
+    setActiveGame,
   } = useSettingsStore();
 
   const { get: configGet } = useConfig();
@@ -73,7 +74,7 @@ const App = () => {
   // Load all settings from config on mount
   useEffect(() => {
     const load = async () => {
-      const [ak, az, key, region, voice, name, button] = await Promise.all([
+      const [ak, az, key, region, voice, name, button, game] = await Promise.all([
         configGet("anthropicApiKey"),
         configGet("azureTtsEnabled"),
         configGet("azureSpeechKey"),
@@ -81,6 +82,7 @@ const App = () => {
         configGet("azureVoiceName"),
         configGet("assistantName"),
         configGet("gamepadTriggerButton"),
+        configGet("activeGame"),
       ]);
       if (ak) setApiKey(ak);
       if (az) setAzureTtsEnabled(az === "true");
@@ -89,6 +91,7 @@ const App = () => {
       if (voice) setAzureVoiceName(voice);
       if (name) setAssistantName(name);
       if (button) setGamepadButton(Number(button));
+      if (game === "ace" || game === "r3e") setActiveGame(game);
       setSettingsLoaded(true);
     };
     load().catch(console.error);
@@ -101,6 +104,7 @@ const App = () => {
     setAzureVoiceName,
     setAssistantName,
     setGamepadButton,
+    setActiveGame,
   ]);
 
   // Accumulate alerts for TTSManager
@@ -132,7 +136,7 @@ const App = () => {
       />
 
       {/* Title bar (frameless Electron drag area) */}
-      <div className="title-bar">
+      <div className="title-bar text-nowrap">
         <img src={iconUrl} className="title-bar-icon" alt="" />
         <span className="title-bar-name">R3E Driving Coach</span>
         <div className="title-bar-tabs">

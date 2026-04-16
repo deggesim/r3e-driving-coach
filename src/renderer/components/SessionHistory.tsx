@@ -22,6 +22,7 @@ import { MOCK_LAP } from "../mocks/mockLap";
 import { useSettingsStore } from "../store/settingsStore";
 import { useIPCStore } from "../store/ipcStore";
 import ScreenshotPicker from "./ScreenshotPicker";
+import AceSetupPicker from "./AceSetupPicker";
 
 const PAGE_SIZE = 10;
 
@@ -57,6 +58,7 @@ const DetailPanel = ({
   const [showPicker, setShowPicker] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const activeGame = useIPCStore((s) => s.status.game);
 
   const analysis = lap.analysis_json ? JSON.parse(lap.analysis_json) : null;
   const setup: SetupData | null = lap.setup_json
@@ -243,12 +245,22 @@ const DetailPanel = ({
         )}
       </div>
 
-      <ScreenshotPicker
-        show={showPicker}
-        expectedCar={lap.car_name}
-        onClose={() => setShowPicker(false)}
-        onConfirm={handleSetupSaved}
-      />
+      {activeGame === "ace" ? (
+        <AceSetupPicker
+          show={showPicker}
+          car={lap.car}
+          track={lap.track}
+          onClose={() => setShowPicker(false)}
+          onConfirm={handleSetupSaved}
+        />
+      ) : (
+        <ScreenshotPicker
+          show={showPicker}
+          expectedCar={lap.car_name}
+          onClose={() => setShowPicker(false)}
+          onConfirm={handleSetupSaved}
+        />
+      )}
     </div>
   );
 };

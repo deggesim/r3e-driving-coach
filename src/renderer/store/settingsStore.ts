@@ -4,12 +4,16 @@
  */
 
 import { create } from "zustand";
+import type { GameSource } from "../../shared/types";
 
 type SettingsStore = {
   // General / AI
   apiKey: string;
   assistantName: string;
   gamepadButton: number;
+
+  // Game selection
+  activeGame: GameSource;
 
   // TTS
   ttsEnabled: boolean;
@@ -28,6 +32,7 @@ type SettingsStore = {
   setApiKey: (v: string) => void;
   setAssistantName: (v: string) => void;
   setGamepadButton: (v: number) => void;
+  setActiveGame: (v: GameSource) => void;
   setTtsEnabled: (v: boolean) => void;
   setAzureTtsEnabled: (v: boolean) => void;
   setAzureSpeechKey: (v: string) => void;
@@ -42,6 +47,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   apiKey: "",
   assistantName: "Aria",
   gamepadButton: 0,
+  activeGame: "r3e",
   ttsEnabled: true,
   azureTtsEnabled: false,
   azureSpeechKey: "",
@@ -53,6 +59,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   setApiKey: (apiKey) => set({ apiKey }),
   setAssistantName: (assistantName) => set({ assistantName }),
   setGamepadButton: (gamepadButton) => set({ gamepadButton }),
+  setActiveGame: (activeGame) => set({ activeGame }),
   setTtsEnabled: (ttsEnabled) => set({ ttsEnabled }),
   setAzureTtsEnabled: (azureTtsEnabled) => set({ azureTtsEnabled }),
   setAzureSpeechKey: (azureSpeechKey) => set({ azureSpeechKey }),

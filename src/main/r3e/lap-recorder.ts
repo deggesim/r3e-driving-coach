@@ -10,10 +10,27 @@
 import { EventEmitter } from "events";
 import { ZONE_SIZE_M, CALIBRATION_LAPS } from "../../shared/alert-types";
 import type { CompactFrame, LapRecord, ZoneData } from "../../shared/types";
-import type { R3EReader } from "./r3e-reader";
+
+/** Minimal reader interface required by LapRecorder (duck-typed by both R3EReader and AceReader). */
+interface LapEventReader {
+  on(
+    event: 'lapComplete',
+    listener: (data: {
+      lapNumber: number;
+      lapTime: number;
+      sectorTimes: number[];
+      frames: CompactFrame[];
+      car: string;
+      track: string;
+      layout: string;
+      layoutLength: number;
+      valid: boolean;
+    }) => void,
+  ): void;
+}
 
 export type LapRecorder = {
-  attach: (reader: R3EReader) => void;
+  attach: (reader: LapEventReader) => void;
   isCalibrating: () => boolean;
   lapsToCalibration: () => number;
   on: EventEmitter["on"];

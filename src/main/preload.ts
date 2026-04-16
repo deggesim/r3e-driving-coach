@@ -94,4 +94,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     analysisJson: string | null;
     setupJson: string | null;
   }) => ipcRenderer.invoke('setup:exportPdfFromData', params),
+
+  // ACE setup (file-based)
+  aceListSetupFiles: (params: { car: string; track: string }) =>
+    ipcRenderer.invoke('ace:listSetupFiles', params),
+  aceReadSetup: (params: { filePath: string }) =>
+    ipcRenderer.invoke('ace:readSetup', params),
 });

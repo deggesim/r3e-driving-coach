@@ -13,6 +13,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import { generatePdfBuffer, type PdfData } from "./pdf-generator";
 import { createR3EReader, type R3EReader } from "./r3e/r3e-reader";
+import { createAceReader, type AceReader } from "./ace/ace-reader";
 import { createLapRecorder } from "./r3e/lap-recorder";
 import { createZoneTracker } from "./r3e/zone-tracker";
 import {
@@ -38,11 +39,14 @@ import {
   getLayoutName,
   getCarClassName,
 } from "./r3e/r3e-data-loader";
+import { toGameFrame } from "./game-adapter";
+import { decodeCarSetup, type AceSetupFileInfo } from "./ace/ace-setup-reader";
 import type {
   LapRecord,
   LapAnalysis,
   R3EStatus,
   R3EFrame,
+  GameSource,
   Alert,
   Deviation,
 } from "../shared/types";
@@ -51,7 +55,7 @@ import cornerNamesData from "../shared/corner-names.json";
 const IS_DEV = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
-let reader: R3EReader | null = null;
+let reader: R3EReader | AceReader | null = null;
 
 // ──────────────────────────────────────────────
 // Window creation
@@ -61,7 +65,7 @@ const createWindow = (): void => {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, "../../public/icon.png"),
+    icon: path.join(__dirname, "../../build/icon.ico"),
     frame: false,
     resizable: true,
     webPreferences: {
@@ -143,19 +147,34 @@ const setupPipeline = (): void => {
     >,
   );
 
+  // Read active game from persistent config (default: 'r3e')
+  const activeGameRow = db
+    .prepare("SELECT value FROM app_config WHERE key = ?")
+    .get("activeGame") as { value: string } | undefined;
+  const activeGame: GameSource =
+    activeGameRow?.value === "ace" ? "ace" : "r3e";
+
+  console.log(`[Main] setupPipeline — activeGame="${activeGame}"`);
+
   let currentCar = "";
   let currentTrack = "";
   let currentLayout = "";
   let lastDeviations: Deviation[] | null = null;
 
-  // corner_names seed data uses track/layout names, so resolve IDs before lookup
-  const lookupCorner = (dist: number): string | null =>
-    getCornerName(
+  // corner_names seed data uses track/layout names.
+  // R3E: resolve numeric IDs to display names before lookup.
+  // ACE: car/track/layout are already readable strings — use directly.
+  const lookupCorner = (dist: number): string | null => {
+    if (activeGame === "ace") {
+      return getCornerName(db, currentTrack, currentLayout, dist);
+    }
+    return getCornerName(
       db,
       currentTrack ? getTrackName(Number(currentTrack)) : currentTrack,
       currentLayout ? getLayoutName(Number(currentLayout)) : currentLayout,
       dist,
     );
+  };
 
   const buildCornerMap = (): Map<number, string> => {
     const map = new Map<number, string>();
@@ -175,20 +194,37 @@ const setupPipeline = (): void => {
     "unknown",
     "unknown",
     db,
+    activeGame,
   );
   let ruleEngine = createRuleEngine(dispatcher, baseline, lookupCorner);
 
   const recorder = createLapRecorder(baseline.isReady());
 
   const pushStatus = (): void => {
-    // IDs are stored internally; resolve to names for UI display
+    let carDisplay: string | null = null;
+    let trackDisplay: string | null = null;
+    let layoutDisplay: string | null = null;
+
+    if (activeGame === "ace") {
+      // ACE: IDs are already human-readable strings
+      carDisplay    = currentCar    || null;
+      trackDisplay  = currentTrack  || null;
+      layoutDisplay = currentLayout || null;
+    } else {
+      // R3E: resolve numeric IDs to display names
+      carDisplay    = currentCar    ? getCarName(Number(currentCar))       : null;
+      trackDisplay  = currentTrack  ? getTrackName(Number(currentTrack))   : null;
+      layoutDisplay = currentLayout ? getLayoutName(Number(currentLayout)) : null;
+    }
+
     const status: R3EStatus = {
       connected: reader !== null,
       calibrating: recorder.isCalibrating(),
       lapsToCalibration: recorder.lapsToCalibration(),
-      car: currentCar ? getCarName(Number(currentCar)) : null,
-      track: currentTrack ? getTrackName(Number(currentTrack)) : null,
-      layout: currentLayout ? getLayoutName(Number(currentLayout)) : null,
+      car:    carDisplay,
+      track:  trackDisplay,
+      layout: layoutDisplay,
+      game:   activeGame,
     };
     pushToRenderer("r3e:status", status);
   };
@@ -224,8 +260,10 @@ const setupPipeline = (): void => {
   // Session tracking
   let currentSessionId: number | null = null;
 
-  // ─── Reader
-  reader = createR3EReader();
+  // ─── Reader (selected by activeGame config)
+  reader = activeGame === "ace"
+    ? createAceReader()
+    : createR3EReader();
 
   reader.on("connected", () => {
     pushStatus();
@@ -235,15 +273,28 @@ const setupPipeline = (): void => {
     pushStatus();
   });
 
-  reader.on("frame", (frame: R3EFrame) => {
-    if (frame.carModelId > 0) currentCar = String(frame.carModelId);
-    if (frame.trackId > 0) currentTrack = String(frame.trackId);
-    if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
+  if (activeGame === "ace") {
+    // AceReader emits GameFrame directly — no projection needed.
+    // car/track/layout are updated from lapComplete (not per-frame).
+    reader.on("frame", (frame: import("../shared/types").GameFrame) => {
+      zoneTracker.update(frame);
+      ruleEngine.processFrame(frame);
+      // Renderer still receives frame data for live telemetry display
+      pushToRenderer("r3e:frame", frame);
+    });
+  } else {
+    // R3EReader emits R3EFrame — project to GameFrame for shared components.
+    reader.on("frame", (frame: R3EFrame) => {
+      if (frame.carModelId > 0) currentCar = String(frame.carModelId);
+      if (frame.trackId > 0) currentTrack = String(frame.trackId);
+      if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
 
-    zoneTracker.update(frame);
-    ruleEngine.processFrame(frame);
-    pushToRenderer("r3e:frame", frame);
-  });
+      const gameFrame = toGameFrame(frame);
+      zoneTracker.update(gameFrame);
+      ruleEngine.processFrame(gameFrame);
+      pushToRenderer("r3e:frame", frame);
+    });
+  }
 
   reader.on("lapComplete", async (lapData) => {
     console.log(
@@ -251,11 +302,18 @@ const setupPipeline = (): void => {
         `valid=${lapData.valid} car="${lapData.car}" track="${lapData.track}" layout="${lapData.layout}"`,
     );
 
+    // For ACE, update current car/track/layout from lapComplete (not from per-frame data)
+    if (activeGame === "ace") {
+      if (lapData.car)    currentCar    = lapData.car;
+      if (lapData.track)  currentTrack  = lapData.track;
+      if (lapData.layout) currentLayout = lapData.layout;
+    }
+
     if (lapData.car !== baseline.car || lapData.track !== baseline.track) {
       console.log(
         `[Main] car/track changed — recreating baseline (was car="${baseline.car}" track="${baseline.track}")`,
       );
-      baseline = createAdaptiveBaseline(lapData.car, lapData.track, db);
+      baseline = createAdaptiveBaseline(lapData.car, lapData.track, db, activeGame);
       ruleEngine = createRuleEngine(dispatcher, baseline, lookupCorner);
       coachEngine.updateCornerNames(buildCornerMap());
     }
@@ -273,6 +331,7 @@ const setupPipeline = (): void => {
           lapData.car,
           lapData.track,
           lapData.layout,
+          activeGame,
         );
         console.log(`[Main] session created: id=${currentSessionId}`);
       } catch (err) {
@@ -294,13 +353,24 @@ const setupPipeline = (): void => {
           `valid=${lap.valid} calibrating=${calibrating} zones=${lap.zones.length}`,
       );
 
-      // Resolve display names before sending to renderer and coach
-      const lapWithNames: LapRecord = {
-        ...lap,
-        carName: getCarName(Number(lap.car)),
-        trackName: getTrackName(Number(lap.track)),
-        layoutName: getLayoutName(Number(lap.layout)),
-      };
+      // Resolve display names before sending to renderer and coach.
+      // ACE: car/track/layout are already human-readable strings — use directly.
+      // R3E: resolve numeric IDs to display names.
+      const lapWithNames: LapRecord = activeGame === "ace"
+        ? {
+            ...lap,
+            game: "ace",
+            carName: lap.car,
+            trackName: lap.track,
+            layoutName: lap.layout,
+          }
+        : {
+            ...lap,
+            game: "r3e",
+            carName: getCarName(Number(lap.car)),
+            trackName: getTrackName(Number(lap.track)),
+            layoutName: getLayoutName(Number(lap.layout)),
+          };
 
       pushToRenderer("r3e:lapComplete", lapWithNames);
       pushStatus();
@@ -397,20 +467,38 @@ const setupPipeline = (): void => {
     `,
       )
       .all() as Array<{
-        id: number; session_id: number; lap_number: number; lap_time: number;
-        sector1: number | null; sector2: number | null; sector3: number | null;
-        valid: number; analysis_json: string | null; pdf_path: string | null;
-        setup_json: string | null; setup_screenshots: string | null;
-        recorded_at: string; car: string; track: string; layout: string;
-      }>;
+      id: number;
+      session_id: number;
+      lap_number: number;
+      lap_time: number;
+      sector1: number | null;
+      sector2: number | null;
+      sector3: number | null;
+      valid: number;
+      analysis_json: string | null;
+      pdf_path: string | null;
+      setup_json: string | null;
+      setup_screenshots: string | null;
+      recorded_at: string;
+      car: string;
+      track: string;
+      layout: string;
+    }>;
 
-    return rows.map((row) => ({
-      ...row,
-      car_name: getCarName(parseInt(row.car)),
-      track_name: getTrackName(parseInt(row.track)),
-      layout_name: getLayoutName(parseInt(row.layout)),
-      car_class_name: getCarClassName(parseInt(row.car)),
-    }));
+    return rows.map((row) => {
+      const carNum   = parseInt(row.car);
+      const trackNum = parseInt(row.track);
+      const layoutNum = parseInt(row.layout);
+      // For ACE rows, parseInt returns NaN and getCarName/etc. return undefined.
+      // Fall back to the raw string ID in that case.
+      return {
+        ...row,
+        car_name:       (!isNaN(carNum)    ? getCarName(carNum)       : undefined) ?? row.car,
+        track_name:     (!isNaN(trackNum)  ? getTrackName(trackNum)   : undefined) ?? row.track,
+        layout_name:    (!isNaN(layoutNum) ? getLayoutName(layoutNum) : undefined) ?? row.layout,
+        car_class_name: (!isNaN(carNum)    ? getCarClassName(carNum)  : undefined) ?? "",
+      };
+    });
   });
 
   ipcMain.handle("db:getSession", (_event, id: number) => {
@@ -505,7 +593,9 @@ const setupPipeline = (): void => {
       }
 
       const buf = Buffer.from(audioBuffer);
-      console.log(`[STT IPC] Received ${buf.byteLength} bytes, mimeType=${mimeType ?? "(default)"}`);
+      console.log(
+        `[STT IPC] Received ${buf.byteLength} bytes, mimeType=${mimeType ?? "(default)"}`,
+      );
       return transcribeAzure(buf, key, region, mimeType);
     },
   );
@@ -602,7 +692,10 @@ const setupPipeline = (): void => {
   // ─── Setup: decode setup from screenshots via Claude Vision
   ipcMain.handle(
     "setup:decodeSetup",
-    async (_event, { filenames, expectedCar }: { filenames: string[]; expectedCar: string }) => {
+    async (
+      _event,
+      { filenames, expectedCar }: { filenames: string[]; expectedCar: string },
+    ) => {
       const fs = await import("fs");
       const path = await import("path");
       const screenshotsDir =
@@ -622,7 +715,11 @@ const setupPipeline = (): void => {
         const data = fs.readFileSync(fullPath).toString("base64");
         return {
           type: "image" as const,
-          source: { type: "base64" as const, media_type: "image/jpeg" as const, data },
+          source: {
+            type: "base64" as const,
+            media_type: "image/jpeg" as const,
+            data,
+          },
         };
       });
 
@@ -676,11 +773,31 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
   // ─── Setup: save setup data to DB for a lap
   ipcMain.handle(
     "setup:saveSetup",
-    (_event, { lapId, setup }: { lapId: number; setup: { carVerified: boolean; carFound: string; setupText: string; params: unknown[]; screenshots: string[] } }) => {
+    (
+      _event,
+      {
+        lapId,
+        setup,
+      }: {
+        lapId: number;
+        setup: {
+          carVerified: boolean;
+          carFound: string;
+          setupText: string;
+          params: unknown[];
+          screenshots: string[];
+        };
+      },
+    ) => {
       db.prepare(
         "UPDATE laps SET setup_json = ?, setup_screenshots = ? WHERE id = ?",
       ).run(
-        JSON.stringify({ carVerified: setup.carVerified, carFound: setup.carFound, setupText: setup.setupText, params: setup.params }),
+        JSON.stringify({
+          carVerified: setup.carVerified,
+          carFound: setup.carFound,
+          setupText: setup.setupText,
+          params: setup.params,
+        }),
         JSON.stringify(setup.screenshots),
         lapId,
       );
@@ -688,73 +805,77 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
   );
 
   // ─── Setup: export PDF with analysis + setup using branded template
-  ipcMain.handle("setup:exportPdf", async (_event, { lapId }: { lapId: number }) => {
-    const { dialog } = await import("electron");
-    const fs = await import("fs");
+  ipcMain.handle(
+    "setup:exportPdf",
+    async (_event, { lapId }: { lapId: number }) => {
+      const { dialog } = await import("electron");
+      const fs = await import("fs");
 
-    const lap = db
-      .prepare(
-        `SELECT l.*, s.car, s.track, s.layout, s.session_type
+      const lap = db
+        .prepare(
+          `SELECT l.*, s.car, s.track, s.layout, s.session_type
          FROM laps l JOIN sessions s ON l.session_id = s.id
          WHERE l.id = ?`,
-      )
-      .get(lapId) as
-      | {
-          lap_number: number;
-          lap_time: number;
-          sector1: number | null;
-          sector2: number | null;
-          sector3: number | null;
-          analysis_json: string | null;
-          setup_json: string | null;
-          car: string;
-          track: string;
-          layout: string;
-          session_type: string;
-          recorded_at: string;
-        }
-      | undefined;
+        )
+        .get(lapId) as
+        | {
+            lap_number: number;
+            lap_time: number;
+            sector1: number | null;
+            sector2: number | null;
+            sector3: number | null;
+            analysis_json: string | null;
+            setup_json: string | null;
+            car: string;
+            track: string;
+            layout: string;
+            session_type: string;
+            recorded_at: string;
+          }
+        | undefined;
 
-    if (!lap) return null;
+      if (!lap) return null;
 
-    const analysis = lap.analysis_json ? JSON.parse(lap.analysis_json) : null;
-    const setup = lap.setup_json ? JSON.parse(lap.setup_json) : null;
+      const analysis = lap.analysis_json ? JSON.parse(lap.analysis_json) : null;
+      const setup = lap.setup_json ? JSON.parse(lap.setup_json) : null;
 
-    const sessionTypeMap: Record<string, string> = {
-      practice: "Pratica",
-      qualify: "Qualifica",
-      race: "Gara",
-    };
+      const sessionTypeMap: Record<string, string> = {
+        practice: "Pratica",
+        qualify: "Qualifica",
+        race: "Gara",
+      };
 
-    const pdfData: PdfData = {
-      car: lap.car,
-      track: lap.track,
-      layout: lap.layout,
-      lapNumber: lap.lap_number,
-      lapTime: lap.lap_time,
-      sector1: lap.sector1,
-      sector2: lap.sector2,
-      sector3: lap.sector3,
-      condition: "Asciutto",
-      sessionType: sessionTypeMap[lap.session_type] ?? lap.session_type ?? "Sessione",
-      recordedAt: lap.recorded_at,
-      templateV3: analysis?.templateV3 ?? null,
-      setupParams: setup?.params ?? undefined,
-    };
+      const pdfData: PdfData = {
+        car: lap.car,
+        track: lap.track,
+        layout: lap.layout,
+        lapNumber: lap.lap_number,
+        lapTime: lap.lap_time,
+        sector1: lap.sector1,
+        sector2: lap.sector2,
+        sector3: lap.sector3,
+        condition: "Asciutto",
+        sessionType:
+          sessionTypeMap[lap.session_type] ?? lap.session_type ?? "Sessione",
+        recordedAt: lap.recorded_at,
+        templateV3: analysis?.templateV3 ?? null,
+        setupParams: setup?.params ?? undefined,
+      };
 
-    const pdfBuffer = await generatePdfBuffer(pdfData);
+      const pdfBuffer = await generatePdfBuffer(pdfData);
 
-    const { canceled, filePath } = await dialog.showSaveDialog({
-      title: "Salva analisi PDF",
-      defaultPath: `giro${lap.lap_number}_car${lap.car}_track${lap.track}.pdf`,
-      filters: [{ name: "PDF", extensions: ["pdf"] }],
-    });
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: "Salva analisi PDF",
+        defaultPath: `giro${lap.lap_number}_car${lap.car}_track${lap.track}.pdf`,
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      });
 
-    if (canceled || !filePath) return null;
+      if (canceled || !filePath) return null;
 
-    fs.writeFileSync(filePath, pdfBuffer);
-    return filePath;
-  });
+      fs.writeFileSync(filePath, pdfBuffer);
+      return filePath;
+    },
+  );
 
   // ─── Setup: export PDF from raw data (used by mock lap in dev/test mode)
   ipcMain.handle(
@@ -812,6 +933,51 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
     },
   );
 
+  // ─── ACE Setup IPC
+  ipcMain.handle(
+    "ace:listSetupFiles",
+    async (_event, { car, track }: { car: string; track: string }) => {
+      const fs = await import("fs");
+      const pathMod = await import("path");
+      const ACE_SETUPS_BASE = "D:\\Salvataggi\\ACE\\Car Setups";
+      const dir = pathMod.join(ACE_SETUPS_BASE, car, track);
+      try {
+        const files = fs
+          .readdirSync(dir)
+          .filter((f: string) => f.endsWith(".carsetup"))
+          .sort()
+          .reverse();
+        return files.map((filename: string): AceSetupFileInfo => {
+          const filePath = pathMod.join(dir, filename);
+          const stat = fs.statSync(filePath);
+          return {
+            filename,
+            filePath,
+            modifiedAt: stat.mtime.toISOString(),
+          };
+        });
+      } catch {
+        return [];
+      }
+    },
+  );
+
+  ipcMain.handle(
+    "ace:readSetup",
+    async (_event, { filePath }: { filePath: string }) => {
+      const fs = await import("fs");
+      const pathMod = await import("path");
+      const buf = fs.readFileSync(filePath);
+      // Extract carId from path: …/Car Setups/{car}/{track}/file.carsetup
+      const parts = filePath.split(/[\\/]/);
+      const carIdx = parts.findIndex(
+        (p) => p.toLowerCase() === "car setups",
+      );
+      const carId = carIdx >= 0 ? (parts[carIdx + 1] ?? "") : pathMod.basename(pathMod.dirname(pathMod.dirname(filePath)));
+      return decodeCarSetup(buf, carId);
+    },
+  );
+
   // Start reader
   reader.start();
 
@@ -837,15 +1003,16 @@ const createSession = (
   car: string,
   track: string,
   layout: string,
+  game = 'r3e',
 ): number => {
   const result = db
     .prepare(
       `
-    INSERT INTO sessions (car, track, layout, session_type, started_at)
-    VALUES (?, ?, ?, 'practice', datetime('now'))
+    INSERT INTO sessions (car, track, layout, session_type, game, started_at)
+    VALUES (?, ?, ?, 'practice', ?, datetime('now'))
   `,
     )
-    .run(car, track, layout);
+    .run(car, track, layout, game);
   return result.lastInsertRowid as number;
 };
 
@@ -855,20 +1022,22 @@ const saveLap = (
   lap: LapRecord,
 ): void => {
   try {
-    const insertResult = db.prepare(
-      `
+    const insertResult = db
+      .prepare(
+        `
     INSERT OR IGNORE INTO laps (session_id, lap_number, lap_time, sector1, sector2, sector3, valid, recorded_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `,
-    ).run(
-      sessionId,
-      lap.lapNumber,
-      lap.lapTime,
-      lap.sectorTimes[0] ?? null,
-      lap.sectorTimes[1] ?? null,
-      lap.sectorTimes[2] ?? null,
-      lap.valid ? 1 : 0,
-    );
+      )
+      .run(
+        sessionId,
+        lap.lapNumber,
+        lap.lapTime,
+        lap.sectorTimes[0] ?? null,
+        lap.sectorTimes[1] ?? null,
+        lap.sectorTimes[2] ?? null,
+        lap.valid ? 1 : 0,
+      );
 
     if (insertResult.changes === 0) {
       console.warn(
@@ -882,14 +1051,16 @@ const saveLap = (
       );
     }
 
-    const updateResult = db.prepare(
-      `
+    const updateResult = db
+      .prepare(
+        `
     UPDATE sessions SET
       best_lap = CASE WHEN best_lap IS NULL OR ? < best_lap THEN ? ELSE best_lap END,
       lap_count = lap_count + 1
     WHERE id = ?
   `,
-    ).run(lap.lapTime, lap.lapTime, sessionId);
+      )
+      .run(lap.lapTime, lap.lapTime, sessionId);
     console.log(
       `[Main] saveLap — session update changes=${updateResult.changes}`,
     );

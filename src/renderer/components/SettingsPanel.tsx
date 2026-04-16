@@ -56,6 +56,8 @@ const SettingsPanel = () => {
     setAssistantName,
     gamepadButton,
     setGamepadButton,
+    activeGame,
+    setActiveGame,
     ttsEnabled,
     setTtsEnabled,
     azureTtsEnabled,
@@ -88,6 +90,12 @@ const SettingsPanel = () => {
     await configSet("assistantName", assistantName);
     await configSet("gamepadTriggerButton", String(gamepadButton));
     showSaved("assistant");
+  };
+
+  const handleGameChange = async (game: "r3e" | "ace") => {
+    setActiveGame(game);
+    await configSet("activeGame", game);
+    showSaved("activeGame");
   };
 
   const handleToggleAzure = async () => {
@@ -286,6 +294,45 @@ const SettingsPanel = () => {
               Premi il tasto configurato sul controller per attivare il
               microfono e fare domande al coach. Il tasto 0 corrisponde al tasto
               A su controller Xbox.
+            </Form.Text>
+          </Form.Group>
+
+          <hr className="mb-4" />
+
+          {/* Simulatore */}
+          <Form.Group className="mb-4">
+            <Form.Label className="setting-section-label">
+              Simulatore
+            </Form.Label>
+            <Row className="g-2 align-items-center mb-2">
+              <Col xs="auto">
+                <Button
+                  variant={activeGame === "r3e" ? "danger" : "secondary"}
+                  onClick={() => handleGameChange("r3e")}
+                >
+                  RaceRoom (R3E)
+                </Button>
+              </Col>
+              <Col xs="auto">
+                <Button
+                  variant={activeGame === "ace" ? "danger" : "secondary"}
+                  onClick={() => handleGameChange("ace")}
+                >
+                  Assetto Corsa EVO
+                </Button>
+              </Col>
+              {settingSaved === "activeGame" && (
+                <Col xs="auto">
+                  <span className="text-success">
+                    <FontAwesomeIcon icon={faCheck} /> Salvato
+                  </span>
+                </Col>
+              )}
+            </Row>
+            <Form.Text>
+              Il cambio simulatore richiede il riavvio dell&apos;app per avere
+              effetto. Il coach si connette alla shared memory del simulatore
+              selezionato.
             </Form.Text>
           </Form.Group>
 

@@ -52,7 +52,9 @@ const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
           bg={status.connected ? "success" : "danger"}
           className="status-badge"
         >
-          {status.connected ? "R3E connesso" : "R3E disconnesso"}
+          {status.connected
+            ? `${status.game === "ace" ? "ACE" : "R3E"} connesso`
+            : `${status.game === "ace" ? "ACE" : "R3E"} disconnesso`}
         </Badge>
       </div>
 

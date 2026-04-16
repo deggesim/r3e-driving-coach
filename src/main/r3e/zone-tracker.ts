@@ -6,7 +6,7 @@
  */
 
 import { ZONE_SIZE_M } from "../../shared/alert-types";
-import type { R3EFrame } from "../../shared/types";
+import type { GameFrame } from "../../shared/types";
 
 type CurrentZone = {
   zone: number;
@@ -19,7 +19,7 @@ type CurrentZone = {
 
 export type ZoneTracker = {
   /** Call on every frame. Returns true if the zone changed. */
-  update: (frame: R3EFrame) => boolean;
+  update: (frame: GameFrame) => boolean;
   getCurrentZone: () => CurrentZone | null;
   getPreviousZoneId: () => number;
   reset: () => void;
@@ -30,7 +30,7 @@ export const createZoneTracker = (): ZoneTracker => {
   let previousZone = -1;
 
   return {
-    update: (frame) => {
+    update: (frame: GameFrame) => {
       const zoneId = Math.floor(frame.lapDistance / ZONE_SIZE_M);
 
       if (current === null || zoneId !== current.zone) {

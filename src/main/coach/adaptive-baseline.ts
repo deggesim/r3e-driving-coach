@@ -42,7 +42,7 @@ const makeDeviation = (type: DeviationType, zone: ZoneData, delta: number, messa
   type, zone: zone.zone, dist: zone.dist, delta, message,
 });
 
-export const createAdaptiveBaseline = (car: string, track: string, db?: Database.Database): AdaptiveBaseline => {
+export const createAdaptiveBaseline = (car: string, track: string, db?: Database.Database, game = 'r3e'): AdaptiveBaseline => {
   const zones = new Map<number, BaselineZone>();
   const tcZones = new Set<number>();
   const absZones = new Set<number>();
@@ -156,18 +156,18 @@ export const createAdaptiveBaseline = (car: string, track: string, db?: Database
     if (!dbRef) return;
 
     const rows = dbRef.prepare(
-      'SELECT zone_id, data FROM baseline WHERE car = ? AND track = ?',
-    ).all(car, track) as Array<{ zone_id: number; data: string }>;
+      'SELECT zone_id, data FROM baseline WHERE car = ? AND track = ? AND game = ?',
+    ).all(car, track, game) as Array<{ zone_id: number; data: string }>;
     for (const row of rows) zones.set(row.zone_id, JSON.parse(row.data));
 
     const tcRows = dbRef.prepare(
-      'SELECT zone_id FROM baseline_tc_zones WHERE car = ? AND track = ?',
-    ).all(car, track) as Array<{ zone_id: number }>;
+      'SELECT zone_id FROM baseline_tc_zones WHERE car = ? AND track = ? AND game = ?',
+    ).all(car, track, game) as Array<{ zone_id: number }>;
     for (const row of tcRows) tcZones.add(row.zone_id);
 
     const absRows = dbRef.prepare(
-      'SELECT zone_id FROM baseline_abs_zones WHERE car = ? AND track = ?',
-    ).all(car, track) as Array<{ zone_id: number }>;
+      'SELECT zone_id FROM baseline_abs_zones WHERE car = ? AND track = ? AND game = ?',
+    ).all(car, track, game) as Array<{ zone_id: number }>;
     for (const row of absRows) absZones.add(row.zone_id);
 
     if (zones.size > 0) ready = true;
@@ -177,27 +177,27 @@ export const createAdaptiveBaseline = (car: string, track: string, db?: Database
     if (!dbRef) return;
 
     const upsert = dbRef.prepare(`
-      INSERT OR REPLACE INTO baseline (car, track, zone_id, data, updated_at)
-      VALUES (?, ?, ?, ?, datetime('now'))
+      INSERT OR REPLACE INTO baseline (car, track, zone_id, game, data, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))
     `);
     const upsertTc = dbRef.prepare(`
-      INSERT OR IGNORE INTO baseline_tc_zones (car, track, zone_id)
-      VALUES (?, ?, ?)
+      INSERT OR IGNORE INTO baseline_tc_zones (car, track, zone_id, game)
+      VALUES (?, ?, ?, ?)
     `);
     const upsertAbs = dbRef.prepare(`
-      INSERT OR IGNORE INTO baseline_abs_zones (car, track, zone_id)
-      VALUES (?, ?, ?)
+      INSERT OR IGNORE INTO baseline_abs_zones (car, track, zone_id, game)
+      VALUES (?, ?, ?, ?)
     `);
 
     const tx = dbRef.transaction(() => {
       for (const [zoneId, data] of zones) {
-        upsert.run(car, track, zoneId, JSON.stringify(data));
+        upsert.run(car, track, zoneId, game, JSON.stringify(data));
       }
       for (const zoneId of tcZones) {
-        upsertTc.run(car, track, zoneId);
+        upsertTc.run(car, track, zoneId, game);
       }
       for (const zoneId of absZones) {
-        upsertAbs.run(car, track, zoneId);
+        upsertAbs.run(car, track, zoneId, game);
       }
     });
 

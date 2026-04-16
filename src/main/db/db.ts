@@ -86,6 +86,36 @@ const initSchema = (db: Database.Database): void => {
   if (!colNames.includes("setup_screenshots")) {
     db.exec("ALTER TABLE laps ADD COLUMN setup_screenshots TEXT");
   }
+
+  // Migration: add game column to sessions (for multi-game support)
+  const sessionCols = db
+    .prepare("PRAGMA table_info(sessions)")
+    .all() as Array<{ name: string }>;
+  if (!sessionCols.map((c) => c.name).includes("game")) {
+    db.exec("ALTER TABLE sessions ADD COLUMN game TEXT NOT NULL DEFAULT 'r3e'");
+  }
+
+  // Migration: add game column to baseline tables
+  const baselineCols = db
+    .prepare("PRAGMA table_info(baseline)")
+    .all() as Array<{ name: string }>;
+  if (!baselineCols.map((c) => c.name).includes("game")) {
+    db.exec("ALTER TABLE baseline ADD COLUMN game TEXT NOT NULL DEFAULT 'r3e'");
+  }
+
+  const tcCols = db
+    .prepare("PRAGMA table_info(baseline_tc_zones)")
+    .all() as Array<{ name: string }>;
+  if (!tcCols.map((c) => c.name).includes("game")) {
+    db.exec("ALTER TABLE baseline_tc_zones ADD COLUMN game TEXT NOT NULL DEFAULT 'r3e'");
+  }
+
+  const absCols = db
+    .prepare("PRAGMA table_info(baseline_abs_zones)")
+    .all() as Array<{ name: string }>;
+  if (!absCols.map((c) => c.name).includes("game")) {
+    db.exec("ALTER TABLE baseline_abs_zones ADD COLUMN game TEXT NOT NULL DEFAULT 'r3e'");
+  }
 };
 
 export const getDb = (userDataPath: string): Database.Database => {

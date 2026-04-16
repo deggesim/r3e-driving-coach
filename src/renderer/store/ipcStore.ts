@@ -19,6 +19,7 @@ const DEFAULT_STATUS: R3EStatus = {
   car: null,
   track: null,
   layout: null,
+  game: 'r3e',
 };
 
 export type IPCStore = {

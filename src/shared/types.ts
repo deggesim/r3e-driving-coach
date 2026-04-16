@@ -45,6 +45,22 @@ export type Deviation = {
   message: string;
 };
 
+// --- Active game source ---
+
+export type GameSource = 'r3e' | 'ace';
+
+// --- Minimal frame interface used by RuleEngine and ZoneTracker ---
+
+export interface GameFrame {
+  lapDistance: number;   // metres from start line
+  tcActive: number;      // 0 or 1
+  absActive: number;     // 0 or 1
+  brakeTempFL: number;   // °C, -1 if unavailable
+  brakeTempFR: number;
+  brakeTempRL: number;
+  brakeTempRR: number;
+}
+
 // --- Frame (compact, from R3EReader) ---
 
 export type CompactFrame = {
@@ -87,14 +103,15 @@ export type ZoneData = {
 export type LapRecord = {
   lapNumber: number;
   lapTime: number;      // seconds
-  sectorTimes: number[]; // [s1, s2, s3] seconds
+  sectorTimes: number[]; // [s1, s2, s3] seconds; [-1,-1,-1] if unavailable
   valid: boolean;
-  car: string;          // numeric ID as string (e.g. "6349")
-  track: string;        // numeric ID as string (e.g. "1683")
-  layout: string;       // numeric ID as string (e.g. "1684")
-  carName?: string;     // resolved display name (e.g. "Porsche 911 GT3 R")
-  trackName?: string;   // resolved display name (e.g. "Circuit Zolder")
-  layoutName?: string;  // resolved display name (e.g. "Grand Prix")
+  game?: GameSource;    // source game; defaults to 'r3e' if absent
+  car: string;          // numeric ID (R3E) or string slug (ACE), e.g. "6349" or "ks_porsche_718_gt4"
+  track: string;        // numeric ID (R3E) or string slug (ACE)
+  layout: string;       // numeric ID (R3E) or config string (ACE)
+  carName?: string;     // resolved display name (R3E) or same as car (ACE)
+  trackName?: string;   // resolved display name (R3E) or same as track (ACE)
+  layoutName?: string;  // resolved display name (R3E) or same as layout (ACE)
   layoutLength: number; // meters
   frames: CompactFrame[];
   zones: ZoneData[];
@@ -110,6 +127,7 @@ export type R3EStatus = {
   car: string | null;
   track: string | null;
   layout: string | null;
+  game: GameSource;
 };
 
 // --- Session & Lap (from SQLite) ---
@@ -322,11 +340,15 @@ export type ElectronAPI = {
   windowMaximize: () => void;
   removeAllListeners: (channel: string) => void;
 
-  // Setup analysis
+  // R3E Setup analysis (screenshot-based)
   listScreenshots: () => Promise<Array<{ name: string; thumbnailB64: string }>>;
   decodeSetup: (params: { filenames: string[]; expectedCar: string }) => Promise<SetupData>;
   saveSetup: (params: { lapId: number; setup: SetupData }) => Promise<void>;
   exportPdf: (params: { lapId: number }) => Promise<string | null>;
+
+  // ACE Setup analysis (file-based)
+  aceListSetupFiles: (params: { car: string; track: string }) => Promise<Array<{ filename: string; filePath: string; modifiedAt: string }>>;
+  aceReadSetup: (params: { filePath: string }) => Promise<SetupData>;
   exportPdfFromData: (params: {
     lapNumber: number;
     lapTime: number;

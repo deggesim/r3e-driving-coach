@@ -7,7 +7,7 @@
 
 import { EventEmitter } from 'events';
 import { ANTI_SPAM, BRAKE_TEMP } from '../../shared/alert-types';
-import type { Alert, AlertType, Deviation, R3EFrame } from '../../shared/types';
+import type { Alert, AlertType, Deviation, GameFrame } from '../../shared/types';
 import type { AdaptiveBaseline } from './adaptive-baseline';
 
 // --- AlertDispatcher ---
@@ -93,7 +93,7 @@ export const createAlertDispatcher = (): AlertDispatcher => {
 type GetCornerNameFn = (dist: number) => string | null;
 
 export type RuleEngine = {
-  processFrame: (frame: R3EFrame) => void;
+  processFrame: (frame: GameFrame) => void;
   processLapDeviations: (deviations: Deviation[]) => void;
   resetLap: () => void;
 };
@@ -103,7 +103,7 @@ export const createRuleEngine = (
   baseline: AdaptiveBaseline,
   getCornerName: GetCornerNameFn,
 ): RuleEngine => {
-  const checkBrakeTemp = (frame: R3EFrame, zone: number, _location: string): void => {
+  const checkBrakeTemp = (frame: GameFrame, zone: number, _location: string): void => {
     const temps = [
       { label: 'anteriore sinistro', value: frame.brakeTempFL },
       { label: 'anteriore destro', value: frame.brakeTempFR },
@@ -129,7 +129,7 @@ export const createRuleEngine = (
     }
   };
 
-  const checkTcAbsAnomaly = (frame: R3EFrame, zone: number, location: string): void => {
+  const checkTcAbsAnomaly = (frame: GameFrame, zone: number, location: string): void => {
     const check = baseline.checkZoneRealtime({
       zone,
       tcActive: frame.tcActive > 0,
@@ -162,7 +162,7 @@ export const createRuleEngine = (
   };
 
   return {
-    processFrame: (frame) => {
+    processFrame: (frame: GameFrame) => {
       const zone = Math.floor(frame.lapDistance / 50);
       const cornerName = getCornerName(frame.lapDistance);
       const location = cornerName
