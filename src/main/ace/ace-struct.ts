@@ -23,15 +23,11 @@
 
 // ── Shared memory names ─────────────────────────────────────────────────────
 
-// Primary names (Steam Community guide 2026-03-31). The reader also auto-tries
-// the bare name without "Local\" prefix, and the acevo_pmf_* variant used by
-// some community connectors (e.g. vAzhureRacingHub).
-export const ACE_SHM_PHYSICS = 'Local\\ACEVOPhysics';
-export const ACE_SHM_GRAPHIC = 'Local\\ACEVOGraphic';
-export const ACE_SHM_STATIC  = 'Local\\ACEVOStatic';
-export const ACE_SHM_PHYSICS_ALT = 'Local\\acevo_pmf_physics';
-export const ACE_SHM_GRAPHIC_ALT = 'Local\\acevo_pmf_graphics';
-export const ACE_SHM_STATIC_ALT  = 'Local\\acevo_pmf_static';
+// Names confirmed working (acevo_pmf_* variant used by ACE and community connectors).
+// Local\ACEVO* names always return handle=0 — removed.
+export const ACE_SHM_PHYSICS = 'Local\\acevo_pmf_physics';
+export const ACE_SHM_GRAPHIC = 'Local\\acevo_pmf_graphics';
+export const ACE_SHM_STATIC  = 'Local\\acevo_pmf_static';
 
 // Read buffer sizes — must not exceed the actual SHM region size created by the
 // game, otherwise koffi.decode will access violation. Values derived from the

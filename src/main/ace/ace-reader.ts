@@ -21,9 +21,6 @@ import {
   ACE_SHM_PHYSICS,
   ACE_SHM_GRAPHIC,
   ACE_SHM_STATIC,
-  ACE_SHM_PHYSICS_ALT,
-  ACE_SHM_GRAPHIC_ALT,
-  ACE_SHM_STATIC_ALT,
   ACE_PHYSICS_BUF,
   ACE_GRAPHIC_BUF,
   ACE_STATIC_BUF,
@@ -275,28 +272,18 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
     pollTimer = setTimeout(() => poll(), POLL_INTERVAL_MS);
   };
 
-  const openSHM = (name: string, altName?: string): { handle: NativePointer; view: NativePointer; resolvedName: string } | null => {
-    // Try: primary, alt, bare name without "Local\" prefix
-    const namesToTry = [name];
-    if (altName) namesToTry.push(altName);
-    if (name.startsWith('Local\\')) namesToTry.push(name.slice('Local\\'.length));
+  const openSHM = (name: string): { handle: NativePointer; view: NativePointer } | null => {
+    const handle = kernel32!.OpenFileMappingA(FILE_MAP_READ, 0, name);
+    console.log(`[AceReader] OpenFileMappingA("${name}") → handle=${ptrStr(handle)}`);
+    if (isNullPtr(handle)) return null;
 
-    for (const n of namesToTry) {
-      const handle = kernel32!.OpenFileMappingA(FILE_MAP_READ, 0, n);
-      const err = kernel32!.GetLastError();
-      console.log(`[AceReader] OpenFileMappingA("${n}") → handle=${ptrStr(handle)} lastError=${err}`);
-      if (isNullPtr(handle)) continue;
-
-      const view = kernel32!.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 0);
-      const errView = kernel32!.GetLastError();
-      console.log(`[AceReader] MapViewOfFile("${n}") → view=${ptrStr(view)} lastError=${errView}`);
-      if (isNullPtr(view)) {
-        kernel32!.CloseHandle(handle);
-        continue;
-      }
-      return { handle, view, resolvedName: n };
+    const view = kernel32!.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 0);
+    console.log(`[AceReader] MapViewOfFile("${name}") → view=${ptrStr(view)}`);
+    if (isNullPtr(view)) {
+      kernel32!.CloseHandle(handle);
+      return null;
     }
-    return null;
+    return { handle, view };
   };
 
   const tryConnect = (): void => {
@@ -324,7 +311,7 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       }
 
       // Physics page
-      const phy = openSHM(ACE_SHM_PHYSICS, ACE_SHM_PHYSICS_ALT);
+      const phy = openSHM(ACE_SHM_PHYSICS);
       if (!phy) {
         console.log('[AceReader] Physics SHM not available — game not running?');
         scheduleReconnect();
@@ -332,10 +319,10 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       }
       physHandle = phy.handle;
       physView   = phy.view;
-      console.log(`[AceReader] Physics SHM opened as "${phy.resolvedName}"`);
+      console.log(`[AceReader] Physics SHM opened as "${ACE_SHM_PHYSICS}"`);
 
       // Graphic page
-      const gfx = openSHM(ACE_SHM_GRAPHIC, ACE_SHM_GRAPHIC_ALT);
+      const gfx = openSHM(ACE_SHM_GRAPHIC);
       if (!gfx) {
         console.log('[AceReader] Graphic SHM not available');
         kernel32.UnmapViewOfFile(physView);
@@ -348,7 +335,7 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       gfxView   = gfx.view;
 
       // Static page
-      const sta = openSHM(ACE_SHM_STATIC, ACE_SHM_STATIC_ALT);
+      const sta = openSHM(ACE_SHM_STATIC);
       if (!sta) {
         console.log('[AceReader] Static SHM not available');
         kernel32.UnmapViewOfFile(physView);  kernel32.CloseHandle(physHandle);
