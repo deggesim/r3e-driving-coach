@@ -69,6 +69,35 @@ const initSchema = (db: Database.Database): void => {
 
     CREATE INDEX IF NOT EXISTS idx_laps_session ON laps(session_id);
 
+    CREATE TABLE IF NOT EXISTS sessions_ace (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      car          TEXT NOT NULL,
+      track        TEXT NOT NULL,
+      layout       TEXT NOT NULL,
+      session_type TEXT NOT NULL DEFAULT 'practice',
+      started_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      best_lap     REAL,
+      lap_count    INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS laps_ace (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id        INTEGER NOT NULL REFERENCES sessions_ace(id),
+      lap_number        INTEGER NOT NULL,
+      lap_time          REAL NOT NULL,
+      sector1           REAL,
+      sector2           REAL,
+      sector3           REAL,
+      valid             INTEGER NOT NULL DEFAULT 1,
+      analysis_json     TEXT,
+      pdf_path          TEXT,
+      setup_json        TEXT,
+      setup_screenshots TEXT,
+      recorded_at       TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_laps_ace_session ON laps_ace(session_id);
+
     CREATE TABLE IF NOT EXISTS app_config (
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL

@@ -161,12 +161,13 @@ export type LapRow = {
 
 /** LapRow enriched with session info and resolved display names. */
 export type LapRowFull = LapRow & {
-  car: string;           // numeric ID from session
-  track: string;         // numeric ID from session
-  layout: string;        // numeric ID from session
-  car_name: string;      // resolved display name
-  track_name: string;    // resolved display name
-  layout_name: string;   // resolved display name
+  car: string;            // numeric ID from session (R3E) or slug (ACE)
+  track: string;
+  layout: string;
+  game: GameSource;       // 'r3e' | 'ace'
+  car_name: string;       // resolved display name
+  track_name: string;
+  layout_name: string;
   car_class_name: string; // resolved class name (may be empty)
 };
 

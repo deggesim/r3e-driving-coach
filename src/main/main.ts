@@ -151,8 +151,7 @@ const setupPipeline = (): void => {
   const activeGameRow = db
     .prepare("SELECT value FROM app_config WHERE key = ?")
     .get("activeGame") as { value: string } | undefined;
-  const activeGame: GameSource =
-    activeGameRow?.value === "ace" ? "ace" : "r3e";
+  const activeGame: GameSource = activeGameRow?.value === "ace" ? "ace" : "r3e";
 
   console.log(`[Main] setupPipeline — activeGame="${activeGame}"`);
 
@@ -201,31 +200,26 @@ const setupPipeline = (): void => {
   const recorder = createLapRecorder(baseline.isReady());
 
   const pushStatus = (): void => {
-    let carDisplay: string | null = null;
-    let trackDisplay: string | null = null;
-    let layoutDisplay: string | null = null;
-
-    if (activeGame === "ace") {
-      // ACE: IDs are already human-readable strings
-      carDisplay    = currentCar    || null;
-      trackDisplay  = currentTrack  || null;
-      layoutDisplay = currentLayout || null;
-    } else {
-      // R3E: resolve numeric IDs to display names
-      carDisplay    = currentCar    ? getCarName(Number(currentCar))       : null;
-      trackDisplay  = currentTrack  ? getTrackName(Number(currentTrack))   : null;
-      layoutDisplay = currentLayout ? getLayoutName(Number(currentLayout)) : null;
-    }
-
-    const status: R3EStatus = {
-      connected: reader !== null,
-      calibrating: recorder.isCalibrating(),
-      lapsToCalibration: recorder.lapsToCalibration(),
-      car:    carDisplay,
-      track:  trackDisplay,
-      layout: layoutDisplay,
-      game:   activeGame,
-    };
+    const status: R3EStatus =
+      activeGame === "ace"
+        ? {
+            connected: reader !== null,
+            calibrating: recorder.isCalibrating(),
+            lapsToCalibration: recorder.lapsToCalibration(),
+            car: currentCar || null,
+            track: currentTrack || null,
+            layout: currentLayout || null,
+            game: activeGame,
+          }
+        : {
+            connected: reader !== null,
+            calibrating: recorder.isCalibrating(),
+            lapsToCalibration: recorder.lapsToCalibration(),
+            car: currentCar ? getCarName(Number(currentCar)) : null,
+            track: currentTrack ? getTrackName(Number(currentTrack)) : null,
+            layout: currentLayout ? getLayoutName(Number(currentLayout)) : null,
+            game: activeGame,
+          };
     pushToRenderer("r3e:status", status);
   };
 
@@ -261,9 +255,7 @@ const setupPipeline = (): void => {
   let currentSessionId: number | null = null;
 
   // ─── Reader (selected by activeGame config)
-  reader = activeGame === "ace"
-    ? createAceReader()
-    : createR3EReader();
+  reader = activeGame === "ace" ? createAceReader() : createR3EReader();
 
   reader.on("connected", () => {
     pushStatus();
@@ -304,8 +296,8 @@ const setupPipeline = (): void => {
 
     // For ACE, update current car/track/layout from lapComplete (not from per-frame data)
     if (activeGame === "ace") {
-      if (lapData.car)    currentCar    = lapData.car;
-      if (lapData.track)  currentTrack  = lapData.track;
+      if (lapData.car) currentCar = lapData.car;
+      if (lapData.track) currentTrack = lapData.track;
       if (lapData.layout) currentLayout = lapData.layout;
     }
 
@@ -313,7 +305,12 @@ const setupPipeline = (): void => {
       console.log(
         `[Main] car/track changed — recreating baseline (was car="${baseline.car}" track="${baseline.track}")`,
       );
-      baseline = createAdaptiveBaseline(lapData.car, lapData.track, db, activeGame);
+      baseline = createAdaptiveBaseline(
+        lapData.car,
+        lapData.track,
+        db,
+        activeGame,
+      );
       ruleEngine = createRuleEngine(dispatcher, baseline, lookupCorner);
       coachEngine.updateCornerNames(buildCornerMap());
     }
@@ -339,7 +336,7 @@ const setupPipeline = (): void => {
         return;
       }
     }
-    saveLap(db, currentSessionId, lapData as LapRecord);
+    saveLap(db, currentSessionId, lapData as LapRecord, activeGame);
   });
 
   // ─── LapRecorder
@@ -356,21 +353,22 @@ const setupPipeline = (): void => {
       // Resolve display names before sending to renderer and coach.
       // ACE: car/track/layout are already human-readable strings — use directly.
       // R3E: resolve numeric IDs to display names.
-      const lapWithNames: LapRecord = activeGame === "ace"
-        ? {
-            ...lap,
-            game: "ace",
-            carName: lap.car,
-            trackName: lap.track,
-            layoutName: lap.layout,
-          }
-        : {
-            ...lap,
-            game: "r3e",
-            carName: getCarName(Number(lap.car)),
-            trackName: getTrackName(Number(lap.track)),
-            layoutName: getLayoutName(Number(lap.layout)),
-          };
+      const lapWithNames: LapRecord =
+        activeGame === "ace"
+          ? {
+              ...lap,
+              game: "ace",
+              carName: lap.car,
+              trackName: lap.track,
+              layoutName: lap.layout,
+            }
+          : {
+              ...lap,
+              game: "r3e",
+              carName: getCarName(Number(lap.car)),
+              trackName: getTrackName(Number(lap.track)),
+              layoutName: getLayoutName(Number(lap.layout)),
+            };
 
       pushToRenderer("r3e:lapComplete", lapWithNames);
       pushStatus();
@@ -447,11 +445,18 @@ const setupPipeline = (): void => {
       SELECT l.* FROM laps l
       JOIN sessions s ON l.session_id = s.id
       WHERE s.car = ? AND s.track = ?
-      ORDER BY l.recorded_at DESC
+
+      UNION ALL
+
+      SELECT l.* FROM laps_ace l
+      JOIN sessions_ace s ON l.session_id = s.id
+      WHERE s.car = ? AND s.track = ?
+
+      ORDER BY recorded_at DESC
       LIMIT 200
     `,
         )
-        .all(car, track);
+        .all(car, track, car, track);
     },
   );
 
@@ -459,10 +464,17 @@ const setupPipeline = (): void => {
     const rows = db
       .prepare(
         `
-      SELECT l.*, s.car, s.track, s.layout
+      SELECT l.*, s.car, s.track, s.layout, s.game AS game
       FROM laps l
       JOIN sessions s ON l.session_id = s.id
-      ORDER BY l.recorded_at DESC
+
+      UNION ALL
+
+      SELECT l.*, s.car, s.track, s.layout, 'ace' AS game
+      FROM laps_ace l
+      JOIN sessions_ace s ON l.session_id = s.id
+
+      ORDER BY recorded_at DESC
       LIMIT 500
     `,
       )
@@ -483,20 +495,20 @@ const setupPipeline = (): void => {
       car: string;
       track: string;
       layout: string;
+      game: string;
     }>;
 
     return rows.map((row) => {
-      const carNum   = parseInt(row.car);
+      const isAce = row.game === "ace";
+      const carNum = parseInt(row.car);
       const trackNum = parseInt(row.track);
       const layoutNum = parseInt(row.layout);
-      // For ACE rows, parseInt returns NaN and getCarName/etc. return undefined.
-      // Fall back to the raw string ID in that case.
       return {
         ...row,
-        car_name:       (!isNaN(carNum)    ? getCarName(carNum)       : undefined) ?? row.car,
-        track_name:     (!isNaN(trackNum)  ? getTrackName(trackNum)   : undefined) ?? row.track,
-        layout_name:    (!isNaN(layoutNum) ? getLayoutName(layoutNum) : undefined) ?? row.layout,
-        car_class_name: (!isNaN(carNum)    ? getCarClassName(carNum)  : undefined) ?? "",
+        car_name: (!isAce && !isNaN(carNum) ? getCarName(carNum) : undefined) ?? row.car,
+        track_name: (!isAce && !isNaN(trackNum) ? getTrackName(trackNum) : undefined) ?? row.track,
+        layout_name: (!isAce && !isNaN(layoutNum) ? getLayoutName(layoutNum) : undefined) ?? row.layout,
+        car_class_name: (!isAce && !isNaN(carNum) ? getCarClassName(carNum) : undefined) ?? "",
       };
     });
   });
@@ -970,10 +982,11 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
       const buf = fs.readFileSync(filePath);
       // Extract carId from path: …/Car Setups/{car}/{track}/file.carsetup
       const parts = filePath.split(/[\\/]/);
-      const carIdx = parts.findIndex(
-        (p) => p.toLowerCase() === "car setups",
-      );
-      const carId = carIdx >= 0 ? (parts[carIdx + 1] ?? "") : pathMod.basename(pathMod.dirname(pathMod.dirname(filePath)));
+      const carIdx = parts.findIndex((p) => p.toLowerCase() === "car setups");
+      const carId =
+        carIdx >= 0
+          ? (parts[carIdx + 1] ?? "")
+          : pathMod.basename(pathMod.dirname(pathMod.dirname(filePath)));
       return decodeCarSetup(buf, carId);
     },
   );
@@ -1003,14 +1016,21 @@ const createSession = (
   car: string,
   track: string,
   layout: string,
-  game = 'r3e',
+  game = "r3e",
 ): number => {
+  if (game === "ace") {
+    const result = db
+      .prepare(
+        `INSERT INTO sessions_ace (car, track, layout, session_type, started_at)
+         VALUES (?, ?, ?, 'practice', datetime('now'))`,
+      )
+      .run(car, track, layout);
+    return result.lastInsertRowid as number;
+  }
   const result = db
     .prepare(
-      `
-    INSERT INTO sessions (car, track, layout, session_type, game, started_at)
-    VALUES (?, ?, ?, 'practice', ?, datetime('now'))
-  `,
+      `INSERT INTO sessions (car, track, layout, session_type, game, started_at)
+       VALUES (?, ?, ?, 'practice', ?, datetime('now'))`,
     )
     .run(car, track, layout, game);
   return result.lastInsertRowid as number;
@@ -1020,14 +1040,16 @@ const saveLap = (
   db: BetterSqlite3.Database,
   sessionId: number,
   lap: LapRecord,
+  game = "r3e",
 ): void => {
+  const lapsTable = game === "ace" ? "laps_ace" : "laps";
+  const sessionsTable = game === "ace" ? "sessions_ace" : "sessions";
   try {
     const insertResult = db
       .prepare(
-        `
-    INSERT OR IGNORE INTO laps (session_id, lap_number, lap_time, sector1, sector2, sector3, valid, recorded_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-  `,
+        `INSERT OR IGNORE INTO ${lapsTable}
+         (session_id, lap_number, lap_time, sector1, sector2, sector3, valid, recorded_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
       )
       .run(
         sessionId,
@@ -1053,12 +1075,10 @@ const saveLap = (
 
     const updateResult = db
       .prepare(
-        `
-    UPDATE sessions SET
-      best_lap = CASE WHEN best_lap IS NULL OR ? < best_lap THEN ? ELSE best_lap END,
-      lap_count = lap_count + 1
-    WHERE id = ?
-  `,
+        `UPDATE ${sessionsTable} SET
+           best_lap = CASE WHEN best_lap IS NULL OR ? < best_lap THEN ? ELSE best_lap END,
+           lap_count = lap_count + 1
+         WHERE id = ?`,
       )
       .run(lap.lapTime, lap.lapTime, sessionId);
     console.log(

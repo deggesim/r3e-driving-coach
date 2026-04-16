@@ -475,9 +475,9 @@ const SettingsPanel = () => {
                   {
                     car: frame.carName,
                     track: frame.trackName,
-                    speed: frame.carSpeed.toFixed(1) + " km/h",
+                    speed: frame.carSpeed?.toFixed(1) ?? "0" + " km/h",
                     gear: frame.gear,
-                    dist: frame.lapDistance.toFixed(0) + "m",
+                    dist: frame.lapDistance?.toFixed(0) ?? "0" + "m",
                     thr: (frame.throttle * 100).toFixed(0) + "%",
                     brk: (frame.brake * 100).toFixed(0) + "%",
                   },

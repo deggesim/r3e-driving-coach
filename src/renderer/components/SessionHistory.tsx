@@ -58,7 +58,7 @@ const DetailPanel = ({
   const [showPicker, setShowPicker] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
-  const activeGame = useIPCStore((s) => s.status.game);
+  const activeGame = useSettingsStore((s) => s.activeGame);
 
   const analysis = lap.analysis_json ? JSON.parse(lap.analysis_json) : null;
   const setup: SetupData | null = lap.setup_json
@@ -273,6 +273,7 @@ const SessionHistory = () => {
   const [loading, setLoading] = useState(false);
   const [selectedLap, setSelectedLap] = useState<LapRowFull | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterGame, setFilterGame] = useState<"" | "r3e" | "ace">("");
   const [filterCar, setFilterCar] = useState("");
   const [filterTrack, setFilterTrack] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "laptime">("date");
@@ -315,12 +316,18 @@ const SessionHistory = () => {
   // Reset page when filters or sort change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterCar, filterTrack, sortBy]);
+  }, [filterGame, filterCar, filterTrack, sortBy]);
 
-  // Distinct cars for the dropdown
+  // Laps scoped to the selected game (used to populate car/track dropdowns)
+  const gameLaps = useMemo(
+    () => (filterGame ? allLaps.filter((l) => l.game === filterGame) : allLaps),
+    [allLaps, filterGame],
+  );
+
+  // Distinct cars for the dropdown (scoped to selected game)
   const carOptions = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const lap of allLaps) {
+    for (const lap of gameLaps) {
       if (!seen.has(lap.car)) {
         const label = lap.car_class_name
           ? `${lap.car_name} (${lap.car_class_name})`
@@ -331,12 +338,12 @@ const SessionHistory = () => {
     return Array.from(seen.entries())
       .map(([id, label]) => ({ id, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [allLaps]);
+  }, [gameLaps]);
 
-  // Distinct track+layout combos for the dropdown
+  // Distinct track+layout combos for the dropdown (scoped to selected game)
   const trackOptions = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const lap of allLaps) {
+    for (const lap of gameLaps) {
       const key = `${lap.track}|${lap.layout}`;
       if (!seen.has(key)) {
         seen.set(key, `${lap.track_name} (${lap.layout_name})`);
@@ -345,11 +352,11 @@ const SessionHistory = () => {
     return Array.from(seen.entries())
       .map(([id, label]) => ({ id, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [allLaps]);
+  }, [gameLaps]);
 
   // Filtered + sorted laps
   const filteredLaps = useMemo(() => {
-    let result = allLaps;
+    let result = gameLaps;
     if (filterCar) result = result.filter((l) => l.car === filterCar);
     if (filterTrack) {
       const [trackId, layoutId] = filterTrack.split("|");
@@ -369,7 +376,7 @@ const SessionHistory = () => {
     }
     // "date": already ordered DESC from the DB query
     return result;
-  }, [allLaps, filterCar, filterTrack, sortBy]);
+  }, [gameLaps, filterCar, filterTrack, sortBy]);
 
   const handleSetupSaved = (lapId: number, setup: SetupData): void => {
     setAllLaps((prev) =>
@@ -435,9 +442,21 @@ const SessionHistory = () => {
         <Form.Select
           size="sm"
           className="sh-filter-select"
+          value={filterGame}
+          onChange={(e) => setFilterGame(e.target.value as "" | "r3e" | "ace")}
+          style={{ maxWidth: 110 }}
+        >
+          <option value="">Tutti i giochi</option>
+          <option value="r3e">RaceRoom</option>
+          <option value="ace">AC Evo</option>
+        </Form.Select>
+
+        <Form.Select
+          size="sm"
+          className="sh-filter-select"
           value={filterCar}
           onChange={(e) => setFilterCar(e.target.value)}
-          style={{ maxWidth: 280 }}
+          style={{ maxWidth: 260 }}
         >
           <option value="">Tutte le auto</option>
           {carOptions.map((o) => (
@@ -482,6 +501,7 @@ const SessionHistory = () => {
         ) : !mockHistoryMode && (!filterCar || !filterTrack) ? (
           <p className="text-secondary py-2 mb-0">
             Seleziona auto e circuito per visualizzare i giri.
+            {!filterGame && " Puoi anche filtrare per gioco."}
           </p>
         ) : filteredLaps.length === 0 ? (
           <p className="text-secondary py-2 mb-0">
@@ -497,13 +517,14 @@ const SessionHistory = () => {
                 <th>S2</th>
                 <th>S3</th>
                 <th>Data</th>
+                {!filterGame && <th>Gioco</th>}
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {pagedLaps.map((lap) => (
                 <tr
-                  key={lap.id}
+                  key={`${lap.game}-${lap.id}`}
                   className="sh-row"
                   onClick={() => setSelectedLap(lap)}
                 >
@@ -513,6 +534,16 @@ const SessionHistory = () => {
                   <td>{formatLapTime(lap.sector2)}</td>
                   <td>{formatLapTime(lap.sector3)}</td>
                   <td className="sh-date">{formatDate(lap.recorded_at)}</td>
+                  {!filterGame && (
+                    <td>
+                      <Badge
+                        bg={lap.game === "ace" ? "info" : "secondary"}
+                        style={{ fontSize: 10 }}
+                      >
+                        {lap.game === "ace" ? "ACE" : "R3E"}
+                      </Badge>
+                    </td>
+                  )}
                   <td>
                     {lap.setup_json && (
                       <FontAwesomeIcon

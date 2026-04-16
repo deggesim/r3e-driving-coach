@@ -23,14 +23,22 @@
 
 // ── Shared memory names ─────────────────────────────────────────────────────
 
+// Primary names (Steam Community guide 2026-03-31). The reader also auto-tries
+// the bare name without "Local\" prefix, and the acevo_pmf_* variant used by
+// some community connectors (e.g. vAzhureRacingHub).
 export const ACE_SHM_PHYSICS = 'Local\\ACEVOPhysics';
 export const ACE_SHM_GRAPHIC = 'Local\\ACEVOGraphic';
 export const ACE_SHM_STATIC  = 'Local\\ACEVOStatic';
+export const ACE_SHM_PHYSICS_ALT = 'Local\\acevo_pmf_physics';
+export const ACE_SHM_GRAPHIC_ALT = 'Local\\acevo_pmf_graphics';
+export const ACE_SHM_STATIC_ALT  = 'Local\\acevo_pmf_static';
 
-// Read buffer sizes (generous upper-bound to handle undocumented tail fields)
-export const ACE_PHYSICS_BUF = 5120;   // ~5 KB documented + margin
-export const ACE_GRAPHIC_BUF = 20480;  // ~18 KB documented + margin
-export const ACE_STATIC_BUF  = 1024;   // ~1 KB documented
+// Read buffer sizes — must not exceed the actual SHM region size created by the
+// game, otherwise koffi.decode will access violation. Values derived from the
+// documented field sequences above; do NOT add a "generous margin" here.
+export const ACE_PHYSICS_BUF = 800;    // documented total: 800 bytes
+export const ACE_GRAPHIC_BUF = 3940;   // documented total: 3937 bytes, rounded to 4
+export const ACE_STATIC_BUF  = 256;    // documented total: 208 bytes, rounded up
 
 // ── ACEVO_STATUS enum ────────────────────────────────────────────────────────
 

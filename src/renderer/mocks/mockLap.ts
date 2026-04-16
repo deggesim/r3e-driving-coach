@@ -80,6 +80,7 @@ export const MOCK_LAP: LapRowFull = {
   car: "0",
   track: "0",
   layout: "0",
+  game: "r3e",
   car_name: "Porsche 911 GT3 Cup",
   track_name: "Zandvoort",
   layout_name: "Grand Prix",
