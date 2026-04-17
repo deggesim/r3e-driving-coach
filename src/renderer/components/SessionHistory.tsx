@@ -29,7 +29,8 @@ const PAGE_SIZE = 10;
 const renderMarkdown = (md: string): string =>
   marked.parse(md, { async: false }) as string;
 
-const formatDate = (iso: string): string => {
+const formatDate = (iso: string | null | undefined): string => {
+  if (!iso) return "—";
   // SQLite datetime('now') returns "YYYY-MM-DD HH:MM:SS" (UTC, no indicator).
   // Without explicit UTC marker V8 parses it as local time — normalize first.
   const normalized = iso.includes("T") ? iso : iso.replace(" ", "T") + "Z";
@@ -64,9 +65,10 @@ const DetailPanel = ({
   const setup: SetupData | null = lap.setup_json
     ? JSON.parse(lap.setup_json)
     : null;
-  const screenshots: string[] = lap.setup_screenshots
-    ? JSON.parse(lap.setup_screenshots)
-    : [];
+  const screenshots: string[] = (() => {
+    if (!lap.setup_screenshots) return [];
+    try { return JSON.parse(lap.setup_screenshots) as string[]; } catch { return []; }
+  })();
 
   const handleSetupSaved = async (decoded: SetupData): Promise<void> => {
     setShowPicker(false);

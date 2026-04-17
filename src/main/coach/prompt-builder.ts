@@ -38,6 +38,7 @@ Regole:
 - Usa il nome ufficiale delle curve quando disponibile
 - Ogni osservazione deve includere almeno un dato numerico
 - Temperatura freni ideale: 550°C ±137.5°C (finestra 413-688°C)
+- Pressioni gomme espresse in PSI
 - Se le temperature freni sono -1, non sono disponibili per questa auto — ignora
 - In Qualification/Leaderboard le temperature gomme sono fisse a 85°C — non diagnosticare come problema`;
 
@@ -86,10 +87,19 @@ export const buildPrompt = (
       parts.push(
         `- Velocità media: ${zone.avgSpeedKmh.toFixed(1)} km/h (min ${zone.minSpeedKmh.toFixed(1)})`,
       );
+      if (zone.avgRpm !== undefined) {
+        parts.push(`- RPM medi: ${zone.avgRpm.toFixed(0)}`);
+      }
       parts.push(`- Frenata max: ${(zone.maxBrakePct * 100).toFixed(0)}%`);
       parts.push(
         `- Acceleratore medio: ${(zone.avgThrottlePct * 100).toFixed(0)}%`,
       );
+      if (zone.maxGLat !== undefined) {
+        parts.push(`- G laterale max: ${zone.maxGLat.toFixed(2)} G`);
+      }
+      if (zone.maxGLon !== undefined) {
+        parts.push(`- G longitudinale max: ${zone.maxGLon.toFixed(2)} G`);
+      }
       if (zone.brakeStartDist !== null) {
         parts.push(`- Inizio frenata: @${zone.brakeStartDist.toFixed(0)}m`);
       }
@@ -107,6 +117,22 @@ export const buildPrompt = (
       }
       if (zone.absActivations > 0) {
         parts.push(`- Attivazioni ABS: ${zone.absActivations}`);
+      }
+      if (zone.avgTyrePressure) {
+        const [fl, fr, rl, rr] = zone.avgTyrePressure;
+        parts.push(
+          `- Pressione gomme (PSI): FL ${fl.toFixed(1)} FR ${fr.toFixed(1)} RL ${rl.toFixed(1)} RR ${rr.toFixed(1)}`,
+        );
+      }
+      if (zone.avgSlipRatio) {
+        const [fl, fr, rl, rr] = zone.avgSlipRatio;
+        parts.push(
+          `- Slip ratio: FL ${fl.toFixed(3)} FR ${fr.toFixed(3)} RL ${rl.toFixed(3)} RR ${rr.toFixed(3)}`,
+        );
+      }
+      if (zone.avgSuspTravel) {
+        const [fl, fr, rl, rr] = zone.avgSuspTravel.map((v) => (v * 1000).toFixed(1));
+        parts.push(`- Corsa ammortizzatori (mm): FL ${fl} FR ${fr} RL ${rl} RR ${rr}`);
       }
       parts.push("");
     }

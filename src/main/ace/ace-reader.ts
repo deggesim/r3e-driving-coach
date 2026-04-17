@@ -181,16 +181,27 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
         return;
       }
 
+      // Re-read static if track length not yet known (game may have been in menus at connect)
+      if (cachedTrackLength === 0 && staView) {
+        const staBuf2 = decodeBuffer(staView, ACE_STATIC_BUF);
+        readStatic(staBuf2);
+      }
+
       const physBuf = decodeBuffer(physView,  ACE_PHYSICS_BUF);
 
       // --- Physics fields ---
       const gas        = readFloat(physBuf, PHY.gas);
       const brake      = readFloat(physBuf, PHY.brake);
       const gear       = readInt32(physBuf, PHY.gear);
+      const rpm        = readInt32(physBuf, PHY.rpms);
       const steerAngle = readFloat(physBuf, PHY.steerAngle);
       const speedKmh   = readFloat(physBuf, PHY.speedKmh);
-      const brakeTempArr = readFloatArray(physBuf, PHY.brakeTemp, 4);
-      const tcinAction = readInt32(physBuf, PHY.tcinAction);
+      const brakeTempArr    = readFloatArray(physBuf, PHY.brakeTemp, 4);
+      const accG            = readFloatArray(physBuf, PHY.accG, 3);
+      const wheelsPressure  = readFloatArray(physBuf, PHY.wheelsPressure, 4);
+      const suspensionTravel = readFloatArray(physBuf, PHY.suspensionTravel, 4);
+      const slipRatio       = readFloatArray(physBuf, PHY.slipRatio, 4);
+      const tcinAction  = readInt32(physBuf, PHY.tcinAction);
       const absInAction = readInt32(physBuf, PHY.absInAction);
 
       // --- Graphic fields ---
@@ -235,6 +246,12 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
           tc:   gameFrame.tcActive,
           bt:   [...brakeTempArr],
           ts:   Date.now(),
+          rpm,
+          gLat: accG[0],
+          gLon: accG[2],
+          tp:   [...wheelsPressure],
+          sr:   [...slipRatio],
+          sus:  [...suspensionTravel],
         });
       }
 

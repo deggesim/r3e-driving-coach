@@ -74,6 +74,13 @@ export type CompactFrame = {
   tc: number;      // TC active 0-1
   bt: number[];    // brake temps [FL, FR, RL, RR]
   ts: number;      // timestamp ms
+  // Extended fields (ACE only; undefined for R3E frames)
+  rpm?: number;               // engine RPM
+  gLat?: number;             // lateral G-force (accG[0])
+  gLon?: number;             // longitudinal G-force (accG[2])
+  tp?: number[];             // tyre pressures PSI [FL, FR, RL, RR]
+  sr?: number[];             // slip ratios [FL, FR, RL, RR]
+  sus?: number[];            // suspension travel m [FL, FR, RL, RR]
 };
 
 // --- Zone aggregate (from LapRecorder) ---
@@ -96,6 +103,13 @@ export type ZoneData = {
   brakeStartDist: number | null;
   brakeEndDist: number | null;
   throttlePickupDist: number | null;
+  // Extended (ACE only; present when source frames have the fields)
+  avgRpm?: number;
+  maxGLat?: number;           // peak lateral G-force magnitude
+  maxGLon?: number;           // peak longitudinal G-force magnitude (braking)
+  avgTyrePressure?: [number, number, number, number]; // PSI FL/FR/RL/RR
+  avgSlipRatio?: [number, number, number, number];    // FL/FR/RL/RR
+  avgSuspTravel?: [number, number, number, number];   // m FL/FR/RL/RR
 };
 
 // --- Lap Record ---

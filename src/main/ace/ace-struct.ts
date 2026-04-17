@@ -140,17 +140,28 @@ export const ACEVO_PITEXIT  = 3;
 // Total documented: 800 bytes
 
 export const PHY = {
-  packetId:    0,
-  gas:         4,
-  brake:       8,
-  fuel:        12,
-  gear:        16,
-  rpms:        20,
-  steerAngle:  24,
-  speedKmh:    28,
-  brakeTemp:   348,  // float[4] FL,FR,RL,RR
-  tcinAction:  672,  // int32 — 1 when TC cutting power
-  absInAction: 676,  // int32 — 1 when ABS modulating brakes
+  packetId:          0,
+  gas:               4,
+  brake:             8,
+  fuel:              12,
+  gear:              16,
+  rpms:              20,   // int32 — engine RPM
+  steerAngle:        24,
+  speedKmh:          28,
+  accG:              44,   // float[3] — G-forces: [0]=lateral, [1]=vertical, [2]=longitudinal
+  wheelsPressure:    88,   // float[4] FL,FR,RL,RR — tyre pressures (PSI)
+  wheelAngularSpeed: 104,  // float[4] FL,FR,RL,RR — wheel angular speed (rad/s)
+  suspensionTravel:  184,  // float[4] FL,FR,RL,RR — suspension travel (m)
+  rideHeight:        268,  // float[2] front,rear — aero ride height (m)
+  airTemp:           288,  // float — ambient air temperature (°C)
+  roadTemp:          292,  // float — road surface temperature (°C)
+  clutch:            364,  // float — clutch position 0-1
+  brakeTemp:         348,  // float[4] FL,FR,RL,RR
+  slipRatio:         640,  // float[4] FL,FR,RL,RR — longitudinal tyre slip ratio
+  slipAngle:         656,  // float[4] FL,FR,RL,RR — tyre slip angle (rad)
+  brakeTorque:       716,  // float[4] FL,FR,RL,RR — brake torque (Nm)
+  tcinAction:        672,  // int32 — 1 when TC cutting power
+  absInAction:       676,  // int32 — 1 when ABS modulating brakes
 } as const;
 
 // ── SPageFileGraphicEvo offsets (Pack=4) ─────────────────────────────────────
