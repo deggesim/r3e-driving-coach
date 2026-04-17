@@ -1,6 +1,7 @@
 {
   "name": "sim-driving-coach",
   "version": "0.2.0",
+  "author": "Simone De Gennaro",
   "description": "Sim Racing Voice Coach — real-time driving coach for Sim racing games, starting with RaceRoom Racing Experience (R3E) and Assetto Corsa EVO, with support for more games in the future. Provides real-time feedback on driving performance, including braking, throttle control, racing lines, and more, using natural language insights powered by AI.",
   "main": "dist/main/main.js",
   "scripts": {
@@ -11,7 +12,7 @@
     "lint": "eslint .",
     "start": "electron .",
     "typecheck": "tsc --noEmit",
-    "rebuild:native": "electron-rebuild -f -w better-sqlite3"
+    "rebuild:native": "npx @electron/rebuild -f -w better-sqlite3"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
@@ -29,6 +30,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
     "@eslint-react/eslint-plugin": "^4.2.3",
     "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^7.6.13",
@@ -38,7 +40,6 @@
     "concurrently": "^9.2.1",
     "electron": "^41.2.1",
     "electron-builder": "^26.8.1",
-    "electron-rebuild": "^3.2.9",
     "eslint": "^10.2.0",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
