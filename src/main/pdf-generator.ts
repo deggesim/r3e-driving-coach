@@ -9,7 +9,7 @@ import * as os from "os";
 import * as path from "path";
 import * as fs from "fs";
 import { marked } from "marked";
-import type { GameSource } from "../shared/types";
+import type { GameSource } from "../shared/types.js";
 
 export type PdfData = {
   car: string;

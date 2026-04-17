@@ -12,6 +12,8 @@
  */
 
 import { EventEmitter } from "events";
+import { createRequire } from "module";
+import { fileURLToPath } from "url";
 import {
   STRUCT_SIZE_KNOWN,
   SHM_NAME,
@@ -21,12 +23,14 @@ import {
   readDouble,
   readFloatArray,
   readString,
-} from "./r3e-struct";
+} from "./r3e-struct.js";
 import {
   POLL_INTERVAL_MS,
   RECONNECT_INTERVAL_MS,
-} from "../../shared/alert-types";
-import type { R3EFrame, CompactFrame } from "../../shared/types";
+} from "../../shared/alert-types.js";
+import type { R3EFrame, CompactFrame } from "../../shared/types.js";
+
+const _require = createRequire(import.meta.url);
 
 type R3EReaderOptions = {
   mock?: boolean;
@@ -320,8 +324,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 
     try {
       if (!kernel32) {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        koffi = require("koffi");
+        koffi = _require("koffi");
         const lib = koffi.load("kernel32.dll");
         console.log("[R3EReader] kernel32.dll loaded");
 
@@ -536,7 +539,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 };
 
 // Standalone test
-if (require.main === module) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const reader = createR3EReader();
   reader.on("connected", () => console.log("[R3EReader] Connected"));
   reader.on("disconnected", () => console.log("[R3EReader] Disconnected"));

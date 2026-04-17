@@ -7,8 +7,8 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type Database from "better-sqlite3";
-import type { Deviation, LapAnalysis, LapRow, SetupData } from "../../shared/types";
-import { formatLapTime } from "../../shared/format";
+import type { Deviation, LapAnalysis, LapRow, SetupData } from "../../shared/types.js";
+import { formatLapTime } from "../../shared/format.js";
 
 const VOICE_SYSTEM_PROMPT = `Sei un coach di guida esperto che risponde a domande specifiche di un pilota durante una sessione di guida.
 Rispondi SEMPRE in italiano, in modo conciso e diretto. Massimo 3-4 frasi.

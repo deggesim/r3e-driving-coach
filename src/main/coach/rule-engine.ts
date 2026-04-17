@@ -6,9 +6,9 @@
  */
 
 import { EventEmitter } from 'events';
-import { ANTI_SPAM, BRAKE_TEMP } from '../../shared/alert-types';
-import type { Alert, AlertType, Deviation, GameFrame } from '../../shared/types';
-import type { AdaptiveBaseline } from './adaptive-baseline';
+import { ANTI_SPAM, BRAKE_TEMP } from '../../shared/alert-types.js';
+import type { Alert, AlertType, Deviation, GameFrame } from '../../shared/types.js';
+import type { AdaptiveBaseline } from './adaptive-baseline.js';
 
 // --- AlertDispatcher ---
 

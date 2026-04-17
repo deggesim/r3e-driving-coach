@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 /**
  * Preload script — exposes IPC channels to the renderer via contextBridge.
  * contextIsolation: true, nodeIntegration: false.
+ * Must be compiled as CommonJS (.cts) because sandboxed preloads cannot use ESM.
  */
 
 contextBridge.exposeInMainWorld('electronAPI', {

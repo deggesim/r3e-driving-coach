@@ -8,8 +8,8 @@
  */
 
 import { EventEmitter } from "events";
-import { ZONE_SIZE_M, CALIBRATION_LAPS } from "../../shared/alert-types";
-import type { CompactFrame, LapRecord, ZoneData } from "../../shared/types";
+import { ZONE_SIZE_M, CALIBRATION_LAPS } from "../../shared/alert-types.js";
+import type { CompactFrame, LapRecord, ZoneData } from "../../shared/types.js";
 
 /** Minimal reader interface required by LapRecorder (duck-typed by both R3EReader and AceReader). */
 interface LapEventReader {

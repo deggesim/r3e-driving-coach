@@ -15,7 +15,7 @@
  *   f9  — Preset ID ASCII string (v0.6+)
  */
 
-import type { SetupData, SetupParam } from '../../shared/types';
+import type { SetupData, SetupParam } from '../../shared/types.js';
 
 // ── Minimal protobuf decoder ──────────────────────────────────────────────────
 

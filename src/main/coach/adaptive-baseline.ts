@@ -6,8 +6,8 @@
  */
 
 import type Database from 'better-sqlite3';
-import { BASELINE_EMA_ALPHA, DEVIATION_THRESHOLDS } from '../../shared/alert-types';
-import type { ZoneData, Deviation, DeviationType } from '../../shared/types';
+import { BASELINE_EMA_ALPHA, DEVIATION_THRESHOLDS } from '../../shared/alert-types.js';
+import type { ZoneData, Deviation, DeviationType } from '../../shared/types.js';
 
 type BaselineZone = {
   avgSpeedKmh: number;

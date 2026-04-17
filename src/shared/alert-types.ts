@@ -1,4 +1,4 @@
-import type { AlertPriority, AlertType } from './types';
+import type { AlertPriority, AlertType } from './types.js';
 
 /**
  * Alert type definitions with priority mapping and Italian message templates.

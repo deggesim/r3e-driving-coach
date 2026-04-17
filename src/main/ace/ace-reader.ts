@@ -17,6 +17,7 @@
  */
 
 import { EventEmitter } from 'events';
+import { createRequire } from 'module';
 import {
   ACE_SHM_PHYSICS,
   ACE_SHM_GRAPHIC,
@@ -33,12 +34,14 @@ import {
   readUint8,
   readString,
   readFloatArray,
-} from './ace-struct';
+} from './ace-struct.js';
 import {
   POLL_INTERVAL_MS,
   RECONNECT_INTERVAL_MS,
-} from '../../shared/alert-types';
-import type { GameFrame, CompactFrame } from '../../shared/types';
+} from '../../shared/alert-types.js';
+import type { GameFrame, CompactFrame } from '../../shared/types.js';
+
+const _require = createRequire(import.meta.url);
 
 type AceReaderOptions = {
   mock?: boolean;
@@ -309,8 +312,7 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
 
     try {
       if (!kernel32) {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        koffi = require('koffi');
+        koffi = _require('koffi');
         const lib = koffi.load('kernel32.dll');
         console.log('[AceReader] kernel32.dll loaded');
 

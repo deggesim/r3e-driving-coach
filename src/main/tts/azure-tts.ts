@@ -8,7 +8,7 @@
  */
 
 import axios from "axios";
-import type { AzureVoice } from "../../shared/types";
+import type { AzureVoice } from "../../shared/types.js";
 
 // ---------------------------------------------------------------------------
 // Italian TTS text preprocessing

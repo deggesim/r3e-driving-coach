@@ -7,9 +7,9 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type Database from "better-sqlite3";
-import { SYSTEM_PROMPT, buildPrompt } from "./prompt-builder";
-import type { LapRecord, Deviation, LapAnalysis } from "../../shared/types";
-import { generatePdfBuffer } from "../pdf-generator";
+import { SYSTEM_PROMPT, buildPrompt } from "./prompt-builder.js";
+import type { LapRecord, Deviation, LapAnalysis } from "../../shared/types.js";
+import { generatePdfBuffer } from "../pdf-generator.js";
 
 type CoachEngineOptions = {
   db: Database.Database;

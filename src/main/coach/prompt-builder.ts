@@ -10,9 +10,9 @@
  *   [5] Sintesi e Prossimo Step (max 5 sentences, read via TTS)
  */
 
-import { BRAKE_TEMP } from "../../shared/alert-types";
-import type { LapRecord, Deviation, ZoneData } from "../../shared/types";
-import { formatLapTime } from "../../shared/format";
+import { BRAKE_TEMP } from "../../shared/alert-types.js";
+import type { LapRecord, Deviation, ZoneData } from "../../shared/types.js";
+import { formatLapTime } from "../../shared/format.js";
 
 export const SYSTEM_PROMPT = `Sei un ingegnere di pista esperto che analizza la telemetria di gare automobilistiche.
 Rispondi SEMPRE in italiano con tono tecnico da ingegnere. Includi SEMPRE dati numerici nelle osservazioni.

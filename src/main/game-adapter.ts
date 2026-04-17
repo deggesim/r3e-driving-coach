@@ -5,7 +5,7 @@
  * AceReader already emits GameFrame directly, so no conversion is needed there.
  */
 
-import type { GameFrame, R3EFrame } from '../shared/types';
+import type { GameFrame, R3EFrame } from '../shared/types.js';
 
 /** Project an R3EFrame to the minimal GameFrame interface used by ZoneTracker and RuleEngine. */
 export const toGameFrame = (frame: R3EFrame): GameFrame => ({

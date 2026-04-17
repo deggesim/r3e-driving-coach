@@ -11,36 +11,37 @@
 
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
-import { generatePdfBuffer, type PdfData } from "./pdf-generator";
-import { createR3EReader, type R3EReader } from "./r3e/r3e-reader";
-import { createAceReader, type AceReader } from "./ace/ace-reader";
-import { createLapRecorder } from "./r3e/lap-recorder";
-import { createZoneTracker } from "./r3e/zone-tracker";
+import { fileURLToPath } from "url";
+import { generatePdfBuffer, type PdfData } from "./pdf-generator.js";
+import { createR3EReader, type R3EReader } from "./r3e/r3e-reader.js";
+import { createAceReader, type AceReader } from "./ace/ace-reader.js";
+import { createLapRecorder } from "./r3e/lap-recorder.js";
+import { createZoneTracker } from "./r3e/zone-tracker.js";
 import {
   createAdaptiveBaseline,
   type AdaptiveBaseline,
-} from "./coach/adaptive-baseline";
-import { createAlertDispatcher, createRuleEngine } from "./coach/rule-engine";
-import { createCoachEngine } from "./coach/coach-engine";
+} from "./coach/adaptive-baseline.js";
+import { createAlertDispatcher, createRuleEngine } from "./coach/rule-engine.js";
+import { createCoachEngine } from "./coach/coach-engine.js";
 import {
   createVoiceCoachEngine,
   type VoiceCoachEngine,
-} from "./coach/voice-coach";
+} from "./coach/voice-coach.js";
 import {
   getAzureVoices,
   synthesizeAzure,
   transcribeAzure,
-} from "./tts/azure-tts";
-import { getDb, seedCornerNames, getCornerName } from "./db/db";
+} from "./tts/azure-tts.js";
+import { getDb, seedCornerNames, getCornerName } from "./db/db.js";
 import {
   loadR3EData,
   getCarName,
   getTrackName,
   getLayoutName,
   getCarClassName,
-} from "./r3e/r3e-data-loader";
-import { toGameFrame } from "./game-adapter";
-import { decodeCarSetup, type AceSetupFileInfo } from "./ace/ace-setup-reader";
+} from "./r3e/r3e-data-loader.js";
+import { toGameFrame } from "./game-adapter.js";
+import { decodeCarSetup, type AceSetupFileInfo } from "./ace/ace-setup-reader.js";
 import type {
   LapRecord,
   LapAnalysis,
@@ -49,8 +50,10 @@ import type {
   GameSource,
   Alert,
   Deviation,
-} from "../shared/types";
-import cornerNamesData from "../shared/corner-names.json";
+} from "../shared/types.js";
+import cornerNamesData from "../shared/corner-names.json" with { type: "json" };
+
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const IS_DEV = !app.isPackaged;
 
@@ -69,7 +72,7 @@ const createWindow = (): void => {
     frame: false,
     resizable: true,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -268,7 +271,7 @@ const setupPipeline = (): void => {
   if (activeGame === "ace") {
     // AceReader emits GameFrame directly — no projection needed.
     // car/track/layout are updated from lapComplete (not per-frame).
-    reader.on("frame", (frame: import("../shared/types").GameFrame) => {
+    reader.on("frame", (frame: import("../shared/types.js").GameFrame) => {
       zoneTracker.update(frame);
       ruleEngine.processFrame(frame);
       // Renderer still receives frame data for live telemetry display
