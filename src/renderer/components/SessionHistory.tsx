@@ -11,11 +11,12 @@ import {
   faFilePdf,
   faFlask,
   faGear,
+  faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
 import { useEffect, useMemo, useState } from "react";
-import { Badge, Button, Col, Form, Row, Spinner } from "react-bootstrap";
+import { Badge, Button, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
 import type { LapRowFull, SetupData, SetupParam } from "../../shared/types";
 import { formatLapTime } from "../../shared/format";
 import { MOCK_LAP } from "../mocks/mockLap";
@@ -94,9 +95,10 @@ const DetailPanel = ({
           recordedAt: lap.recorded_at,
           analysisJson: lap.analysis_json,
           setupJson: lap.setup_json,
+          game: lap.game,
         });
       } else {
-        path = await window.electronAPI.exportPdf({ lapId: lap.id });
+        path = await window.electronAPI.exportPdf({ lapId: lap.id, game: lap.game });
       }
       setExportMsg(path ? `Salvato: ${path}` : null);
     } catch {
@@ -279,6 +281,8 @@ const SessionHistory = () => {
   const [filterCar, setFilterCar] = useState("");
   const [filterTrack, setFilterTrack] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "laptime">("date");
+  type DeleteTarget = { type: "single"; lap: LapRowFull } | { type: "all" };
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const loadLaps = (): void => {
     if (mockHistoryMode) {
@@ -403,6 +407,21 @@ const SessionHistory = () => {
     );
   };
 
+  const executeDelete = async (): Promise<void> => {
+    if (!deleteTarget) return;
+    if (deleteTarget.type === "single") {
+      const { lap } = deleteTarget;
+      await window.electronAPI.deleteLap({ id: lap.id, game: lap.game });
+      setAllLaps((prev) => prev.filter((l) => !(l.id === lap.id && l.game === lap.game)));
+    } else {
+      const items = filteredLaps.map(({ id, game }) => ({ id, game }));
+      await window.electronAPI.deleteAllLaps(items);
+      const deletedKeys = new Set(items.map(({ id, game }) => `${game}-${id}`));
+      setAllLaps((prev) => prev.filter((l) => !deletedKeys.has(`${l.game}-${l.id}`)));
+    }
+    setDeleteTarget(null);
+  };
+
   const totalPages = Math.max(1, Math.ceil(filteredLaps.length / PAGE_SIZE));
   const pagedLaps = filteredLaps.slice(
     (currentPage - 1) * PAGE_SIZE,
@@ -493,6 +512,18 @@ const SessionHistory = () => {
           <option value="date">Data ↓</option>
           <option value="laptime">Tempo sul giro </option>
         </Form.Select>
+
+        {!mockHistoryMode && !!filterCar && !!filterTrack && filteredLaps.length > 0 && (
+          <Button
+            variant="outline-danger"
+            size="sm"
+            className="sh-filter-select"
+            onClick={() => setDeleteTarget({ type: "all" })}
+          >
+            <FontAwesomeIcon icon={faTrash} className="me-1" />
+            Elimina tutti
+          </Button>
+        )}
       </div>
 
       <div className="overflow-y-auto flex-grow-1 px-3">
@@ -546,14 +577,23 @@ const SessionHistory = () => {
                       </Badge>
                     </td>
                   )}
-                  <td>
+                  <td className="sh-actions" onClick={(e) => e.stopPropagation()}>
                     {lap.setup_json && (
                       <FontAwesomeIcon
                         icon={faGear}
-                        className="sh-has-setup"
+                        className="sh-has-setup me-2"
                         aria-label="Setup disponibile"
                       />
                     )}
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="sh-del-btn"
+                      onClick={() => setDeleteTarget({ type: "single", lap })}
+                      aria-label="Elimina giro"
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                    </Button>
                   </td>
                 </tr>
               ))}
@@ -596,6 +636,43 @@ const SessionHistory = () => {
           </Button>
         </div>
       )}
+      <Modal
+        show={deleteTarget !== null}
+        onHide={() => setDeleteTarget(null)}
+        centered
+        size="sm"
+        className="delete-confirm-modal"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title style={{ fontSize: 15 }}>Conferma eliminazione</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {deleteTarget?.type === "single" ? (
+            <p className="mb-0">
+              Stai per eliminare il <strong>Giro {deleteTarget.lap.lap_number}</strong>
+              {" "}({formatLapTime(deleteTarget.lap.lap_time)}) del{" "}
+              {formatDate(deleteTarget.lap.recorded_at)}.
+              <br />
+              <span className="text-danger">L'operazione è irreversibile.</span>
+            </p>
+          ) : (
+            <p className="mb-0">
+              Stai per eliminare <strong>tutti i {filteredLaps.length} giri</strong> della
+              selezione corrente.
+              <br />
+              <span className="text-danger">L'operazione è irreversibile e non può essere annullata.</span>
+            </p>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)}>
+            Annulla
+          </Button>
+          <Button variant="danger" size="sm" onClick={executeDelete}>
+            Conferma
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };

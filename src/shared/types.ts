@@ -8,14 +8,14 @@
 export type AlertPriority = 1 | 2 | 3;
 
 export type AlertType =
-  | 'BRAKE_TEMP_CRITICAL'
-  | 'TC_ANOMALY'
-  | 'ABS_ANOMALY'
-  | 'LATE_BRAKE'
-  | 'SLOW_THROTTLE'
-  | 'TRAIL_BRAKING'
-  | 'COASTING'
-  | 'BRAKE_THROTTLE_OVERLAP';
+  | "BRAKE_TEMP_CRITICAL"
+  | "TC_ANOMALY"
+  | "ABS_ANOMALY"
+  | "LATE_BRAKE"
+  | "SLOW_THROTTLE"
+  | "TRAIL_BRAKING"
+  | "COASTING"
+  | "BRAKE_THROTTLE_OVERLAP";
 
 export type Alert = {
   type: AlertType;
@@ -31,11 +31,11 @@ export type Alert = {
 // --- Deviation from baseline ---
 
 export type DeviationType =
-  | 'LATE_BRAKE'
-  | 'SLOW_THROTTLE'
-  | 'TRAIL_BRAKING'
-  | 'COASTING'
-  | 'BRAKE_THROTTLE_OVERLAP';
+  | "LATE_BRAKE"
+  | "SLOW_THROTTLE"
+  | "TRAIL_BRAKING"
+  | "COASTING"
+  | "BRAKE_THROTTLE_OVERLAP";
 
 export type Deviation = {
   type: DeviationType;
@@ -47,15 +47,15 @@ export type Deviation = {
 
 // --- Active game source ---
 
-export type GameSource = 'r3e' | 'ace';
+export type GameSource = "r3e" | "ace";
 
 // --- Minimal frame interface used by RuleEngine and ZoneTracker ---
 
 export interface GameFrame {
-  lapDistance: number;   // metres from start line
-  tcActive: number;      // 0 or 1
-  absActive: number;     // 0 or 1
-  brakeTempFL: number;   // °C, -1 if unavailable
+  lapDistance: number; // metres from start line
+  tcActive: number; // 0 or 1
+  absActive: number; // 0 or 1
+  brakeTempFL: number; // °C, -1 if unavailable
   brakeTempFR: number;
   brakeTempRL: number;
   brakeTempRR: number;
@@ -64,23 +64,23 @@ export interface GameFrame {
 // --- Frame (compact, from R3EReader) ---
 
 export type CompactFrame = {
-  d: number;       // lapDistance
-  spd: number;     // speed km/h
-  thr: number;     // throttle 0-1
-  brk: number;     // brake 0-1
-  str: number;     // steer input
+  d: number; // lapDistance
+  spd: number; // speed km/h
+  thr: number; // throttle 0-1
+  brk: number; // brake 0-1
+  str: number; // steer input
   gear: number;
-  abs: number;     // ABS active 0-1
-  tc: number;      // TC active 0-1
-  bt: number[];    // brake temps [FL, FR, RL, RR]
-  ts: number;      // timestamp ms
+  abs: number; // ABS active 0-1
+  tc: number; // TC active 0-1
+  bt: number[]; // brake temps [FL, FR, RL, RR]
+  ts: number; // timestamp ms
   // Extended fields (ACE only; undefined for R3E frames)
-  rpm?: number;               // engine RPM
-  gLat?: number;             // lateral G-force (accG[0])
-  gLon?: number;             // longitudinal G-force (accG[2])
-  tp?: number[];             // tyre pressures PSI [FL, FR, RL, RR]
-  sr?: number[];             // slip ratios [FL, FR, RL, RR]
-  sus?: number[];            // suspension travel m [FL, FR, RL, RR]
+  rpm?: number; // engine RPM
+  gLat?: number; // lateral G-force (accG[0])
+  gLon?: number; // longitudinal G-force (accG[2])
+  tp?: number[]; // tyre pressures PSI [FL, FR, RL, RR]
+  sr?: number[]; // slip ratios [FL, FR, RL, RR]
+  sus?: number[]; // suspension travel m [FL, FR, RL, RR]
 };
 
 // --- Zone aggregate (from LapRecorder) ---
@@ -105,36 +105,36 @@ export type ZoneData = {
   throttlePickupDist: number | null;
   // Extended (ACE only; present when source frames have the fields)
   avgRpm?: number;
-  maxGLat?: number;           // peak lateral G-force magnitude
-  maxGLon?: number;           // peak longitudinal G-force magnitude (braking)
+  maxGLat?: number; // peak lateral G-force magnitude
+  maxGLon?: number; // peak longitudinal G-force magnitude (braking)
   avgTyrePressure?: [number, number, number, number]; // PSI FL/FR/RL/RR
-  avgSlipRatio?: [number, number, number, number];    // FL/FR/RL/RR
-  avgSuspTravel?: [number, number, number, number];   // m FL/FR/RL/RR
+  avgSlipRatio?: [number, number, number, number]; // FL/FR/RL/RR
+  avgSuspTravel?: [number, number, number, number]; // m FL/FR/RL/RR
 };
 
 // --- Lap Record ---
 
 export type LapRecord = {
   lapNumber: number;
-  lapTime: number;      // seconds
+  lapTime: number; // seconds
   sectorTimes: number[]; // [s1, s2, s3] seconds; [-1,-1,-1] if unavailable
   valid: boolean;
-  game?: GameSource;    // source game; defaults to 'r3e' if absent
-  car: string;          // numeric ID (R3E) or string slug (ACE), e.g. "6349" or "ks_porsche_718_gt4"
-  track: string;        // numeric ID (R3E) or string slug (ACE)
-  layout: string;       // numeric ID (R3E) or config string (ACE)
-  carName?: string;     // resolved display name (R3E) or same as car (ACE)
-  trackName?: string;   // resolved display name (R3E) or same as track (ACE)
-  layoutName?: string;  // resolved display name (R3E) or same as layout (ACE)
+  game?: GameSource; // source game; defaults to "r3e" if absent
+  car: string; // numeric ID (R3E) or string slug (ACE), e.g. "6349" or "ks_porsche_718_gt4"
+  track: string; // numeric ID (R3E) or string slug (ACE)
+  layout: string; // numeric ID (R3E) or config string (ACE)
+  carName?: string; // resolved display name (R3E) or same as car (ACE)
+  trackName?: string; // resolved display name (R3E) or same as track (ACE)
+  layoutName?: string; // resolved display name (R3E) or same as layout (ACE)
   layoutLength: number; // meters
   frames: CompactFrame[];
   zones: ZoneData[];
-  recordedAt: string;   // ISO timestamp
+  recordedAt: string; // ISO timestamp
 };
 
 // --- R3E Connection Status ---
 
-export type R3EStatus = {
+export type GameStatus = {
   connected: boolean;
   calibrating: boolean;
   lapsToCalibration: number;
@@ -175,11 +175,11 @@ export type LapRow = {
 
 /** LapRow enriched with session info and resolved display names. */
 export type LapRowFull = LapRow & {
-  car: string;            // numeric ID from session (R3E) or slug (ACE)
+  car: string; // numeric ID from session (R3E) or slug (ACE)
   track: string;
   layout: string;
-  game: GameSource;       // 'r3e' | 'ace'
-  car_name: string;       // resolved display name
+  game: GameSource; // 'r3e' | 'ace'
+  car_name: string; // resolved display name
   track_name: string;
   layout_name: string;
   car_class_name: string; // resolved class name (may be empty)
@@ -196,9 +196,9 @@ export type SetupParam = {
 export type SetupData = {
   carVerified: boolean;
   carFound: string;
-  setupText: string;          // free-form markdown summary
-  params: SetupParam[];       // structured list of parameters
-  screenshots: string[];      // filenames used
+  setupText: string; // free-form markdown summary
+  params: SetupParam[]; // structured list of parameters
+  screenshots: string[]; // filenames used
 };
 
 // --- Analysis result from Claude API ---
@@ -206,7 +206,7 @@ export type SetupData = {
 export type LapAnalysis = {
   lapNumber: number;
   lapTime: number;
-  templateV3: string;     // Full Template v3 markdown
+  templateV3: string; // Full Template v3 markdown
   section5Summary: string; // Section [5] text for TTS
   generatedAt: string;
 };
@@ -246,18 +246,18 @@ export type R3EFrame = {
   // Vehicle
   carModelId: number;
   carName: string;
-  carSpeed: number;       // km/h (converted from m/s)
+  carSpeed: number; // km/h (converted from m/s)
   gear: number;
-  engineRpm: number;      // converted from rad/s
+  engineRpm: number; // converted from rad/s
 
   // Inputs
-  throttle: number;       // 0-1
-  brake: number;          // 0-1
+  throttle: number; // 0-1
+  brake: number; // 0-1
   steerInput: number;
 
   // Aids
-  absActive: number;      // 0-1
-  tcActive: number;       // 0-1
+  absActive: number; // 0-1
+  tcActive: number; // 0-1
 
   // Temps
   brakeTempFL: number;
@@ -325,7 +325,7 @@ export type ElectronAPI = {
   onFrame: (callback: (data: R3EFrame) => void) => void;
   onAlert: (callback: (data: Alert) => void) => void;
   onLapComplete: (callback: (data: LapRecord) => void) => void;
-  onStatus: (callback: (data: R3EStatus) => void) => void;
+  onStatus: (callback: (data: GameStatus) => void) => void;
   onAnalysis: (callback: (data: LapAnalysis) => void) => void;
   onVoiceChunk: (callback: (data: { token: string }) => void) => void;
   onVoiceDone: (callback: (data: { answer: string }) => void) => void;
@@ -334,7 +334,9 @@ export type ElectronAPI = {
   // Request/response
   getLaps: (params: { car: string; track: string }) => Promise<LapRow[]>;
   getAllLaps: () => Promise<LapRowFull[]>;
-  getSession: (id: number) => Promise<SessionRow | null>;
+  deleteLap: (params: { id: number; game: string }) => Promise<void>;
+  deleteAllLaps: (items: Array<{ id: number; game: string }>) => Promise<void>;
+  getSession: (id: number, game: string) => Promise<SessionRow | null>;
   configGet: (key: string) => Promise<unknown>;
   configSet: (key: string, value: unknown) => Promise<void>;
 
@@ -342,7 +344,10 @@ export type ElectronAPI = {
   voiceQuery: (question: string) => Promise<void>;
 
   // Azure STT
-  sttTranscribe: (audioBuffer: ArrayBuffer, mimeType?: string) => Promise<string>;
+  sttTranscribe: (
+    audioBuffer: ArrayBuffer,
+    mimeType?: string,
+  ) => Promise<string>;
 
   // Azure TTS
   ttsGetVoices: () => Promise<AzureVoice[]>;
@@ -357,12 +362,20 @@ export type ElectronAPI = {
 
   // R3E Setup analysis (screenshot-based)
   listScreenshots: () => Promise<Array<{ name: string; thumbnailB64: string }>>;
-  decodeSetup: (params: { filenames: string[]; expectedCar: string }) => Promise<SetupData>;
+  decodeSetup: (params: {
+    filenames: string[];
+    expectedCar: string;
+  }) => Promise<SetupData>;
   saveSetup: (params: { lapId: number; setup: SetupData }) => Promise<void>;
-  exportPdf: (params: { lapId: number }) => Promise<string | null>;
+  exportPdf: (params: { lapId: number; game?: GameSource }) => Promise<string | null>;
 
   // ACE Setup analysis (file-based)
-  aceListSetupFiles: (params: { car: string; track: string }) => Promise<Array<{ filename: string; filePath: string; modifiedAt: string }>>;
+  aceListSetupFiles: (params: {
+    car: string;
+    track: string;
+  }) => Promise<
+    Array<{ filename: string; filePath: string; modifiedAt: string }>
+  >;
   aceReadSetup: (params: { filePath: string }) => Promise<SetupData>;
   exportPdfFromData: (params: {
     lapNumber: number;
@@ -376,6 +389,7 @@ export type ElectronAPI = {
     recordedAt: string;
     analysisJson: string | null;
     setupJson: string | null;
+    game?: GameSource;
   }) => Promise<string | null>;
 };
 

@@ -9,7 +9,7 @@ import type {
   R3EFrame,
   Alert,
   LapRecord,
-  R3EStatus,
+  GameStatus,
   LapAnalysis,
 } from "../../shared/types";
 
@@ -26,7 +26,7 @@ export const useIPC = (): void => {
     window.electronAPI.onFrame((data) => setFrame(data as R3EFrame));
     window.electronAPI.onAlert((data) => setLastAlert(data as Alert));
     window.electronAPI.onLapComplete((data) => setLastLap(data as LapRecord));
-    window.electronAPI.onStatus((data) => setStatus(data as R3EStatus));
+    window.electronAPI.onStatus((data) => setStatus(data as GameStatus));
     window.electronAPI.onAnalysis((data) =>
       setLastAnalysis(data as LapAnalysis),
     );

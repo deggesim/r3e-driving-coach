@@ -1,7 +1,7 @@
 {
-  "name": "r3e-driving-coach",
-  "version": "0.1.0",
-  "description": "R3E Voice Coach — real-time driving coach for RaceRoom Racing Experience",
+  "name": "sim-driving-coach",
+  "version": "0.2.0",
+  "description": "Sim Racing Voice Coach — real-time driving coach for Sim racing games, starting with RaceRoom Racing Experience (R3E) and Assetto Corsa EVO, with support for more games in the future. Provides real-time feedback on driving performance, including braking, throttle control, racing lines, and more, using natural language insights powered by AI.",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "tsc -p tsconfig.node.json && concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
@@ -9,56 +9,58 @@
     "build": "tsc -p tsconfig.node.json && vite build",
     "build:electron": "npm run build && electron-builder",
     "lint": "eslint .",
-    "test:reader": "ts-node src/main/r3e/r3e-reader.ts",
     "start": "electron .",
     "typecheck": "tsc --noEmit",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.85.0",
+    "@anthropic-ai/sdk": "^0.90.0",
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.3.0",
     "axios": "^1.15.0",
-    "better-sqlite3": "^12.8.0",
+    "better-sqlite3": "^12.9.0",
     "bootstrap": "^5.3.8",
     "electron-store": "^11.0.2",
     "jspdf": "^4.2.1",
-    "koffi": "^2.15.6",
-    "marked": "^18.0.0",
+    "koffi": "^2.16.0",
+    "marked": "^18.0.1",
     "react-bootstrap": "^2.10.10",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@eslint-react/eslint-plugin": "^4.2.3",
     "@eslint/js": "^10.0.1",
-    "@types/better-sqlite3": "^7.6.12",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "concurrently": "^9.1.0",
-    "electron": "^41.2.0",
+    "concurrently": "^9.2.1",
+    "electron": "^41.2.1",
     "electron-builder": "^26.8.1",
     "electron-rebuild": "^3.2.9",
     "eslint": "^10.2.0",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "globals": "^17.5.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.2",
-    "typescript-eslint": "^8.58.1",
-    "vite": "^8.0.7",
-    "wait-on": "^9.0.4"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.8",
+    "wait-on": "^9.0.5"
   },
   "build": {
-    "appId": "com.r3e-driving-coach.app",
-    "productName": "R3E Driving Coach",
+    "appId": "com.sim-driving-coach.app",
+    "productName": "Sim Driving Coach",
     "directories": {
       "output": "release"
     },
     "win": {
-      "target": ["nsis", "portable"],
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "build/icon.ico"
     },
     "nsis": {

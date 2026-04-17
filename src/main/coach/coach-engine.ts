@@ -30,13 +30,13 @@ const extractSection5 = (text: string): string => {
   const raw = match[1].trim();
   // Strip markdown: bold/italic markers, headers, list bullets, inline code
   const stripped = raw
-    .replace(/\*\*([^*]+)\*\*/g, "$1")   // **bold**
-    .replace(/\*([^*]+)\*/g, "$1")        // *italic*
-    .replace(/__([^_]+)__/g, "$1")        // __bold__
-    .replace(/_([^_]+)_/g, "$1")          // _italic_
-    .replace(/^#{1,6}\s+/gm, "")          // # headers
-    .replace(/^[-*+]\s+/gm, "")           // list bullets
-    .replace(/`([^`]+)`/g, "$1");         // `code`
+    .replace(/\*\*([^*]+)\*\*/g, "$1") // **bold**
+    .replace(/\*([^*]+)\*/g, "$1") // *italic*
+    .replace(/__([^_]+)__/g, "$1") // __bold__
+    .replace(/_([^_]+)_/g, "$1") // _italic_
+    .replace(/^#{1,6}\s+/gm, "") // # headers
+    .replace(/^[-*+]\s+/gm, "") // list bullets
+    .replace(/`([^`]+)`/g, "$1"); // `code`
   const sentences = stripped.match(/[^.!?]+[.!?]+/g) ?? [];
   return sentences.slice(0, 3).join(" ").trim();
 };
@@ -45,19 +45,33 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
   const db = options.db;
   const onAnalysis = options.onAnalysis;
   const model = options.model ?? "claude-haiku-4-5-20251001";
-  let client = new Anthropic({ apiKey: options.apiKey ?? process.env.ANTHROPIC_API_KEY });
+  let client = new Anthropic({
+    apiKey: options.apiKey ?? process.env.ANTHROPIC_API_KEY,
+  });
   let cornerNames = new Map<number, string>();
 
   const saveAnalysis = (lap: LapRecord, analysis: LapAnalysis): void => {
     try {
-      const result = db.prepare(`
-        UPDATE laps SET analysis_json = ?
+      const lapsTable = lap.game === "ace" ? "laps_ace" : "laps";
+      const sessionsTable = lap.game === "ace" ? "sessions_ace" : "sessions_r3e";
+      const result = db
+        .prepare(
+          `
+        UPDATE ${lapsTable} SET analysis_json = ?
         WHERE session_id = (
-          SELECT id FROM sessions
+          SELECT id FROM ${sessionsTable}
           WHERE car = ? AND track = ? AND layout = ?
           ORDER BY started_at DESC LIMIT 1
         ) AND lap_number = ?
-      `).run(JSON.stringify(analysis), lap.car, lap.track, lap.layout, lap.lapNumber);
+      `,
+        )
+        .run(
+          JSON.stringify(analysis),
+          lap.car,
+          lap.track,
+          lap.layout,
+          lap.lapNumber,
+        );
       if (result.changes === 0) {
         console.warn(
           `[CoachEngine] saveAnalysis — 0 rows updated (lap not in DB?) ` +
@@ -75,20 +89,27 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
 
   const updatePdfPath = (lap: LapRecord, pdfPath: string): void => {
     try {
-      db.prepare(`
-        UPDATE laps SET pdf_path = ?
+      const lapsTable = lap.game === "ace" ? "laps_ace" : "laps";
+      const sessionsTable = lap.game === "ace" ? "sessions_ace" : "sessions_r3e";
+      db.prepare(
+        `
+        UPDATE ${lapsTable} SET pdf_path = ?
         WHERE session_id = (
-          SELECT id FROM sessions
+          SELECT id FROM ${sessionsTable}
           WHERE car = ? AND track = ? AND layout = ?
           ORDER BY started_at DESC LIMIT 1
         ) AND lap_number = ?
-      `).run(pdfPath, lap.car, lap.track, lap.layout, lap.lapNumber);
+      `,
+      ).run(pdfPath, lap.car, lap.track, lap.layout, lap.lapNumber);
     } catch {
       // Non-critical
     }
   };
 
-  const generatePdf = async (lap: LapRecord, analysis: LapAnalysis): Promise<string | null> => {
+  const generatePdf = async (
+    lap: LapRecord,
+    analysis: LapAnalysis,
+  ): Promise<string | null> => {
     try {
       const path = await import("path");
       const fs = await import("fs");
@@ -106,9 +127,14 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
         sessionType: "Sessione",
         recordedAt: analysis.generatedAt,
         templateV3: analysis.templateV3,
+        game: lap.game ?? "r3e",
       });
 
-      const outputDir = path.join(process.env.APPDATA ?? ".", "r3e-coach", "reports");
+      const outputDir = path.join(
+        process.env.APPDATA ?? ".",
+        "sim-coach",
+        "reports",
+      );
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
       }
@@ -125,8 +151,12 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
   };
 
   return {
-    updateCornerNames: (names) => { cornerNames = names; },
-    updateApiKey: (apiKey) => { client = new Anthropic({ apiKey }); },
+    updateCornerNames: (names) => {
+      cornerNames = names;
+    },
+    updateApiKey: (apiKey) => {
+      client = new Anthropic({ apiKey });
+    },
 
     analyzeLap: async (lap, deviations) => {
       const prompt = buildPrompt(lap, deviations, cornerNames);
@@ -141,7 +171,10 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
         });
 
         for await (const event of stream) {
-          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          if (
+            event.type === "content_block_delta" &&
+            event.delta.type === "text_delta"
+          ) {
             fullText += event.delta.text;
           }
         }

@@ -39,8 +39,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('db:getLaps', params),
   getAllLaps: () =>
     ipcRenderer.invoke('db:getAllLaps'),
-  getSession: (id: number) =>
-    ipcRenderer.invoke('db:getSession', id),
+  deleteLap: (params: { id: number; game: string }) =>
+    ipcRenderer.invoke('db:deleteLap', params),
+  deleteAllLaps: (items: Array<{ id: number; game: string }>) =>
+    ipcRenderer.invoke('db:deleteAllLaps', items),
+  getSession: (id: number, game: string) =>
+    ipcRenderer.invoke('db:getSession', { id, game }),
   configGet: (key: string) =>
     ipcRenderer.invoke('config:get', key),
   configSet: (key: string, value: unknown) =>
@@ -79,7 +83,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('setup:decodeSetup', params),
   saveSetup: (params: { lapId: number; setup: unknown }) =>
     ipcRenderer.invoke('setup:saveSetup', params),
-  exportPdf: (params: { lapId: number }) =>
+  exportPdf: (params: { lapId: number; game?: string }) =>
     ipcRenderer.invoke('setup:exportPdf', params),
   exportPdfFromData: (params: {
     lapNumber: number;
@@ -93,6 +97,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     recordedAt: string;
     analysisJson: string | null;
     setupJson: string | null;
+    game?: string;
   }) => ipcRenderer.invoke('setup:exportPdfFromData', params),
 
   // ACE setup (file-based)

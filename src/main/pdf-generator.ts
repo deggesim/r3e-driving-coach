@@ -9,6 +9,7 @@ import * as os from "os";
 import * as path from "path";
 import * as fs from "fs";
 import { marked } from "marked";
+import type { GameSource } from "../shared/types";
 
 export type PdfData = {
   car: string;
@@ -30,6 +31,13 @@ export type PdfData = {
   templateV3: string | null;
   /** Structured setup params for the Setup table */
   setupParams?: Array<{ category: string; parameter: string; value: string }>;
+  /** Source simulator */
+  game?: GameSource;
+};
+
+const GAME_LABELS: Record<GameSource, { short: string; full: string }> = {
+  r3e: { short: "R3E", full: "RaceRoom Racing Experience" },
+  ace: { short: "ACE", full: "Assetto Corsa EVO" },
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -38,7 +46,9 @@ function fmtTime(s: number | null): string {
   if (!s || s <= 0) return "--:--";
   const m = Math.floor(s / 60);
   const sec = s % 60;
-  return m > 0 ? `${m}:${sec.toFixed(3).padStart(6, "0")}` : `${sec.toFixed(3)}s`;
+  return m > 0
+    ? `${m}:${sec.toFixed(3).padStart(6, "0")}`
+    : `${sec.toFixed(3)}s`;
 }
 
 function escapeHtml(str: string): string {
@@ -132,14 +142,22 @@ export function buildPdfHtml(data: PdfData): string {
   });
   const condition = escapeHtml(data.condition ?? "Asciutto");
   const sessionType = escapeHtml(data.sessionType ?? "Sessione");
-  const trackLine = [data.track, data.layout].filter(Boolean).map(escapeHtml).join(" ");
+  const trackLine = [data.track, data.layout]
+    .filter(Boolean)
+    .map(escapeHtml)
+    .join(" ");
 
-  const sectionsHtml = data.templateV3 ? buildSectionsHtml(data.templateV3) : "";
-  const setupHtml =
-    data.setupParams?.length ? buildSetupTableHtml(data.setupParams) : "";
+  const sectionsHtml = data.templateV3
+    ? buildSectionsHtml(data.templateV3)
+    : "";
+  const setupHtml = data.setupParams?.length
+    ? buildSetupTableHtml(data.setupParams)
+    : "";
+
+  const gameLabel = GAME_LABELS[data.game ?? "r3e"];
 
   const infoItems = [
-    `Simulatore: R3E`,
+    `Simulatore: ${gameLabel.short}`,
     `Tempo: <span class="laptime">${lapTimeStr}</span>`,
     `S1: ${s1} &nbsp;S2: ${s2} &nbsp;S3: ${s3}`,
     ...(data.setupName ? [`Setup: ${escapeHtml(data.setupName)}`] : []),
@@ -320,7 +338,7 @@ ${sectionsHtml}
 ${setupHtml}
 
 <div class="footer">
-  Analisi generata da R3E Driving Coach &bull; Simulatore: RaceRoom Racing Experience &bull; Telemetria: Second Monitor &bull; ${sessionDate}
+  Analisi generata da Sim Driving Coach &bull; Simulatore: ${gameLabel.full} &bull; ${sessionDate}
 </div>
 
 </body>
@@ -335,7 +353,7 @@ ${setupHtml}
  */
 export async function generatePdfBuffer(data: PdfData): Promise<Buffer> {
   const html = buildPdfHtml(data);
-  const tmpFile = path.join(os.tmpdir(), `r3e-coach-pdf-${Date.now()}.html`);
+  const tmpFile = path.join(os.tmpdir(), `sim-coach-pdf-${Date.now()}.html`);
   fs.writeFileSync(tmpFile, html, "utf-8");
 
   const win = new BrowserWindow({

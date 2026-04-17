@@ -308,6 +308,19 @@ body {
 .setup-value { color: var(--yellow); font-variant-numeric: tabular-nums; font-weight: 600; }
 .text-dim { color: var(--text-dim); }
 
+/* ── Delete Confirm Modal ── */
+.delete-confirm-modal .modal-content {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.delete-confirm-modal .modal-header,
+.delete-confirm-modal .modal-footer {
+  background: var(--bg3);
+  border-color: var(--border);
+}
+.delete-confirm-modal .btn-close { filter: invert(1) grayscale(1); }
+
 /* ── Screenshot Picker Modal ── */
 .screenshot-picker-modal .modal-content {
   background: var(--bg2);

@@ -1,8 +1,3 @@
-/**
- * SQLite database wrapper using better-sqlite3.
- * Schema: baseline, baseline_tc_zones, baseline_abs_zones, corner_names, sessions, laps.
- */
-
 import Database from "better-sqlite3";
 import path from "path";
 
@@ -11,26 +6,29 @@ let _db: Database.Database | null = null;
 const initSchema = (db: Database.Database): void => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS baseline (
+      game      TEXT NOT NULL DEFAULT 'r3e',
       car       TEXT NOT NULL,
       track     TEXT NOT NULL,
       zone_id   INTEGER NOT NULL,
       data      TEXT NOT NULL,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (car, track, zone_id)
+      PRIMARY KEY (game, car, track, zone_id)
     );
 
     CREATE TABLE IF NOT EXISTS baseline_tc_zones (
+      game      TEXT NOT NULL DEFAULT 'r3e',
       car       TEXT NOT NULL,
       track     TEXT NOT NULL,
       zone_id   INTEGER NOT NULL,
-      PRIMARY KEY (car, track, zone_id)
+      PRIMARY KEY (game, car, track, zone_id)
     );
 
     CREATE TABLE IF NOT EXISTS baseline_abs_zones (
+      game      TEXT NOT NULL DEFAULT 'r3e',
       car       TEXT NOT NULL,
       track     TEXT NOT NULL,
       zone_id   INTEGER NOT NULL,
-      PRIMARY KEY (car, track, zone_id)
+      PRIMARY KEY (game, car, track, zone_id)
     );
 
     CREATE TABLE IF NOT EXISTS corner_names (
@@ -42,7 +40,7 @@ const initSchema = (db: Database.Database): void => {
       PRIMARY KEY (track, layout, dist_min)
     );
 
-    CREATE TABLE IF NOT EXISTS sessions (
+    CREATE TABLE IF NOT EXISTS sessions_r3e (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
       car          TEXT NOT NULL,
       track        TEXT NOT NULL,
@@ -53,9 +51,9 @@ const initSchema = (db: Database.Database): void => {
       lap_count    INTEGER NOT NULL DEFAULT 0
     );
 
-    CREATE TABLE IF NOT EXISTS laps (
+    CREATE TABLE IF NOT EXISTS laps_r3e (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id    INTEGER NOT NULL REFERENCES sessions(id),
+      session_id    INTEGER NOT NULL REFERENCES sessions_r3e(id),
       lap_number    INTEGER NOT NULL,
       lap_time      REAL NOT NULL,
       sector1       REAL,
@@ -67,7 +65,7 @@ const initSchema = (db: Database.Database): void => {
       recorded_at   TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
-    CREATE INDEX IF NOT EXISTS idx_laps_session ON laps(session_id);
+    CREATE INDEX IF NOT EXISTS idx_laps_session ON laps_r3e(session_id);
 
     CREATE TABLE IF NOT EXISTS sessions_ace (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,54 +101,12 @@ const initSchema = (db: Database.Database): void => {
       value TEXT NOT NULL
     );
   `);
-
-  // Migrations: add setup columns if they don't exist yet
-  const lapCols = db
-    .prepare("PRAGMA table_info(laps)")
-    .all() as Array<{ name: string }>;
-  const colNames = lapCols.map((c) => c.name);
-  if (!colNames.includes("setup_json")) {
-    db.exec("ALTER TABLE laps ADD COLUMN setup_json TEXT");
-  }
-  if (!colNames.includes("setup_screenshots")) {
-    db.exec("ALTER TABLE laps ADD COLUMN setup_screenshots TEXT");
-  }
-
-  // Migration: add game column to sessions (for multi-game support)
-  const sessionCols = db
-    .prepare("PRAGMA table_info(sessions)")
-    .all() as Array<{ name: string }>;
-  if (!sessionCols.map((c) => c.name).includes("game")) {
-    db.exec("ALTER TABLE sessions ADD COLUMN game TEXT NOT NULL DEFAULT 'r3e'");
-  }
-
-  // Migration: add game column to baseline tables
-  const baselineCols = db
-    .prepare("PRAGMA table_info(baseline)")
-    .all() as Array<{ name: string }>;
-  if (!baselineCols.map((c) => c.name).includes("game")) {
-    db.exec("ALTER TABLE baseline ADD COLUMN game TEXT NOT NULL DEFAULT 'r3e'");
-  }
-
-  const tcCols = db
-    .prepare("PRAGMA table_info(baseline_tc_zones)")
-    .all() as Array<{ name: string }>;
-  if (!tcCols.map((c) => c.name).includes("game")) {
-    db.exec("ALTER TABLE baseline_tc_zones ADD COLUMN game TEXT NOT NULL DEFAULT 'r3e'");
-  }
-
-  const absCols = db
-    .prepare("PRAGMA table_info(baseline_abs_zones)")
-    .all() as Array<{ name: string }>;
-  if (!absCols.map((c) => c.name).includes("game")) {
-    db.exec("ALTER TABLE baseline_abs_zones ADD COLUMN game TEXT NOT NULL DEFAULT 'r3e'");
-  }
 };
 
 export const getDb = (userDataPath: string): Database.Database => {
   if (_db) return _db;
 
-  const dbPath = path.join(userDataPath, "r3e-driving-coach.db");
+  const dbPath = path.join(userDataPath, "sim-driving-coach.db");
   _db = new Database(dbPath);
   _db.pragma("journal_mode = WAL");
   _db.pragma("foreign_keys = ON");

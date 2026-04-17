@@ -16,6 +16,7 @@ Il pilota sta guidando in questo momento — sii pratico, usa dati numerici, cit
 Non ripetere la domanda. Non usare elenchi puntati. Rispondi come se stessi parlando al pilota in diretta radio.`;
 
 type SessionContext = {
+  game: string;
   car: string;      // numeric ID as string, used for DB queries
   track: string;    // numeric ID as string, used for DB queries
   layout: string;   // numeric ID as string, used for DB queries
@@ -151,6 +152,7 @@ export const createVoiceCoachEngine = (
 ): VoiceCoachEngine => {
   const client = new Anthropic({ apiKey });
   const currentContext: SessionContext = {
+    game: "r3e",
     car: "",
     track: "",
     layout: "",
@@ -172,10 +174,12 @@ export const createVoiceCoachEngine = (
   const refreshLaps = (): void => {
     if (!currentContext.car) return;
     try {
+      const lapsTable = currentContext.game === "ace" ? "laps_ace" : "laps";
+      const sessionsTable = currentContext.game === "ace" ? "sessions_ace" : "sessions_r3e";
       const rows = db
         .prepare(
-          `SELECT l.* FROM laps l
-           JOIN sessions s ON l.session_id = s.id
+          `SELECT l.* FROM ${lapsTable} l
+           JOIN ${sessionsTable} s ON l.session_id = s.id
            WHERE s.car = ? AND s.track = ?
            ORDER BY l.recorded_at DESC LIMIT 10`,
         )
@@ -200,6 +204,7 @@ export const createVoiceCoachEngine = (
 
   return {
     updateContext: (ctx) => {
+      if (ctx.game !== undefined) currentContext.game = ctx.game;
       if (ctx.car !== undefined) currentContext.car = ctx.car;
       if (ctx.track !== undefined) currentContext.track = ctx.track;
       if (ctx.layout !== undefined) currentContext.layout = ctx.layout;

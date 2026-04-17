@@ -8,11 +8,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Badge } from "react-bootstrap";
-import type { Alert, R3EStatus } from "../../shared/types";
+import type { Alert, GameStatus } from "../../shared/types";
 import { useSettingsStore } from "../store/settingsStore";
 
 type StatusBarProps = {
-  status: R3EStatus;
+  status: GameStatus;
   lastAlert: Alert | null;
 };
 

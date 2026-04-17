@@ -44,7 +44,7 @@ import { decodeCarSetup, type AceSetupFileInfo } from "./ace/ace-setup-reader";
 import type {
   LapRecord,
   LapAnalysis,
-  R3EStatus,
+  GameStatus,
   R3EFrame,
   GameSource,
   Alert,
@@ -200,7 +200,7 @@ const setupPipeline = (): void => {
   const recorder = createLapRecorder(baseline.isReady());
 
   const pushStatus = (): void => {
-    const status: R3EStatus =
+    const status: GameStatus =
       activeGame === "ace"
         ? {
             connected: reader !== null,
@@ -390,6 +390,7 @@ const setupPipeline = (): void => {
       const zonesJson = JSON.stringify(lapWithNames.zones);
       const cornerMap = buildCornerMap();
       voiceCoach?.updateContext({
+        game: activeGame,
         car: lapWithNames.car,
         track: lapWithNames.track,
         layout: lapWithNames.layout,
@@ -443,7 +444,7 @@ const setupPipeline = (): void => {
         .prepare(
           `
       SELECT l.* FROM laps l
-      JOIN sessions s ON l.session_id = s.id
+      JOIN sessions_r3e s ON l.session_id = s.id
       WHERE s.car = ? AND s.track = ?
 
       UNION ALL
@@ -466,7 +467,7 @@ const setupPipeline = (): void => {
         `
       SELECT l.*, s.car, s.track, s.layout, s.game AS game
       FROM laps l
-      JOIN sessions s ON l.session_id = s.id
+      JOIN sessions_r3e s ON l.session_id = s.id
 
       UNION ALL
 
@@ -505,16 +506,51 @@ const setupPipeline = (): void => {
       const layoutNum = parseInt(row.layout);
       return {
         ...row,
-        car_name: (!isAce && !isNaN(carNum) ? getCarName(carNum) : undefined) ?? row.car,
-        track_name: (!isAce && !isNaN(trackNum) ? getTrackName(trackNum) : undefined) ?? row.track,
-        layout_name: (!isAce && !isNaN(layoutNum) ? getLayoutName(layoutNum) : undefined) ?? row.layout,
-        car_class_name: (!isAce && !isNaN(carNum) ? getCarClassName(carNum) : undefined) ?? "",
+        car_name:
+          (!isAce && !isNaN(carNum) ? getCarName(carNum) : undefined) ??
+          row.car,
+        track_name:
+          (!isAce && !isNaN(trackNum) ? getTrackName(trackNum) : undefined) ??
+          row.track,
+        layout_name:
+          (!isAce && !isNaN(layoutNum)
+            ? getLayoutName(layoutNum)
+            : undefined) ?? row.layout,
+        car_class_name:
+          (!isAce && !isNaN(carNum) ? getCarClassName(carNum) : undefined) ??
+          "",
       };
     });
   });
 
-  ipcMain.handle("db:getSession", (_event, id: number) => {
-    return db.prepare("SELECT * FROM sessions WHERE id = ?").get(id);
+  ipcMain.handle(
+    "db:deleteLap",
+    (_event, { id, game }: { id: number; game: string }) => {
+      if (game === "ace") {
+        db.prepare("DELETE FROM laps_ace WHERE id = ?").run(id);
+      } else {
+        db.prepare("DELETE FROM laps WHERE id = ?").run(id);
+      }
+    },
+  );
+
+  ipcMain.handle(
+    "db:deleteAllLaps",
+    (_event, items: Array<{ id: number; game: string }>) => {
+      const deleteR3e = db.prepare("DELETE FROM laps WHERE id = ?");
+      const deleteAce = db.prepare("DELETE FROM laps_ace WHERE id = ?");
+      db.transaction(() => {
+        for (const { id, game } of items) {
+          if (game === "ace") deleteAce.run(id);
+          else deleteR3e.run(id);
+        }
+      })();
+    },
+  );
+
+  ipcMain.handle("db:getSession", (_event, { id, game }: { id: number; game: string }) => {
+    const table = game === "ace" ? "sessions_ace" : "sessions_r3e";
+    return db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
   });
 
   // ─── Azure TTS IPC
@@ -819,14 +855,18 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
   // ─── Setup: export PDF with analysis + setup using branded template
   ipcMain.handle(
     "setup:exportPdf",
-    async (_event, { lapId }: { lapId: number }) => {
+    async (_event, { lapId, game }: { lapId: number; game?: string }) => {
       const { dialog } = await import("electron");
       const fs = await import("fs");
+
+      const isAce = game === "ace";
+      const lapsTable = isAce ? "laps_ace" : "laps";
+      const sessionsTable = isAce ? "sessions_ace" : "sessions_r3e";
 
       const lap = db
         .prepare(
           `SELECT l.*, s.car, s.track, s.layout, s.session_type
-         FROM laps l JOIN sessions s ON l.session_id = s.id
+         FROM ${lapsTable} l JOIN ${sessionsTable} s ON l.session_id = s.id
          WHERE l.id = ?`,
         )
         .get(lapId) as
@@ -872,6 +912,7 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
         recordedAt: lap.recorded_at,
         templateV3: analysis?.templateV3 ?? null,
         setupParams: setup?.params ?? undefined,
+        game: isAce ? "ace" : "r3e",
       };
 
       const pdfBuffer = await generatePdfBuffer(pdfData);
@@ -906,6 +947,7 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
         recordedAt: string;
         analysisJson: string | null;
         setupJson: string | null;
+        game?: string;
       },
     ) => {
       const { dialog } = await import("electron");
@@ -928,6 +970,7 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
         recordedAt: data.recordedAt,
         templateV3: analysis?.templateV3 ?? null,
         setupParams: setup?.params ?? undefined,
+        game: data.game === "ace" ? "ace" : "r3e",
       };
 
       const pdfBuffer = await generatePdfBuffer(pdfData);
@@ -1026,14 +1069,15 @@ const createSession = (
       )
       .run(car, track, layout);
     return result.lastInsertRowid as number;
-  }
-  const result = db
-    .prepare(
-      `INSERT INTO sessions (car, track, layout, session_type, game, started_at)
+  } else {
+    const result = db
+      .prepare(
+        `INSERT INTO sessions_r3e (car, track, layout, session_type, game, started_at)
        VALUES (?, ?, ?, 'practice', ?, datetime('now'))`,
-    )
-    .run(car, track, layout, game);
-  return result.lastInsertRowid as number;
+      )
+      .run(car, track, layout, game);
+    return result.lastInsertRowid as number;
+  }
 };
 
 const saveLap = (
@@ -1043,7 +1087,7 @@ const saveLap = (
   game = "r3e",
 ): void => {
   const lapsTable = game === "ace" ? "laps_ace" : "laps";
-  const sessionsTable = game === "ace" ? "sessions_ace" : "sessions";
+  const sessionsTable = game === "ace" ? "sessions_ace" : "sessions_r3e";
   try {
     const insertResult = db
       .prepare(

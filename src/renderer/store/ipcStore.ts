@@ -8,30 +8,30 @@ import type {
   R3EFrame,
   Alert,
   LapRecord,
-  R3EStatus,
+  GameStatus,
   LapAnalysis,
 } from "../../shared/types";
 
-const DEFAULT_STATUS: R3EStatus = {
+const DEFAULT_STATUS: GameStatus = {
   connected: false,
   calibrating: false,
   lapsToCalibration: 2,
   car: null,
   track: null,
   layout: null,
-  game: 'r3e',
+  game: "r3e",
 };
 
 export type IPCStore = {
   frame: R3EFrame | null;
   lastAlert: Alert | null;
   lastLap: LapRecord | null;
-  status: R3EStatus;
+  status: GameStatus;
   lastAnalysis: LapAnalysis | null;
   setFrame: (frame: R3EFrame) => void;
   setLastAlert: (alert: Alert) => void;
   setLastLap: (lap: LapRecord) => void;
-  setStatus: (status: R3EStatus) => void;
+  setStatus: (status: GameStatus) => void;
   setLastAnalysis: (analysis: LapAnalysis) => void;
 };
 

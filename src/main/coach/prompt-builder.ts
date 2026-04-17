@@ -38,9 +38,9 @@ Regole:
 - Usa il nome ufficiale delle curve quando disponibile
 - Ogni osservazione deve includere almeno un dato numerico
 - Temperatura freni ideale: 550°C ±137.5°C (finestra 413-688°C)
-- Pressioni gomme espresse in PSI
+- Pressioni gomme espresse in PSI per Assetto Corsa EVO, in kPa per R3E (converti 1 bar = 14.5038 PSI)
 - Se le temperature freni sono -1, non sono disponibili per questa auto — ignora
-- In Qualification/Leaderboard le temperature gomme sono fisse a 85°C — non diagnosticare come problema`;
+- In R3E, in modalità Leaderboard, le temperature gomme sono fisse a 85°C — non diagnosticare come problema`;
 
 /**
  * Build the user message for Claude API from lap data.
@@ -131,8 +131,12 @@ export const buildPrompt = (
         );
       }
       if (zone.avgSuspTravel) {
-        const [fl, fr, rl, rr] = zone.avgSuspTravel.map((v) => (v * 1000).toFixed(1));
-        parts.push(`- Corsa ammortizzatori (mm): FL ${fl} FR ${fr} RL ${rl} RR ${rr}`);
+        const [fl, fr, rl, rr] = zone.avgSuspTravel.map((v) =>
+          (v * 1000).toFixed(1),
+        );
+        parts.push(
+          `- Corsa ammortizzatori (mm): FL ${fl} FR ${fr} RL ${rl} RR ${rr}`,
+        );
       }
       parts.push("");
     }
