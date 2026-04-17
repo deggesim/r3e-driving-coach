@@ -95,13 +95,13 @@ Gamepad button held
 
 #### `components/`
 - **TTSManager.tsx** — Headless component, Web Speech API (it-IT), priority queue, P1 interrupts. Used for real-time lap alerts when Azure TTS is not enabled
-- **Debriefing.tsx** — Live telemetry display during session (speed, inputs, brake temps, zone info, alerts). Shows last lap record
+- **Debriefing.tsx** — Post-lap analysis panel. Header includes a "Carica Setup" button that opens ScreenshotPicker (R3E) or AceSetupPicker (ACE). When a setup is confirmed it calls `session:setSetup` IPC to store it in the main process — all subsequent lap analyses for the session will include the setup in the prompt and save it alongside `analysis_json` in the DB
 - **StatusBar.tsx** — Connection status, car/track/layout (resolved names), calibration state, last alert
 - **SessionHistory.tsx** — Paginated list of all past laps (R3E + ACE, filterable by car/track). Detail panel with Template v3 analysis, setup table; "Aggiungi Setup" opens game-appropriate picker (ScreenshotPicker for R3E, AceSetupPicker for ACE); "Esporta PDF" calls main-process PDF generator; supports single-lap and bulk delete
 - **SettingsPanel.tsx** — All user settings: API key, assistant name, active game selector (R3E/ACE toggle), Azure TTS/STT config, voice selection, gamepad button capture, mock mode toggle
 - **VoiceCoachOverlay.tsx** — Fixed overlay showing voice interaction state: idle (hidden), listening (pulsing mic), processing (spinner + transcript), speaking (streaming answer)
 - **ScreenshotPicker.tsx** — R3E only. Modal to select Steam screenshots for setup decoding via Claude Vision; thumbnails, multi-select, triggers IPC `setup:decodeSetup`
-- **AceSetupPicker.tsx** — ACE only. Modal to select `.carsetup` files from `D:\Salvataggi\ACE\Car Setups\{car}\{track}\`; triggers IPC `ace:listSetupFiles` / `ace:readSetup` (protobuf decode, no Claude Vision)
+- **AceSetupPicker.tsx** — ACE only. Modal to browse `D:\Salvataggi\ACE\Car Setups\` via 3-step flow: car dropdown → track dropdown → .carsetup file list. IPC calls: `ace:listSetupCars`, `ace:listSetupTracks`, `ace:listSetupFiles`, `ace:readSetup`. Shows a validation badge when the selected car/track doesn't match the `expectedCar`/`expectedTrack` prop supplied by the caller (lap row in history, or live game status in Debriefing)
 
 #### `hooks/`
 - **useIPC.ts** — Hook wrapping `window.electronAPI` for frame/alert/lapComplete/status/analysis. Also exposes `useConfig()` (config:get/set)
@@ -159,7 +159,8 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 | Handle | `coach:voiceQuery` | streaming voice response |
 | Handle | `setup:listScreenshots` / `setup:decodeSetup` | R3E screenshot setup |
 | Handle | `setup:saveSetup` / `setup:exportPdf` / `setup:exportPdfFromData` | R3E setup save/export |
-| Handle | `ace:listSetupFiles` / `ace:readSetup` | ACE file-based setup |
+| Handle | `ace:listSetupCars` / `ace:listSetupTracks` / `ace:listSetupFiles` / `ace:readSetup` | ACE file-based setup — 3-step picker |
+| Handle | `session:setSetup` | Store current session setup for real-time analysis |
 | One-way | `window:close` / `window:minimize` / `window:maximize` | frameless window |
 
 ## Key Design Decisions (Do Not Change)
@@ -168,7 +169,8 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 - **Data source R3E**: Shared Memory (`$R3E`) via `koffi` — not telemetry files. Numeric car/track/layout IDs resolved via R3EDataLoader
 - **Data source ACE**: Three SHM pages (PhysicsEvo, GraphicsEvo, StaticEvo) via `koffi`. Car/track/layout are readable strings from SHM
 - **Setup loading R3E**: Steam screenshot thumbnails → Claude Vision API decode → `SetupData`
-- **Setup loading ACE**: `.carsetup` binary files read directly from `D:\Salvataggi\ACE\Car Setups\{car}\{track}\` → protobuf decode (no Claude Vision)
+- **Setup loading ACE**: `.carsetup` binary files browsed via car→track→file dropdown flow in `AceSetupPicker` → protobuf decode (no Claude Vision). Validation badge warns when selected car/track doesn't match the reference (lap row or live status)
+- **Real-time session setup**: "Carica Setup" button in Debriefing header. Loaded setup stored as `currentSetup` in main process via `session:setSetup` IPC. All subsequent valid lap analyses include the setup in the prompt (section [2]) and persist it in `setup_json` alongside `analysis_json`. Cleared only when the user loads a new setup or the app restarts
 - **Polling**: 16ms (`setTimeout`, not `setInterval`), reconnect every 2s if sim not running
 - **Alerts during lap**: Audio only, alert-driven (no continuous delta). Only fire when there's a problem
 - **Alert priorities**: P1 (safety, immediate, interrupts), P2 (TC/ABS anomaly, immediate, queued), P3 (technique, post-corner, max 1 per zone per lap)

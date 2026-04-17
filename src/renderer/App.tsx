@@ -74,16 +74,17 @@ const App = () => {
   // Load all settings from config on mount
   useEffect(() => {
     const load = async () => {
-      const [ak, az, key, region, voice, name, button, game] = await Promise.all([
-        configGet("anthropicApiKey"),
-        configGet("azureTtsEnabled"),
-        configGet("azureSpeechKey"),
-        configGet("azureRegion"),
-        configGet("azureVoiceName"),
-        configGet("assistantName"),
-        configGet("gamepadTriggerButton"),
-        configGet("activeGame"),
-      ]);
+      const [ak, az, key, region, voice, name, button, game] =
+        await Promise.all([
+          configGet("anthropicApiKey"),
+          configGet("azureTtsEnabled"),
+          configGet("azureSpeechKey"),
+          configGet("azureRegion"),
+          configGet("azureVoiceName"),
+          configGet("assistantName"),
+          configGet("gamepadTriggerButton"),
+          configGet("activeGame"),
+        ]);
       if (ak) setApiKey(ak);
       if (az) setAzureTtsEnabled(az === "true");
       if (key) setAzureSpeechKey(key);
@@ -138,7 +139,7 @@ const App = () => {
       {/* Title bar (frameless Electron drag area) */}
       <div className="title-bar text-nowrap">
         <img src={iconUrl} className="title-bar-icon" alt="" />
-        <span className="title-bar-name">R3E Driving Coach</span>
+        <span className="title-bar-name">Sim Driving Coach</span>
         <div className="title-bar-tabs">
           <Button
             variant="link"

@@ -370,6 +370,8 @@ export type ElectronAPI = {
   exportPdf: (params: { lapId: number; game?: GameSource }) => Promise<string | null>;
 
   // ACE Setup analysis (file-based)
+  aceListSetupCars: () => Promise<string[]>;
+  aceListSetupTracks: (params: { car: string }) => Promise<string[]>;
   aceListSetupFiles: (params: {
     car: string;
     track: string;
@@ -377,6 +379,9 @@ export type ElectronAPI = {
     Array<{ filename: string; filePath: string; modifiedAt: string }>
   >;
   aceReadSetup: (params: { filePath: string }) => Promise<SetupData>;
+
+  // Real-time session setup
+  sessionSetSetup: (setup: SetupData | null) => Promise<void>;
   exportPdfFromData: (params: {
     lapNumber: number;
     lapTime: number;

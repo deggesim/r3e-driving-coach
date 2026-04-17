@@ -168,6 +168,8 @@ const setupPipeline = (): void => {
   let currentTrack = "";
   let currentLayout = "";
   let lastDeviations: Deviation[] | null = null;
+  let currentSetup: import("../shared/types.js").SetupData | null = null;
+  let readerConnected = false;
 
   // corner_names seed data uses track/layout names.
   // R3E: resolve numeric IDs to display names before lookup.
@@ -212,7 +214,7 @@ const setupPipeline = (): void => {
     const status: GameStatus =
       activeGame === "ace"
         ? {
-            connected: reader !== null,
+            connected: readerConnected,
             calibrating: recorder.isCalibrating(),
             lapsToCalibration: recorder.lapsToCalibration(),
             car: currentCar || null,
@@ -221,7 +223,7 @@ const setupPipeline = (): void => {
             game: activeGame,
           }
         : {
-            connected: reader !== null,
+            connected: readerConnected,
             calibrating: recorder.isCalibrating(),
             lapsToCalibration: recorder.lapsToCalibration(),
             car: currentCar ? getCarName(Number(currentCar)) : null,
@@ -267,10 +269,12 @@ const setupPipeline = (): void => {
   reader = activeGame === "ace" ? createAceReader() : createR3EReader();
 
   reader.on("connected", () => {
+    readerConnected = true;
     pushStatus();
   });
 
   reader.on("disconnected", () => {
+    readerConnected = false;
     pushStatus();
   });
 
@@ -418,9 +422,11 @@ const setupPipeline = (): void => {
         const apiKey = apiKeyRow?.value;
         console.log("apiKey", apiKey);
         if (apiKey) coachEngine.updateApiKey(apiKey);
-        coachEngine.analyzeLap(lapWithNames, deviations).catch((err) => {
-          console.error("[CoachEngine] Analysis error:", err);
-        });
+        coachEngine
+          .analyzeLap(lapWithNames, deviations, currentSetup)
+          .catch((err) => {
+            console.error("[CoachEngine] Analysis error:", err);
+          });
       }
     },
   );
@@ -452,7 +458,7 @@ const setupPipeline = (): void => {
       return db
         .prepare(
           `
-      SELECT l.* FROM laps l
+      SELECT l.* FROM laps_r3e l
       JOIN sessions_r3e s ON l.session_id = s.id
       WHERE s.car = ? AND s.track = ?
 
@@ -474,13 +480,17 @@ const setupPipeline = (): void => {
     const rows = db
       .prepare(
         `
-      SELECT l.*, s.car, s.track, s.layout, s.game AS game
-      FROM laps l
+      SELECT l.id, l.session_id, l.lap_number, l.lap_time, l.sector1, l.sector2, l.sector3,
+             l.valid, l.analysis_json, l.pdf_path, NULL AS setup_json, NULL AS setup_screenshots,
+             l.recorded_at, s.car, s.track, s.layout, 'r3e' AS game
+      FROM laps_r3e l
       JOIN sessions_r3e s ON l.session_id = s.id
 
       UNION ALL
 
-      SELECT l.*, s.car, s.track, s.layout, 'ace' AS game
+      SELECT l.id, l.session_id, l.lap_number, l.lap_time, l.sector1, l.sector2, l.sector3,
+             l.valid, l.analysis_json, l.pdf_path, l.setup_json, l.setup_screenshots,
+             l.recorded_at, s.car, s.track, s.layout, 'ace' AS game
       FROM laps_ace l
       JOIN sessions_ace s ON l.session_id = s.id
 
@@ -538,7 +548,7 @@ const setupPipeline = (): void => {
       if (game === "ace") {
         db.prepare("DELETE FROM laps_ace WHERE id = ?").run(id);
       } else {
-        db.prepare("DELETE FROM laps WHERE id = ?").run(id);
+        db.prepare("DELETE FROM laps_r3e WHERE id = ?").run(id);
       }
     },
   );
@@ -546,7 +556,7 @@ const setupPipeline = (): void => {
   ipcMain.handle(
     "db:deleteAllLaps",
     (_event, items: Array<{ id: number; game: string }>) => {
-      const deleteR3e = db.prepare("DELETE FROM laps WHERE id = ?");
+      const deleteR3e = db.prepare("DELETE FROM laps_r3e WHERE id = ?");
       const deleteAce = db.prepare("DELETE FROM laps_ace WHERE id = ?");
       db.transaction(() => {
         for (const { id, game } of items) {
@@ -875,7 +885,7 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
       const fs = await import("fs");
 
       const isAce = game === "ace";
-      const lapsTable = isAce ? "laps_ace" : "laps";
+      const lapsTable = isAce ? "laps_ace" : "laps_r3e";
       const sessionsTable = isAce ? "sessions_ace" : "sessions_r3e";
 
       const lap = db
@@ -1049,6 +1059,54 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
     },
   );
 
+  // ─── ACE Setup: list available cars and tracks
+  ipcMain.handle("ace:listSetupCars", async () => {
+    const fs = await import("fs");
+    const pathMod = await import("path");
+    const ACE_SETUPS_BASE = "D:\\Salvataggi\\ACE\\Car Setups";
+    try {
+      return fs
+        .readdirSync(ACE_SETUPS_BASE)
+        .filter((f: string) =>
+          fs.statSync(pathMod.join(ACE_SETUPS_BASE, f)).isDirectory(),
+        )
+        .sort();
+    } catch {
+      return [];
+    }
+  });
+
+  ipcMain.handle(
+    "ace:listSetupTracks",
+    async (_event, { car }: { car: string }) => {
+      const fs = await import("fs");
+      const pathMod = await import("path");
+      const ACE_SETUPS_BASE = "D:\\Salvataggi\\ACE\\Car Setups";
+      const carDir = pathMod.join(ACE_SETUPS_BASE, car);
+      try {
+        return fs
+          .readdirSync(carDir)
+          .filter((f: string) =>
+            fs.statSync(pathMod.join(carDir, f)).isDirectory(),
+          )
+          .sort();
+      } catch {
+        return [];
+      }
+    },
+  );
+
+  // ─── Session setup: store current setup for real-time analysis
+  ipcMain.handle(
+    "session:setSetup",
+    (_event, setup: import("../shared/types.js").SetupData | null) => {
+      currentSetup = setup;
+      console.log(
+        `[Main] session:setSetup — ${setup ? `loaded: ${setup.carFound}` : "cleared"}`,
+      );
+    },
+  );
+
   // Start reader
   reader.start();
 
@@ -1101,7 +1159,7 @@ const saveLap = (
   lap: LapRecord,
   game = "r3e",
 ): void => {
-  const lapsTable = game === "ace" ? "laps_ace" : "laps";
+  const lapsTable = game === "ace" ? "laps_ace" : "laps_r3e";
   const sessionsTable = game === "ace" ? "sessions_ace" : "sessions_r3e";
   try {
     const insertResult = db

@@ -7,7 +7,12 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type Database from "better-sqlite3";
-import type { Deviation, LapAnalysis, LapRow, SetupData } from "../../shared/types.js";
+import type {
+  Deviation,
+  LapAnalysis,
+  LapRow,
+  SetupData,
+} from "../../shared/types.js";
 import { formatLapTime } from "../../shared/format.js";
 
 const VOICE_SYSTEM_PROMPT = `Sei un coach di guida esperto che risponde a domande specifiche di un pilota durante una sessione di guida.
@@ -17,10 +22,10 @@ Non ripetere la domanda. Non usare elenchi puntati. Rispondi come se stessi parl
 
 type SessionContext = {
   game: string;
-  car: string;      // numeric ID as string, used for DB queries
-  track: string;    // numeric ID as string, used for DB queries
-  layout: string;   // numeric ID as string, used for DB queries
-  carName: string;  // resolved display name
+  car: string; // numeric ID as string, used for DB queries
+  track: string; // numeric ID as string, used for DB queries
+  layout: string; // numeric ID as string, used for DB queries
+  carName: string; // resolved display name
   trackName: string;
   layoutName: string;
   laps: LapRow[];
@@ -117,7 +122,9 @@ const buildVoiceContext = (ctx: SessionContext): string => {
 
   // Full Template v3 analysis for the most recently analyzed lap
   if (ctx.lastLapAnalysis) {
-    parts.push(`\n## Analisi tecnica giro ${ctx.lastLapAnalysis.lapNumber} (Coach Engine)`);
+    parts.push(
+      `\n## Analisi tecnica giro ${ctx.lastLapAnalysis.lapNumber} (Coach Engine)`,
+    );
     parts.push(ctx.lastLapAnalysis.templateV3);
   }
 
@@ -174,8 +181,9 @@ export const createVoiceCoachEngine = (
   const refreshLaps = (): void => {
     if (!currentContext.car) return;
     try {
-      const lapsTable = currentContext.game === "ace" ? "laps_ace" : "laps";
-      const sessionsTable = currentContext.game === "ace" ? "sessions_ace" : "sessions_r3e";
+      const lapsTable = currentContext.game === "ace" ? "laps_ace" : "laps_r3e";
+      const sessionsTable =
+        currentContext.game === "ace" ? "sessions_ace" : "sessions_r3e";
       const rows = db
         .prepare(
           `SELECT l.* FROM ${lapsTable} l
@@ -210,15 +218,18 @@ export const createVoiceCoachEngine = (
       if (ctx.layout !== undefined) currentContext.layout = ctx.layout;
       if (ctx.carName !== undefined) currentContext.carName = ctx.carName;
       if (ctx.trackName !== undefined) currentContext.trackName = ctx.trackName;
-      if (ctx.layoutName !== undefined) currentContext.layoutName = ctx.layoutName;
+      if (ctx.layoutName !== undefined)
+        currentContext.layoutName = ctx.layoutName;
       if (ctx.lastLapZones !== undefined)
         currentContext.lastLapZones = ctx.lastLapZones;
       if (ctx.deviations !== undefined)
         currentContext.deviations = ctx.deviations;
       if (ctx.cornerMap !== undefined) currentContext.cornerMap = ctx.cornerMap;
       if (ctx.laps !== undefined) currentContext.laps = ctx.laps;
-      if (ctx.lastLapAnalysis !== undefined) currentContext.lastLapAnalysis = ctx.lastLapAnalysis;
-      if (ctx.lastLapSetup !== undefined) currentContext.lastLapSetup = ctx.lastLapSetup;
+      if (ctx.lastLapAnalysis !== undefined)
+        currentContext.lastLapAnalysis = ctx.lastLapAnalysis;
+      if (ctx.lastLapSetup !== undefined)
+        currentContext.lastLapSetup = ctx.lastLapSetup;
 
       // Always refresh laps from DB on car/track update
       if (ctx.car !== undefined || ctx.track !== undefined) refreshLaps();

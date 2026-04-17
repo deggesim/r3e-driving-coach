@@ -8,7 +8,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type Database from "better-sqlite3";
 import { SYSTEM_PROMPT, buildPrompt } from "./prompt-builder.js";
-import type { LapRecord, Deviation, LapAnalysis } from "../../shared/types.js";
+import type {
+  LapRecord,
+  Deviation,
+  LapAnalysis,
+  SetupData,
+} from "../../shared/types.js";
 import { generatePdfBuffer } from "../pdf-generator.js";
 
 type CoachEngineOptions = {
@@ -21,7 +26,11 @@ type CoachEngineOptions = {
 export type CoachEngine = {
   updateCornerNames: (names: Map<number, string>) => void;
   updateApiKey: (apiKey: string) => void;
-  analyzeLap: (lap: LapRecord, deviations: Deviation[] | null) => Promise<void>;
+  analyzeLap: (
+    lap: LapRecord,
+    deviations: Deviation[] | null,
+    setup?: SetupData | null,
+  ) => Promise<void>;
 };
 
 const extractSection5 = (text: string): string => {
@@ -50,14 +59,25 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
   });
   let cornerNames = new Map<number, string>();
 
-  const saveAnalysis = (lap: LapRecord, analysis: LapAnalysis): void => {
+  const saveAnalysis = (
+    lap: LapRecord,
+    analysis: LapAnalysis,
+    setup?: SetupData | null,
+  ): void => {
     try {
-      const lapsTable = lap.game === "ace" ? "laps_ace" : "laps";
-      const sessionsTable = lap.game === "ace" ? "sessions_ace" : "sessions_r3e";
+      const lapsTable = lap.game === "ace" ? "laps_ace" : "laps_r3e";
+      const sessionsTable =
+        lap.game === "ace" ? "sessions_ace" : "sessions_r3e";
+      const setCols = setup
+        ? "analysis_json = ?, setup_json = ?"
+        : "analysis_json = ?";
+      const setVals: unknown[] = setup
+        ? [JSON.stringify(analysis), JSON.stringify(setup)]
+        : [JSON.stringify(analysis)];
       const result = db
         .prepare(
           `
-        UPDATE ${lapsTable} SET analysis_json = ?
+        UPDATE ${lapsTable} SET ${setCols}
         WHERE session_id = (
           SELECT id FROM ${sessionsTable}
           WHERE car = ? AND track = ? AND layout = ?
@@ -65,13 +85,7 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
         ) AND lap_number = ?
       `,
         )
-        .run(
-          JSON.stringify(analysis),
-          lap.car,
-          lap.track,
-          lap.layout,
-          lap.lapNumber,
-        );
+        .run(...setVals, lap.car, lap.track, lap.layout, lap.lapNumber);
       if (result.changes === 0) {
         console.warn(
           `[CoachEngine] saveAnalysis — 0 rows updated (lap not in DB?) ` +
@@ -89,8 +103,9 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
 
   const updatePdfPath = (lap: LapRecord, pdfPath: string): void => {
     try {
-      const lapsTable = lap.game === "ace" ? "laps_ace" : "laps";
-      const sessionsTable = lap.game === "ace" ? "sessions_ace" : "sessions_r3e";
+      const lapsTable = lap.game === "ace" ? "laps_ace" : "laps_r3e";
+      const sessionsTable =
+        lap.game === "ace" ? "sessions_ace" : "sessions_r3e";
       db.prepare(
         `
         UPDATE ${lapsTable} SET pdf_path = ?
@@ -109,6 +124,7 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
   const generatePdf = async (
     lap: LapRecord,
     analysis: LapAnalysis,
+    setup?: SetupData | null,
   ): Promise<string | null> => {
     try {
       const path = await import("path");
@@ -127,6 +143,7 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
         sessionType: "Sessione",
         recordedAt: analysis.generatedAt,
         templateV3: analysis.templateV3,
+        setupParams: setup?.params,
         game: lap.game ?? "r3e",
       });
 
@@ -158,8 +175,8 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
       client = new Anthropic({ apiKey });
     },
 
-    analyzeLap: async (lap, deviations) => {
-      const prompt = buildPrompt(lap, deviations, cornerNames);
+    analyzeLap: async (lap, deviations, setup) => {
+      const prompt = buildPrompt(lap, deviations, cornerNames, setup);
       let fullText = "";
 
       try {
@@ -193,9 +210,9 @@ export const createCoachEngine = (options: CoachEngineOptions): CoachEngine => {
         generatedAt: new Date().toISOString(),
       };
 
-      saveAnalysis(lap, analysis);
+      saveAnalysis(lap, analysis, setup);
 
-      const pdfPath = await generatePdf(lap, analysis);
+      const pdfPath = await generatePdf(lap, analysis, setup);
       if (pdfPath) updatePdfPath(lap, pdfPath);
 
       onAnalysis(analysis);

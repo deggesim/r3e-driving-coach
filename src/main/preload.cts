@@ -102,8 +102,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   }) => ipcRenderer.invoke('setup:exportPdfFromData', params),
 
   // ACE setup (file-based)
+  aceListSetupCars: () =>
+    ipcRenderer.invoke('ace:listSetupCars'),
+  aceListSetupTracks: (params: { car: string }) =>
+    ipcRenderer.invoke('ace:listSetupTracks', params),
   aceListSetupFiles: (params: { car: string; track: string }) =>
     ipcRenderer.invoke('ace:listSetupFiles', params),
   aceReadSetup: (params: { filePath: string }) =>
     ipcRenderer.invoke('ace:readSetup', params),
+
+  // Real-time session setup
+  sessionSetSetup: (setup: unknown) =>
+    ipcRenderer.invoke('session:setSetup', setup),
 });

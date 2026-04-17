@@ -252,8 +252,8 @@ const DetailPanel = ({
       {activeGame === "ace" ? (
         <AceSetupPicker
           show={showPicker}
-          car={lap.car}
-          track={lap.track}
+          expectedCar={lap.car}
+          expectedTrack={lap.track}
           onClose={() => setShowPicker(false)}
           onConfirm={handleSetupSaved}
         />

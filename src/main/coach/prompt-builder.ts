@@ -11,7 +11,7 @@
  */
 
 import { BRAKE_TEMP } from "../../shared/alert-types.js";
-import type { LapRecord, Deviation, ZoneData } from "../../shared/types.js";
+import type { LapRecord, Deviation, ZoneData, SetupData } from "../../shared/types.js";
 import { formatLapTime } from "../../shared/format.js";
 
 export const SYSTEM_PROMPT = `Sei un ingegnere di pista esperto che analizza la telemetria di gare automobilistiche.
@@ -49,6 +49,7 @@ export const buildPrompt = (
   lap: LapRecord,
   deviations: Deviation[] | null,
   cornerNames: Map<number, string>,
+  setup?: SetupData | null,
 ): string => {
   const parts: string[] = [];
 
@@ -159,6 +160,24 @@ export const buildPrompt = (
     parts.push("## Nota");
     parts.push(
       "Baseline non ancora calibrato — analisi standalone senza confronto con giri precedenti.",
+    );
+    parts.push("");
+  }
+
+  // Setup data (from real-time session or history page)
+  if (setup && setup.params.length > 0) {
+    parts.push("## Setup Auto Caricato");
+    parts.push(
+      `- **Auto**: ${setup.carFound}${setup.carVerified ? " (verificata)" : " (non verificata)"}`,
+    );
+    for (const p of setup.params) {
+      parts.push(`- **${p.category} / ${p.parameter}**: ${p.value}`);
+    }
+    parts.push("");
+  } else if (!setup) {
+    parts.push("## Nota Setup");
+    parts.push(
+      "Nessun setup auto disponibile — ometti la sezione [2] o proponi suggerimenti generici basati sulla telemetria.",
     );
     parts.push("");
   }
