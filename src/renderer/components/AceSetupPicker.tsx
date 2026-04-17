@@ -9,10 +9,22 @@
  * expectedCar/expectedTrack supplied by the caller (lap row or live session).
  */
 
-import { faCheck, faGear, faTriangleExclamation, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+  faCheck,
+  faGear,
+  faTriangleExclamation,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Form, ListGroup, Modal, Spinner } from "react-bootstrap";
+import {
+  Badge,
+  Button,
+  Form,
+  ListGroup,
+  Modal,
+  Spinner,
+} from "react-bootstrap";
 import type { SetupData } from "../../shared/types";
 
 type SetupFileEntry = {
@@ -38,7 +50,13 @@ const formatDate = (iso: string): string =>
     minute: "2-digit",
   });
 
-const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }: Props) => {
+const AceSetupPicker = ({
+  show,
+  expectedCar,
+  expectedTrack,
+  onClose,
+  onConfirm,
+}: Props) => {
   const [cars, setCars] = useState<string[]>([]);
   const [tracks, setTracks] = useState<string[]>([]);
   const [files, setFiles] = useState<SetupFileEntry[]>([]);
@@ -84,12 +102,15 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
       .aceListSetupTracks({ car: selectedCar })
       .then((list) => {
         setTracks(list);
-        const pre = list.includes(selectedTrack) ? selectedTrack : (list[0] ?? "");
+        const pre = list.includes(selectedTrack)
+          ? selectedTrack
+          : (list[0] ?? "");
         setSelectedTrack(pre);
       })
-      .catch(() => setError("Impossibile leggere le tracce per questo veicolo."))
+      .catch(() =>
+        setError("Impossibile leggere le tracce per questo veicolo."),
+      )
       .finally(() => setLoadingTracks(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCar]);
 
   // Load file list when selectedTrack changes
@@ -122,11 +143,17 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
     setDecoding(true);
     setError(null);
     try {
-      const setup = await window.electronAPI.aceReadSetup({ filePath: selectedFile });
+      const setup = await window.electronAPI.aceReadSetup({
+        filePath: selectedFile,
+      });
       onConfirm(setup);
       handleClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore nella decodifica del file.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Errore nella decodifica del file.",
+      );
     } finally {
       setDecoding(false);
     }
@@ -137,7 +164,13 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
     (selectedTrack && expectedTrack && selectedTrack !== expectedTrack);
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered>
+    <Modal
+      show={show}
+      onHide={handleClose}
+      size="lg"
+      centered
+      className="ace-setup-picker-modal"
+    >
       <Modal.Header closeButton>
         <Modal.Title>
           <FontAwesomeIcon icon={faGear} className="me-2" />
@@ -159,7 +192,8 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
             <Form.Label className="small mb-1">Vettura</Form.Label>
             {loadingCars ? (
               <div className="d-flex align-items-center gap-2">
-                <Spinner size="sm" /> <span className="small">Caricamento...</span>
+                <Spinner size="sm" />{" "}
+                <span className="small">Caricamento...</span>
               </div>
             ) : (
               <Form.Select
@@ -168,7 +202,9 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
                 onChange={(e) => setSelectedCar(e.target.value)}
               >
                 {cars.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
                 ))}
               </Form.Select>
             )}
@@ -178,7 +214,8 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
             <Form.Label className="small mb-1">Circuito</Form.Label>
             {loadingTracks ? (
               <div className="d-flex align-items-center gap-2">
-                <Spinner size="sm" /> <span className="small">Caricamento...</span>
+                <Spinner size="sm" />{" "}
+                <span className="small">Caricamento...</span>
               </div>
             ) : (
               <Form.Select
@@ -188,7 +225,9 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
                 disabled={tracks.length === 0}
               >
                 {tracks.map((t) => (
-                  <option key={t} value={t}>{t}</option>
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
                 ))}
               </Form.Select>
             )}
@@ -197,12 +236,21 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
           {/* Validation badge */}
           <div style={{ minWidth: 140 }}>
             {mismatch ? (
-              <Badge bg="warning" text="dark" className="d-flex align-items-center gap-1" style={{ fontSize: 11 }}>
+              <Badge
+                bg="warning"
+                text="dark"
+                className="d-flex align-items-center gap-1"
+                style={{ fontSize: 11 }}
+              >
                 <FontAwesomeIcon icon={faTriangleExclamation} />
                 Diverso dal giro selezionato
               </Badge>
             ) : selectedCar && selectedTrack ? (
-              <Badge bg="success" className="d-flex align-items-center gap-1" style={{ fontSize: 11 }}>
+              <Badge
+                bg="success"
+                className="d-flex align-items-center gap-1"
+                style={{ fontSize: 11 }}
+              >
                 <FontAwesomeIcon icon={faCheck} />
                 Auto/circuito corretti
               </Badge>
@@ -218,13 +266,18 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
           </div>
         )}
 
-        {!loadingFiles && files.length === 0 && selectedCar && selectedTrack && (
-          <div className="text-secondary text-center py-3">
-            Nessun file .carsetup trovato per
-            <br />
-            <code>{selectedCar} / {selectedTrack}</code>
-          </div>
-        )}
+        {!loadingFiles &&
+          files.length === 0 &&
+          selectedCar &&
+          selectedTrack && (
+            <div className="text-secondary text-center py-3">
+              Nessun file .carsetup trovato per
+              <br />
+              <code>
+                {selectedCar} / {selectedTrack}
+              </code>
+            </div>
+          )}
 
         {!loadingFiles && files.length > 0 && (
           <ListGroup>
@@ -237,7 +290,9 @@ const AceSetupPicker = ({ show, expectedCar, expectedTrack, onClose, onConfirm }
                 className="d-flex justify-content-between align-items-center"
               >
                 <span className="fw-medium">{f.filename}</span>
-                <small className="text-secondary">{formatDate(f.modifiedAt)}</small>
+                <small className="text-secondary">
+                  {formatDate(f.modifiedAt)}
+                </small>
               </ListGroup.Item>
             ))}
           </ListGroup>

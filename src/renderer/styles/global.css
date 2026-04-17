@@ -321,6 +321,46 @@ body {
 }
 .delete-confirm-modal .btn-close { filter: invert(1) grayscale(1); }
 
+/* ── ACE Setup Picker Modal ── */
+.ace-setup-picker-modal .modal-content {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.ace-setup-picker-modal .modal-header {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.ace-setup-picker-modal .modal-body { background: var(--bg2); }
+.ace-setup-picker-modal .modal-footer {
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+}
+.ace-setup-picker-modal .btn-close { filter: invert(1) grayscale(1); }
+.ace-setup-picker-modal .list-group-item {
+  background: var(--bg3);
+  border-color: var(--border);
+  color: var(--text);
+}
+.ace-setup-picker-modal .list-group-item-action:hover {
+  background: var(--bg2);
+  color: var(--text);
+}
+.ace-setup-picker-modal .list-group-item.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.ace-setup-picker-modal .form-select {
+  background-color: var(--bg3) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+.ace-setup-picker-modal .form-select option {
+  background: var(--bg3);
+  color: var(--text);
+}
+
 /* ── Screenshot Picker Modal ── */
 .screenshot-picker-modal .modal-content {
   background: var(--bg2);

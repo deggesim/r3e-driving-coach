@@ -6,9 +6,10 @@
  *
  * Top-level fields:
  *   f1  — General/Header (steering ratio, brake bias, ARB front, TC/ABS ratios)
- *   f2  — Dampers ×4 (FL, FR, RL, RR) — spring rates
- *   f3  — ARB physical ×4 (not used for UI display)
- *   f4  — Geometry ×4 (tyre pressure, camber, toe)
+ *   f2  — Springs ×4 (FL, FR, RL, RR): f2.f1=spring N/m, f2.f2/f3=damper physical sub-blocks
+ *   f3  — Dampers ×4 (FL, FR, RL, RR): f3.f1=slow comp click, f3.f2=slow comp N/m·s,
+ *          f3.f3=slow ext click, f3.f4=slow ext N/m·s
+ *   f4  — Geometry ×4 (tyre pressure, camber, toe; f4.f4=caster front-only)
  *   f5  — Electronics (TC1 click, ABS click)
  *   f6  — Aero + ride height (ride height front/rear, tyre compound, rear wing)
  *   f7  — Fuel
@@ -174,7 +175,7 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
     }
   }
 
-  // ── f2 — Dampers (×4: FL, FR, RL, RR) ─────────────────────────────────────
+  // ── f2 — Springs (×4: FL, FR, RL, RR) ─────────────────────────────────────
 
   const wheelLabels = ['FL', 'FR', 'RL', 'RR'];
   const f2Fields = getAll(topFields, 2);
@@ -185,6 +186,23 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
     const spring = getFloat(sub, 1);
     if (spring !== undefined) {
       push('Sospensioni', `Molla ${label} (N/m)`, spring.toFixed(0));
+    }
+  });
+
+  // ── f3 — Dampers (×4: FL, FR, RL, RR) ─────────────────────────────────────
+
+  const f3Fields = getAll(topFields, 3);
+  f3Fields.forEach((field, i) => {
+    if (!field.lenVal) return;
+    const label = wheelLabels[i] ?? `W${i}`;
+    const damp = parseFields(field.lenVal);
+    const slowComp = getFloat(damp, 1);
+    if (slowComp !== undefined) {
+      push('Ammortizzatori', `Lento Compressione ${label} (click)`, slowComp.toFixed(0));
+    }
+    const slowExt = getFloat(damp, 3);
+    if (slowExt !== undefined) {
+      push('Ammortizzatori', `Lento Estensione ${label} (click)`, slowExt.toFixed(0));
     }
   });
 
@@ -222,6 +240,10 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
     const abs = getFloat(elec, 3);
     if (abs !== undefined) {
       push('Elettronica', 'ABS (click)', abs.toFixed(0));
+    }
+    const telemetry = getFloat(elec, 5);
+    if (telemetry !== undefined) {
+      push('Elettronica', 'Registrazione Telemetria (Giri)', telemetry.toFixed(0));
     }
   }
 
