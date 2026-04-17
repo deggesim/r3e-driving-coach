@@ -63,6 +63,87 @@ const MOCK_SETUP: SetupData = {
   screenshots: [],
 };
 
+const MOCK_ANALYSIS_ACE: LapAnalysis = {
+  lapNumber: 3,
+  lapTime: 102.874,
+  templateV3: `[1] Sintesi giro
+Tempo: 1:42.874 | Settori: S1 32.510 · S2 36.122 · S3 34.242
+Giro valido. Baseline stabilizzata al giro 2.
+
+[2] Frenata
+- **Curva Grande (dist 210m):** Punto di frenata anticipato di 6m. Margine per posticipare.
+- **Roggia (dist 520m):** Frenata corretta, breve picco ABS (0.2s) — accettabile.
+- **Lesmo 1 (dist 780m):** Trail braking di 0.18s oltre la corda — penalizza la trazione.
+- **Ascari (dist 1180m):** Frenata ottimale, nessuna anomalia rilevata.
+
+[3] Gas e trazione
+- **Uscita Curva Grande:** Apertura gas 0.12s in ritardo rispetto al baseline.
+- **Uscita Roggia:** Progressione fluida — ben eseguito.
+- **Uscita Lesmo 1:** TC attivato 3 volte in uscita. Ridurre il gas anticipato.
+- **Parabolica:** Throttle al 100% raggiunto a 45m dalla corda — ottimale.
+
+[4] Traiettoria e sterzata
+- **Curva Grande:** Corda raggiunta correttamente, uscita pulita.
+- **Lesmo 2:** Ingresso leggermente largo, picco di steer 0.61. Valutare traiettoria più stretta.
+- **Ascari:** Cambio direzionale fluido, nessun sottosterzo.
+- **Parabolica:** Traiettoria progressiva corretta — ottima uscita sul rettilineo.
+
+[5] Riepilogo e prossimo giro
+Giro solido su Monza. I tre punti da correggere nel prossimo giro sono:
+1. Posticipare il punto di frenata alla Curva Grande di circa 6m.
+2. Ridurre il trail braking al Lesmo 1 per migliorare la trazione in uscita.
+3. Aprire il gas 0.12s prima in uscita dalla Curva Grande.
+Potenziale stimato di miglioramento: 0.4–0.6s.`,
+  section5Summary:
+    "Giro solido. Priorità: frena 6m più tardi alla Curva Grande, riduci il trail al Lesmo 1, apri il gas prima in uscita dalla Curva Grande.",
+  generatedAt: "2026-04-17T09:15:00.000Z",
+};
+
+const MOCK_SETUP_ACE: SetupData = {
+  carVerified: true,
+  carFound: "Porsche 718 GT4",
+  setupText: "",
+  params: [
+    { category: "Aerodinamica", parameter: "Ala anteriore", value: "3" },
+    { category: "Aerodinamica", parameter: "Ala posteriore", value: "5" },
+    { category: "Sospensioni", parameter: "Altezza ant. (mm)", value: "58" },
+    { category: "Sospensioni", parameter: "Altezza post. (mm)", value: "64" },
+    { category: "Sospensioni", parameter: "ARB anteriore", value: "2" },
+    { category: "Sospensioni", parameter: "ARB posteriore", value: "3" },
+    { category: "Freni", parameter: "Bias frenante (%)", value: "56" },
+    { category: "Elettronica", parameter: "TC", value: "4" },
+    { category: "Elettronica", parameter: "ABS", value: "3" },
+    { category: "Gomme", parameter: "Pressione ant. (psi)", value: "26.5" },
+    { category: "Gomme", parameter: "Pressione post. (psi)", value: "25.8" },
+    { category: "Trasmissione", parameter: "Rapporto sterzo", value: "13.5" },
+  ],
+  screenshots: [],
+};
+
+export const MOCK_LAP_ACE: LapRowFull = {
+  id: -2,
+  session_id: -2,
+  lap_number: 3,
+  lap_time: 102.874,
+  sector1: 32.51,
+  sector2: 36.122,
+  sector3: 34.242,
+  valid: true,
+  analysis_json: JSON.stringify(MOCK_ANALYSIS_ACE),
+  pdf_path: null,
+  setup_json: JSON.stringify(MOCK_SETUP_ACE),
+  setup_screenshots: null,
+  recorded_at: "2026-04-17T09:12:00.000Z",
+  car: "ks_porsche_718_gt4",
+  track: "monza",
+  layout: "monza",
+  game: "ace",
+  car_name: "Porsche 718 GT4",
+  track_name: "Monza",
+  layout_name: "Monza",
+  car_class_name: "",
+};
+
 export const MOCK_LAP: LapRowFull = {
   id: -1,
   session_id: -1,

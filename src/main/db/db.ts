@@ -60,9 +60,11 @@ const initSchema = (db: Database.Database): void => {
       sector2       REAL,
       sector3       REAL,
       valid         INTEGER NOT NULL DEFAULT 1,
-      analysis_json TEXT,
-      pdf_path      TEXT,
-      recorded_at   TEXT NOT NULL DEFAULT (datetime('now'))
+      analysis_json     TEXT,
+      pdf_path          TEXT,
+      setup_json        TEXT,
+      setup_screenshots TEXT,
+      recorded_at       TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE INDEX IF NOT EXISTS idx_laps_session ON laps_r3e(session_id);

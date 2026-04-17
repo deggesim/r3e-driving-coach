@@ -17,9 +17,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
-import type { LapRowFull, SetupData, SetupParam } from "../../shared/types";
+import type { GameSource, LapRowFull, SetupData, SetupParam } from "../../shared/types";
 import { formatLapTime } from "../../shared/format";
-import { MOCK_LAP } from "../mocks/mockLap";
+import { MOCK_LAP, MOCK_LAP_ACE } from "../mocks/mockLap";
 import { useSettingsStore } from "../store/settingsStore";
 import { useIPCStore } from "../store/ipcStore";
 import ScreenshotPicker from "./ScreenshotPicker";
@@ -73,7 +73,7 @@ const DetailPanel = ({
 
   const handleSetupSaved = async (decoded: SetupData): Promise<void> => {
     setShowPicker(false);
-    await window.electronAPI.saveSetup({ lapId: lap.id, setup: decoded });
+    await window.electronAPI.saveSetup({ lapId: lap.id, game: lap.game as GameSource, setup: decoded });
     onSetupSaved(lap.id, decoded);
   };
 
@@ -286,7 +286,7 @@ const SessionHistory = () => {
 
   const loadLaps = (): void => {
     if (mockHistoryMode) {
-      setAllLaps([MOCK_LAP]);
+      setAllLaps([MOCK_LAP, MOCK_LAP_ACE]);
       setSelectedLap(null);
       setCurrentPage(1);
       return;

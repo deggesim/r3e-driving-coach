@@ -366,7 +366,7 @@ export type ElectronAPI = {
     filenames: string[];
     expectedCar: string;
   }) => Promise<SetupData>;
-  saveSetup: (params: { lapId: number; setup: SetupData }) => Promise<void>;
+  saveSetup: (params: { lapId: number; game: GameSource; setup: SetupData }) => Promise<void>;
   exportPdf: (params: { lapId: number; game?: GameSource }) => Promise<string | null>;
 
   // ACE Setup analysis (file-based)

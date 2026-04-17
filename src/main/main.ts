@@ -21,7 +21,10 @@ import {
   createAdaptiveBaseline,
   type AdaptiveBaseline,
 } from "./coach/adaptive-baseline.js";
-import { createAlertDispatcher, createRuleEngine } from "./coach/rule-engine.js";
+import {
+  createAlertDispatcher,
+  createRuleEngine,
+} from "./coach/rule-engine.js";
 import { createCoachEngine } from "./coach/coach-engine.js";
 import {
   createVoiceCoachEngine,
@@ -41,7 +44,10 @@ import {
   getCarClassName,
 } from "./r3e/r3e-data-loader.js";
 import { toGameFrame } from "./game-adapter.js";
-import { decodeCarSetup, type AceSetupFileInfo } from "./ace/ace-setup-reader.js";
+import {
+  decodeCarSetup,
+  type AceSetupFileInfo,
+} from "./ace/ace-setup-reader.js";
 import type {
   LapRecord,
   LapAnalysis,
@@ -551,10 +557,13 @@ const setupPipeline = (): void => {
     },
   );
 
-  ipcMain.handle("db:getSession", (_event, { id, game }: { id: number; game: string }) => {
-    const table = game === "ace" ? "sessions_ace" : "sessions_r3e";
-    return db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
-  });
+  ipcMain.handle(
+    "db:getSession",
+    (_event, { id, game }: { id: number; game: string }) => {
+      const table = game === "ace" ? "sessions_ace" : "sessions_r3e";
+      return db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+    },
+  );
 
   // ─── Azure TTS IPC
   ipcMain.handle("tts:getVoices", async () => {
@@ -774,7 +783,7 @@ const setupPipeline = (): void => {
         };
       });
 
-      const systemPrompt = `Sei un esperto di setup per simulatori di guida (RaceRoom Racing Experience / R3E).
+      const systemPrompt = `Sei un esperto di setup per i simulatori di guida RaceRoom Racing Experience (R3E) e Assetto Corsa EVO (ACE).
 Analizza le schermate del setup dell'auto e restituisci un JSON con questa struttura esatta:
 {
   "carVerified": boolean,
@@ -829,8 +838,10 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
       {
         lapId,
         setup,
+        game,
       }: {
         lapId: number;
+        game: string;
         setup: {
           carVerified: boolean;
           carFound: string;
@@ -840,8 +851,9 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
         };
       },
     ) => {
+      const table = game === "ace" ? "laps_ace" : "laps_r3e";
       db.prepare(
-        "UPDATE laps SET setup_json = ?, setup_screenshots = ? WHERE id = ?",
+        `UPDATE ${table} SET setup_json = ?, setup_screenshots = ? WHERE id = ?`,
       ).run(
         JSON.stringify({
           carVerified: setup.carVerified,
@@ -849,7 +861,7 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
           setupText: setup.setupText,
           params: setup.params,
         }),
-        JSON.stringify(setup.screenshots),
+        game === "ace" ? null : JSON.stringify(setup.screenshots),
         lapId,
       );
     },

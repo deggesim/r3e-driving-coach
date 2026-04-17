@@ -353,7 +353,10 @@ ${setupHtml}
  */
 export async function generatePdfBuffer(data: PdfData): Promise<Buffer> {
   const html = buildPdfHtml(data);
-  const tmpFile = path.join(os.tmpdir(), `sim-coach-pdf-${Date.now()}.html`);
+  const tmpFile = path.join(
+    os.tmpdir(),
+    `sim-driving-coach-pdf-${Date.now()}.html`,
+  );
   fs.writeFileSync(tmpFile, html, "utf-8");
 
   const win = new BrowserWindow({
