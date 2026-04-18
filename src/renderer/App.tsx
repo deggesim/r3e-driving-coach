@@ -22,7 +22,7 @@ import { useVoiceCoach } from "./hooks/useVoiceCoach";
 import iconUrl from "/icon.png";
 import TTSManager from "./components/TTSManager";
 import StatusBar from "./components/StatusBar";
-import Debriefing from "./components/Debriefing";
+import RealtimeAnalysis from "./components/RealtimeAnalysis";
 import SessionHistory from "./components/SessionHistory";
 import VoiceCoachOverlay from "./components/VoiceCoachOverlay";
 import SettingsPanel from "./components/SettingsPanel";
@@ -210,7 +210,7 @@ const App = () => {
 
       {/* Main content */}
       <div className="main-content">
-        {tab === "debriefing" && <Debriefing />}
+        {tab === "debriefing" && <RealtimeAnalysis />}
         {tab === "history" && (
           <SessionHistory onOpenSession={() => setTab("debriefing")} />
         )}

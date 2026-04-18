@@ -1,5 +1,5 @@
 /**
- * RealtimeAnalysis (exported as Debriefing for backward-compatible import).
+ * RealtimeAnalysis — real-time session analysis panel.
  *
  * Top: session header with action buttons
  *   [Nuova sessione] [Chiudi sessione] [Carica setup] [Esegui analisi] [Esporta PDF]
@@ -36,7 +36,7 @@ import { useSessionStore } from "../store/sessionStore";
 import ScreenshotPicker from "./ScreenshotPicker";
 import AceSetupPicker from "./AceSetupPicker";
 
-const Debriefing = () => {
+const RealtimeAnalysis = () => {
   const activeGame = useSettingsStore((s) => s.activeGame);
   const status = useIPCStore((s) => s.status);
 
@@ -327,4 +327,4 @@ const Debriefing = () => {
   );
 };
 
-export default Debriefing;
+export default RealtimeAnalysis;
