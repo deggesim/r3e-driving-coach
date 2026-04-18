@@ -106,8 +106,6 @@ const SettingsPanel = () => {
     setAssistantName,
     gamepadButton,
     setGamepadButton,
-    activeGame,
-    setActiveGame,
     anthropicModel,
     setAnthropicModel,
     ttsEnabled,
@@ -143,12 +141,6 @@ const SettingsPanel = () => {
     await configSet("assistantName", assistantName);
     await configSet("gamepadTriggerButton", String(gamepadButton));
     showSaved("assistant");
-  };
-
-  const handleGameChange = async (game: "r3e" | "ace") => {
-    setActiveGame(game);
-    await configSet("activeGame", game);
-    showSaved("activeGame");
   };
 
   const handleToggleAzure = async () => {
@@ -521,49 +513,8 @@ const SettingsPanel = () => {
         </Col>
       </Row>
 
-      {/* Row 3: Simulatore + Test & sviluppo */}
+      {/* Row 3: Test & sviluppo */}
       <Row className="mb-4 g-4">
-        <Col md={6}>
-          <div className="settings-section">
-            {/* Simulatore */}
-            <Form.Group>
-              <Form.Label className="setting-section-label">
-                Simulatore
-              </Form.Label>
-              <Row className="g-2 align-items-center mb-2">
-                <Col xs="auto">
-                  <Button
-                    variant={activeGame === "r3e" ? "danger" : "secondary"}
-                    onClick={() => handleGameChange("r3e")}
-                  >
-                    RaceRoom (R3E)
-                  </Button>
-                </Col>
-                <Col xs="auto">
-                  <Button
-                    variant={activeGame === "ace" ? "danger" : "secondary"}
-                    onClick={() => handleGameChange("ace")}
-                  >
-                    Assetto Corsa EVO
-                  </Button>
-                </Col>
-                {settingSaved === "activeGame" && (
-                  <Col xs="auto">
-                    <span className="text-success">
-                      <FontAwesomeIcon icon={faCheck} /> Salvato
-                    </span>
-                  </Col>
-                )}
-              </Row>
-              <Form.Text>
-                Il cambio simulatore richiede il riavvio dell&apos;app per avere
-                effetto. Il coach si connette alla shared memory del simulatore
-                selezionato.
-              </Form.Text>
-            </Form.Group>
-          </div>
-        </Col>
-
         <Col md={6}>
           <div className="settings-section">
             {/* Dev / Test */}

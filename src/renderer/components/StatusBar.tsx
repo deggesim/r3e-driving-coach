@@ -9,7 +9,6 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Badge } from "react-bootstrap";
 import type { Alert, GameStatus } from "../../shared/types";
-import { useSettingsStore } from "../store/settingsStore";
 
 type StatusBarProps = {
   status: GameStatus;
@@ -17,7 +16,6 @@ type StatusBarProps = {
 };
 
 const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
-  const activeGame = useSettingsStore((s) => s.activeGame);
   const [visibleAlert, setVisibleAlert] = useState<string | null>(null);
   const [fadeOut, setFadeOut] = useState(false);
 
@@ -48,15 +46,19 @@ const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
 
   return (
     <div className="status-bar">
-      {/* Connection */}
+      {/* Connection — one badge per game */}
       <div className="status-connection">
         <Badge
-          bg={status.connected ? "success" : "danger"}
+          bg={status.r3eConnected ? "success" : "secondary"}
           className="status-badge"
         >
-          {status.connected
-            ? `${activeGame === "ace" ? "ACE" : "R3E"} connesso`
-            : `${activeGame === "ace" ? "ACE" : "R3E"} disconnesso`}
+          R3E {status.r3eConnected ? "connesso" : "disconnesso"}
+        </Badge>
+        <Badge
+          bg={status.aceConnected ? "success" : "secondary"}
+          className="status-badge ms-1"
+        >
+          ACE {status.aceConnected ? "connesso" : "disconnesso"}
         </Badge>
       </div>
 

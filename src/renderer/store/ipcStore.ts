@@ -12,6 +12,8 @@ import type {
 
 const DEFAULT_STATUS: GameStatus = {
   connected: false,
+  r3eConnected: false,
+  aceConnected: false,
   calibrating: false,
   lapsToCalibration: 2,
   car: null,

@@ -30,14 +30,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { SetupData } from "../../shared/types";
 import { formatLapTime } from "../../shared/format";
-import { useSettingsStore } from "../store/settingsStore";
 import { useIPCStore } from "../store/ipcStore";
 import { useSessionStore } from "../store/sessionStore";
 import ScreenshotPicker from "./ScreenshotPicker";
 import AceSetupPicker from "./AceSetupPicker";
 
 const RealtimeAnalysis = () => {
-  const activeGame = useSettingsStore((s) => s.activeGame);
   const status = useIPCStore((s) => s.status);
 
   const session = useSessionStore((s) => s.session);
@@ -307,7 +305,7 @@ const RealtimeAnalysis = () => {
       </div>
 
       {/* Setup pickers */}
-      {activeGame === "ace" ? (
+      {status.game === "ace" ? (
         <AceSetupPicker
           show={showPicker}
           expectedCar={currentCar}

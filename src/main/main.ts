@@ -76,7 +76,8 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const IS_DEV = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
-let reader: R3EReader | AceReader | null = null;
+let r3eReaderInst: R3EReader | null = null;
+let aceReaderInst: AceReader | null = null;
 
 // ──────────────────────────────────────────────
 // Window creation
@@ -213,18 +214,15 @@ const setupPipeline = (): void => {
     >,
   );
 
-  const activeGameRow = db
-    .prepare("SELECT value FROM app_config WHERE key = ?")
-    .get("activeGame") as { value: string } | undefined;
-  const activeGame: GameSource = activeGameRow?.value === "ace" ? "ace" : "r3e";
-
-  console.log(`[Main] setupPipeline — activeGame="${activeGame}"`);
+  console.log(`[Main] setupPipeline — dual-reader mode`);
 
   // Live reader state
   let currentCar = "";
   let currentTrack = "";
   let currentLayout = "";
-  let readerConnected = false;
+  let r3eConnected = false;
+  let aceConnected = false;
+  let activeGame: GameSource = "r3e";
 
   // Session lifecycle state
   let currentSessionId: number | null = null;
@@ -282,7 +280,9 @@ const setupPipeline = (): void => {
               : "",
           };
     const status: GameStatus = {
-      connected: readerConnected,
+      connected: r3eConnected || aceConnected,
+      r3eConnected,
+      aceConnected,
       calibrating: recorder.isCalibrating(),
       lapsToCalibration: recorder.lapsToCalibration(),
       car: names.carName || null,
@@ -462,47 +462,68 @@ const setupPipeline = (): void => {
   };
 
   // ──────────────────────────────────────────────
-  // Reader lifecycle
+  // Reader lifecycle — both readers run in parallel
   // ──────────────────────────────────────────────
 
-  reader = activeGame === "ace" ? createAceReader() : createR3EReader();
+  const r3eReader = createR3EReader();
+  const aceReader = createAceReader();
+  r3eReaderInst = r3eReader;
+  aceReaderInst = aceReader;
 
-  reader.on("connected", () => {
-    readerConnected = true;
+  r3eReader.on("connected", () => {
+    r3eConnected = true;
+    if (!aceConnected) activeGame = "r3e";
     pushStatus();
   });
 
-  reader.on("disconnected", () => {
-    readerConnected = false;
+  r3eReader.on("disconnected", () => {
+    r3eConnected = false;
+    if (aceConnected) activeGame = "ace";
     pushStatus();
   });
 
-  if (activeGame === "ace") {
-    reader.on("frame", (frame: import("../shared/types.js").GameFrame) => {
-      zoneTracker.update(frame);
-      ruleEngine.processFrame(frame);
-      pushToRenderer("r3e:frame", frame);
-    });
-  } else {
-    reader.on("frame", (frame: R3EFrame) => {
-      if (frame.carModelId > 0) currentCar = String(frame.carModelId);
-      if (frame.trackId > 0) currentTrack = String(frame.trackId);
-      if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
+  aceReader.on("connected", () => {
+    aceConnected = true;
+    if (!r3eConnected) activeGame = "ace";
+    pushStatus();
+  });
 
-      const gameFrame = toGameFrame(frame);
-      zoneTracker.update(gameFrame);
-      ruleEngine.processFrame(gameFrame);
-      pushToRenderer("r3e:frame", frame);
-    });
-  }
+  aceReader.on("disconnected", () => {
+    aceConnected = false;
+    if (r3eConnected) activeGame = "r3e";
+    pushStatus();
+  });
 
-  reader.on("lapComplete", async (lapData) => {
+  r3eReader.on("frame", (frame: R3EFrame) => {
+    if (activeGame !== "r3e") return;
+    if (frame.carModelId > 0) currentCar = String(frame.carModelId);
+    if (frame.trackId > 0) currentTrack = String(frame.trackId);
+    if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
+
+    const gameFrame = toGameFrame(frame);
+    zoneTracker.update(gameFrame);
+    ruleEngine.processFrame(gameFrame);
+    pushToRenderer("r3e:frame", frame);
+  });
+
+  aceReader.on("frame", (frame: import("../shared/types.js").GameFrame) => {
+    if (activeGame !== "ace") return;
+    zoneTracker.update(frame);
+    ruleEngine.processFrame(frame);
+    pushToRenderer("r3e:frame", frame);
+  });
+
+  const handleLapComplete = (
+    lapData: LapRecord,
+    game: GameSource,
+  ): void => {
+    if (activeGame !== game) return;
     console.log(
-      `[Main] reader:lapComplete — lap=${lapData.lapNumber} time=${lapData.lapTime.toFixed(3)}s ` +
+      `[Main] ${game}:lapComplete — lap=${lapData.lapNumber} time=${lapData.lapTime.toFixed(3)}s ` +
         `valid=${lapData.valid} car="${lapData.car}" track="${lapData.track}" layout="${lapData.layout}"`,
     );
 
-    if (activeGame === "ace") {
+    if (game === "ace") {
       if (lapData.car) currentCar = lapData.car;
       if (lapData.track) currentTrack = lapData.track;
       if (lapData.layout) currentLayout = lapData.layout;
@@ -544,9 +565,17 @@ const setupPipeline = (): void => {
     if (currentSessionId) {
       saveLap(currentSessionId, lapData as LapRecord);
     }
-  });
+  };
 
-  recorder.attach(reader);
+  r3eReader.on("lapComplete", (lapData) =>
+    handleLapComplete(lapData as LapRecord, "r3e"),
+  );
+  aceReader.on("lapComplete", (lapData) =>
+    handleLapComplete(lapData as LapRecord, "ace"),
+  );
+
+  recorder.attach(r3eReader);
+  recorder.attach(aceReader);
 
   recorder.on(
     "lapRecorded",
@@ -621,11 +650,11 @@ const setupPipeline = (): void => {
   // ──────────────────────────────────────────────
 
   const startSession = (): SessionStartResult => {
-    if (!readerConnected) {
+    if (!r3eConnected && !aceConnected) {
       return {
         ok: false,
         reason:
-          "Simulatore non connesso. Avvia il gioco prima di aprire una sessione.",
+          "Nessun simulatore connesso. Avvia R3E o ACE prima di aprire una sessione.",
       };
     }
     if (!currentCar || !currentTrack || !currentLayout) {
@@ -1250,8 +1279,9 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
     },
   );
 
-  // Start reader
-  reader.start();
+  // Start both readers
+  r3eReader.start();
+  aceReader.start();
   pushStatus();
 
   mainWindow?.webContents.once("did-finish-load", () => {
@@ -1280,10 +1310,12 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  reader?.stop();
+  r3eReaderInst?.stop();
+  aceReaderInst?.stop();
   if (process.platform !== "darwin") app.quit();
 });
 
 app.on("before-quit", () => {
-  reader?.stop();
+  r3eReaderInst?.stop();
+  aceReaderInst?.stop();
 });

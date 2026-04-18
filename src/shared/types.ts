@@ -135,13 +135,15 @@ export type LapRecord = {
 // --- R3E Connection Status ---
 
 export type GameStatus = {
-  connected: boolean;
+  connected: boolean;       // true if at least one game is connected
+  r3eConnected: boolean;
+  aceConnected: boolean;
   calibrating: boolean;
   lapsToCalibration: number;
   car: string | null;
   track: string | null;
   layout: string | null;
-  game: GameSource;
+  game: GameSource;         // currently active game
 };
 
 // --- Session & Lap (from SQLite) ---
