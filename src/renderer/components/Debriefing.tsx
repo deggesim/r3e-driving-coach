@@ -50,7 +50,9 @@ const Debriefing = () => {
   const reset = useSessionStore((s) => s.reset);
 
   const [showPicker, setShowPicker] = useState(false);
-  const [flash, setFlash] = useState<{ variant: string; text: string } | null>(null);
+  const [flash, setFlash] = useState<{ variant: string; text: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (mode === "live") void loadCurrent();
@@ -104,7 +106,8 @@ const Debriefing = () => {
   };
 
   const currentCar = session?.car_name ?? session?.car ?? status?.car ?? "";
-  const currentTrack = session?.track_name ?? session?.track ?? status?.track ?? "";
+  const currentTrack =
+    session?.track_name ?? session?.track ?? status?.track ?? "";
 
   const setupById = useMemo(() => {
     const m = new Map<number, number>(); // setup.id → setup index (1-based)
@@ -115,7 +118,8 @@ const Debriefing = () => {
   const renderMd = (md: string): string =>
     marked.parse(md, { async: false }) as string;
 
-  const streamingVersion = streaming?.sessionId === session?.id ? streaming : null;
+  const streamingVersion =
+    streaming?.sessionId === session?.id ? streaming : null;
 
   return (
     <div className="d-flex flex-column h-100 overflow-hidden">
@@ -145,7 +149,7 @@ const Debriefing = () => {
             </small>
           </>
         ) : (
-          <span className="deb-placeholder text-muted">
+          <span className="deb-placeholder">
             {isLive ? "Nessuna sessione aperta" : "Caricamento sessione…"}
           </span>
         )}
@@ -177,7 +181,8 @@ const Debriefing = () => {
             onClick={handleAnalyze}
             disabled={!session || (isLive && laps.length === 0)}
           >
-            <FontAwesomeIcon icon={faChartLine} className="me-1" /> Esegui analisi
+            <FontAwesomeIcon icon={faChartLine} className="me-1" /> Esegui
+            analisi
           </Button>
           <Button
             size="sm"
@@ -209,8 +214,8 @@ const Debriefing = () => {
       {/* Body */}
       <div className="flex-grow-1 overflow-y-auto p-3">
         {/* Laps table */}
-        <h6 className="text-uppercase text-muted">Giri</h6>
-        <Table striped size="sm" className="align-middle">
+        <h6 className="text-uppercase">Giri</h6>
+        <Table striped size="sm" variant="dark" className="align-middle">
           <thead>
             <tr>
               <th>#</th>
@@ -235,15 +240,9 @@ const Debriefing = () => {
               <tr key={l.id}>
                 <td>{l.lap_number}</td>
                 <td>{formatLapTime(l.lap_time)}</td>
-                <td>
-                  {l.sector1 != null ? formatLapTime(l.sector1) : "--"}
-                </td>
-                <td>
-                  {l.sector2 != null ? formatLapTime(l.sector2) : "--"}
-                </td>
-                <td>
-                  {l.sector3 != null ? formatLapTime(l.sector3) : "--"}
-                </td>
+                <td>{l.sector1 != null ? formatLapTime(l.sector1) : "--"}</td>
+                <td>{l.sector2 != null ? formatLapTime(l.sector2) : "--"}</td>
+                <td>{l.sector3 != null ? formatLapTime(l.sector3) : "--"}</td>
                 <td>{l.valid ? "✔" : "✗"}</td>
                 <td>
                   {l.setup_id != null ? (
@@ -265,16 +264,16 @@ const Debriefing = () => {
         </Table>
 
         {/* Analyses accordion */}
-        <h6 className="text-uppercase text-muted mt-3">Analisi</h6>
+        <h6 className="text-uppercase mt-3">Analisi</h6>
         {analyses.length === 0 && !streamingVersion && (
-          <p className="text-muted small">Nessuna analisi ancora generata.</p>
+          <p className="small">Nessuna analisi ancora generata.</p>
         )}
         <Accordion alwaysOpen>
           {analyses.map((a) => (
             <Accordion.Item key={a.id} eventKey={`v${a.version}`}>
               <Accordion.Header>
                 Analisi #{a.version}
-                <span className="ms-2 text-muted small">
+                <span className="ms-2 small">
                   {new Date(a.created_at).toLocaleString("it-IT")}
                 </span>
               </Accordion.Header>
