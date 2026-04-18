@@ -53,6 +53,7 @@ const App = () => {
     azureTtsEnabled,
     setAzureTtsEnabled,
     setApiKey,
+    setAnthropicModel,
     setAzureSpeechKey,
     setAzureRegion,
     setAzureVoiceName,
@@ -78,7 +79,7 @@ const App = () => {
   // Load all settings from config on mount
   useEffect(() => {
     const load = async () => {
-      const [ak, az, key, region, voice, name, button, game] =
+      const [ak, az, key, region, voice, name, button, game, model] =
         await Promise.all([
           configGet("anthropicApiKey"),
           configGet("azureTtsEnabled"),
@@ -88,6 +89,7 @@ const App = () => {
           configGet("assistantName"),
           configGet("gamepadTriggerButton"),
           configGet("activeGame"),
+          configGet("anthropicModel"),
         ]);
       if (ak) setApiKey(ak);
       if (az) setAzureTtsEnabled(az === "true");
@@ -97,6 +99,7 @@ const App = () => {
       if (name) setAssistantName(name);
       if (button) setGamepadButton(Number(button));
       if (game === "ace" || game === "r3e") setActiveGame(game);
+      if (model) setAnthropicModel(model);
       setSettingsLoaded(true);
     };
     load().catch(console.error);
@@ -110,6 +113,7 @@ const App = () => {
     setAssistantName,
     setGamepadButton,
     setActiveGame,
+    setAnthropicModel,
   ]);
 
   // Accumulate alerts for TTSManager

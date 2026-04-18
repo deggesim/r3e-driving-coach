@@ -142,9 +142,19 @@ const resolveNames = (
   car: string,
   track: string,
   layout: string,
-): { carName: string; trackName: string; layoutName: string; carClassName: string } => {
+): {
+  carName: string;
+  trackName: string;
+  layoutName: string;
+  carClassName: string;
+} => {
   if (game === "ace") {
-    return { carName: car, trackName: track, layoutName: layout, carClassName: "" };
+    return {
+      carName: car,
+      trackName: track,
+      layoutName: layout,
+      carClassName: "",
+    };
   }
   const carNum = Number(car);
   const trackNum = Number(track);
@@ -157,7 +167,10 @@ const resolveNames = (
   };
 };
 
-const enrichSession = (row: Record<string, unknown>, game: GameSource): SessionRow => {
+const enrichSession = (
+  row: Record<string, unknown>,
+  game: GameSource,
+): SessionRow => {
   const names = resolveNames(
     game,
     row.car as string,
@@ -256,11 +269,17 @@ const setupPipeline = (): void => {
   const pushStatus = (): void => {
     const names =
       activeGame === "ace"
-        ? { carName: currentCar, trackName: currentTrack, layoutName: currentLayout }
+        ? {
+            carName: currentCar,
+            trackName: currentTrack,
+            layoutName: currentLayout,
+          }
         : {
             carName: currentCar ? getCarName(Number(currentCar)) : "",
             trackName: currentTrack ? getTrackName(Number(currentTrack)) : "",
-            layoutName: currentLayout ? getLayoutName(Number(currentLayout)) : "",
+            layoutName: currentLayout
+              ? getLayoutName(Number(currentLayout))
+              : "",
           };
     const status: GameStatus = {
       connected: readerConnected,
@@ -274,8 +293,24 @@ const setupPipeline = (): void => {
     pushToRenderer("r3e:status", status);
   };
 
+  const getAnthropicApiKey = (): string | undefined => {
+    const row = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("anthropicApiKey") as { value: string } | undefined;
+    return row?.value;
+  };
+
+  const getAnthropicModel = (): string => {
+    const row = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("anthropicModel") as { value: string } | undefined;
+    return row?.value ?? "claude-haiku-4-5-20251001";
+  };
+
   const sessionCoach = createSessionCoachEngine({
     db,
+    apiKey: getAnthropicApiKey(),
+    model: getAnthropicModel(),
     onChunk: (data) => pushToRenderer("session:analysisChunk", data),
     onDone: (data) => pushToRenderer("session:analysisDone", data),
   });
@@ -288,16 +323,9 @@ const setupPipeline = (): void => {
     const apiKey = row?.value;
     if (!apiKey) return null;
     if (!voiceCoach) {
-      voiceCoach = createVoiceCoachEngine(db, apiKey);
+      voiceCoach = createVoiceCoachEngine(db, apiKey, getAnthropicModel());
     }
     return voiceCoach;
-  };
-
-  const getAnthropicApiKey = (): string | undefined => {
-    const row = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("anthropicApiKey") as { value: string } | undefined;
-    return row?.value;
   };
 
   dispatcher.on("alert", (alert: Alert) => {
@@ -345,7 +373,13 @@ const setupPipeline = (): void => {
       try {
         setup = JSON.parse(r.setup_json) as SetupData;
       } catch {
-        setup = { carVerified: false, carFound: "", setupText: "", params: [], screenshots: [] };
+        setup = {
+          carVerified: false,
+          carFound: "",
+          setupText: "",
+          params: [],
+          screenshots: [],
+        };
       }
       return {
         id: r.id,
@@ -492,9 +526,7 @@ const setupPipeline = (): void => {
     // Auto-close session if car/track/layout differ from the current session's
     if (currentSessionId) {
       const sessionRow = db
-        .prepare(
-          `SELECT car, track, layout FROM ${t("sessions")} WHERE id = ?`,
-        )
+        .prepare(`SELECT car, track, layout FROM ${t("sessions")} WHERE id = ?`)
         .get(currentSessionId) as
         | { car: string; track: string; layout: string }
         | undefined;
@@ -535,7 +567,11 @@ const setupPipeline = (): void => {
       pushToRenderer("r3e:lapComplete", lapWithNames);
       pushStatus();
 
-      const deviations = baseline.ingestLap(lap.zones, lap.lapNumber, calibrating);
+      const deviations = baseline.ingestLap(
+        lap.zones,
+        lap.lapNumber,
+        calibrating,
+      );
       if (deviations && deviations.length > 0) {
         ruleEngine.processLapDeviations(deviations);
       }
@@ -576,7 +612,8 @@ const setupPipeline = (): void => {
     db.prepare(
       "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
     ).run(key, String(value));
-    if (key === "anthropicApiKey") voiceCoach = null;
+    if (key === "anthropicApiKey" || key === "anthropicModel")
+      voiceCoach = null;
   });
 
   // ──────────────────────────────────────────────
@@ -585,10 +622,17 @@ const setupPipeline = (): void => {
 
   const startSession = (): SessionStartResult => {
     if (!readerConnected) {
-      return { ok: false, reason: "Simulatore non connesso. Avvia il gioco prima di aprire una sessione." };
+      return {
+        ok: false,
+        reason:
+          "Simulatore non connesso. Avvia il gioco prima di aprire una sessione.",
+      };
     }
     if (!currentCar || !currentTrack || !currentLayout) {
-      return { ok: false, reason: "Auto/circuito non ancora rilevati. Entra in pista e riprova." };
+      return {
+        ok: false,
+        reason: "Auto/circuito non ancora rilevati. Entra in pista e riprova.",
+      };
     }
     if (currentSessionId) {
       // Close the existing session (explicit intent: new session)
@@ -628,7 +672,9 @@ const setupPipeline = (): void => {
     "session:loadSetup",
     (_event, { setup }: { setup: SetupData }) => {
       if (!currentSessionId) {
-        throw new Error("Nessuna sessione attiva. Apri una sessione prima di caricare un setup.");
+        throw new Error(
+          "Nessuna sessione attiva. Apri una sessione prima di caricare un setup.",
+        );
       }
       const result = db
         .prepare(
@@ -662,10 +708,7 @@ const setupPipeline = (): void => {
 
   ipcMain.handle(
     "session:analyze",
-    async (
-      _event,
-      params: { sessionId?: number; game?: GameSource } = {},
-    ) => {
+    async (_event, params: { sessionId?: number; game?: GameSource } = {}) => {
       const sessionId = params.sessionId ?? currentSessionId;
       const game = params.game ?? activeGame;
       if (!sessionId) {
@@ -680,11 +723,15 @@ const setupPipeline = (): void => {
 
       // Resolve names for prompt
       const sRow = db
-        .prepare(`SELECT car, track, layout FROM ${t("sessions", game)} WHERE id = ?`)
+        .prepare(
+          `SELECT car, track, layout FROM ${t("sessions", game)} WHERE id = ?`,
+        )
         .get(sessionId) as
         | { car: string; track: string; layout: string }
         | undefined;
-      const resolved = sRow ? resolveNames(game, sRow.car, sRow.track, sRow.layout) : undefined;
+      const resolved = sRow
+        ? resolveNames(game, sRow.car, sRow.track, sRow.layout)
+        : undefined;
 
       sessionCoach
         .analyzeSession(sessionId, game, resolved)
@@ -727,7 +774,10 @@ const setupPipeline = (): void => {
           parts.push("track = ?");
           args.push(trackFilter);
         }
-        return { sql: parts.length ? `WHERE ${parts.join(" AND ")}` : "", args };
+        return {
+          sql: parts.length ? `WHERE ${parts.join(" AND ")}` : "",
+          args,
+        };
       };
 
       const w = buildWhere();
@@ -799,10 +849,9 @@ const setupPipeline = (): void => {
       if (!detail) return null;
 
       const pdfBuffer = await generateSessionPdfBuffer(detail);
-      const filenameSafe = (detail.session.car_name ?? detail.session.car).replace(
-        /\s+/g,
-        "_",
-      );
+      const filenameSafe = (
+        detail.session.car_name ?? detail.session.car
+      ).replace(/\s+/g, "_");
       const { canceled, filePath } = await dialog.showSaveDialog({
         title: "Salva PDF sessione",
         defaultPath: `sessione_${id}_${filenameSafe}.pdf`,
@@ -819,38 +868,63 @@ const setupPipeline = (): void => {
   // ──────────────────────────────────────────────
 
   ipcMain.handle("tts:getVoices", async () => {
-    const keyRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureSpeechKey") as { value: string } | undefined;
-    const regionRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureRegion") as { value: string } | undefined;
+    const keyRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureSpeechKey") as { value: string } | undefined;
+    const regionRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureRegion") as { value: string } | undefined;
     if (!keyRow?.value || !regionRow?.value)
       throw new Error("Azure Speech Key e Region non configurati");
     return getAzureVoices(keyRow.value, regionRow.value);
   });
 
   ipcMain.handle("tts:synthesize", async (_event, text: string) => {
-    const keyRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureSpeechKey") as { value: string } | undefined;
-    const regionRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureRegion") as { value: string } | undefined;
-    const voiceRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureVoiceName") as { value: string } | undefined;
+    const keyRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureSpeechKey") as { value: string } | undefined;
+    const regionRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureRegion") as { value: string } | undefined;
+    const voiceRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureVoiceName") as { value: string } | undefined;
     if (!keyRow?.value || !regionRow?.value || !voiceRow?.value)
       throw new Error("Azure TTS non completamente configurato");
     return synthesizeAzure(text, keyRow.value, regionRow.value, voiceRow.value);
   });
 
   ipcMain.handle("tts:test", async (_event, voiceName: string) => {
-    const keyRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureSpeechKey") as { value: string } | undefined;
-    const regionRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureRegion") as { value: string } | undefined;
-    const nameRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("assistantName") as { value: string } | undefined;
+    const keyRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureSpeechKey") as { value: string } | undefined;
+    const regionRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureRegion") as { value: string } | undefined;
+    const nameRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("assistantName") as { value: string } | undefined;
     if (!keyRow?.value || !regionRow?.value)
       throw new Error("Azure Speech Key e Region non configurati");
     const assistantName = nameRow?.value ?? "Aria";
     const testPhrase = `Ciao, sono ${assistantName} e oggi sono il tuo insegnante virtuale`;
-    return synthesizeAzure(testPhrase, keyRow.value, regionRow.value, voiceName);
+    return synthesizeAzure(
+      testPhrase,
+      keyRow.value,
+      regionRow.value,
+      voiceName,
+    );
   });
 
   ipcMain.handle(
     "stt:transcribe",
     async (_event, audioBuffer: ArrayBuffer, mimeType?: string) => {
-      const keyRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureSpeechKey") as { value: string } | undefined;
-      const regionRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureRegion") as { value: string } | undefined;
+      const keyRow = db
+        .prepare("SELECT value FROM app_config WHERE key = ?")
+        .get("azureSpeechKey") as { value: string } | undefined;
+      const regionRow = db
+        .prepare("SELECT value FROM app_config WHERE key = ?")
+        .get("azureRegion") as { value: string } | undefined;
       if (!keyRow?.value || !regionRow?.value)
         throw new Error("Azure Speech Key e Region non configurati");
       const buf = Buffer.from(audioBuffer);
@@ -886,12 +960,23 @@ const setupPipeline = (): void => {
       .prepare("SELECT value FROM app_config WHERE key = ?")
       .get("azureTtsEnabled") as { value: string } | undefined;
     if (azureEnabledRow?.value !== "true") return;
-    const keyRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureSpeechKey") as { value: string } | undefined;
-    const regionRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureRegion") as { value: string } | undefined;
-    const voiceRow = db.prepare("SELECT value FROM app_config WHERE key = ?").get("azureVoiceName") as { value: string } | undefined;
+    const keyRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureSpeechKey") as { value: string } | undefined;
+    const regionRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureRegion") as { value: string } | undefined;
+    const voiceRow = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("azureVoiceName") as { value: string } | undefined;
     if (!keyRow?.value || !regionRow?.value || !voiceRow?.value) return;
     try {
-      const audio = await synthesizeAzure(text, keyRow.value, regionRow.value, voiceRow.value);
+      const audio = await synthesizeAzure(
+        text,
+        keyRow.value,
+        regionRow.value,
+        voiceRow.value,
+      );
       pushToRenderer("coach:voiceAudio", { audio });
     } catch (err) {
       console.error("[VoiceCoach] TTS synthesis error:", err);
@@ -904,7 +989,11 @@ const setupPipeline = (): void => {
 
     if (intent === "newSession") {
       const res = startSession();
-      await speakText(res.ok ? "Sessione aperta." : `Impossibile aprire la sessione. ${res.reason}`);
+      await speakText(
+        res.ok
+          ? "Sessione aperta."
+          : `Impossibile aprire la sessione. ${res.reason}`,
+      );
       return;
     }
     if (intent === "closeSession") {
@@ -930,8 +1019,12 @@ const setupPipeline = (): void => {
       sessionCoach.updateCornerNames(buildCornerMap());
       const sRow = db
         .prepare(`SELECT car, track, layout FROM ${t("sessions")} WHERE id = ?`)
-        .get(currentSessionId) as { car: string; track: string; layout: string } | undefined;
-      const resolved = sRow ? resolveNames(activeGame, sRow.car, sRow.track, sRow.layout) : undefined;
+        .get(currentSessionId) as
+        | { car: string; track: string; layout: string }
+        | undefined;
+      const resolved = sRow
+        ? resolveNames(activeGame, sRow.car, sRow.track, sRow.layout)
+        : undefined;
       const analysis = await sessionCoach.analyzeSession(
         currentSessionId,
         activeGame,
@@ -963,7 +1056,8 @@ const setupPipeline = (): void => {
       }
     }
 
-    let fullAnswer = "Si è verificato un errore durante l'elaborazione della domanda.";
+    let fullAnswer =
+      "Si è verificato un errore durante l'elaborazione della domanda.";
     try {
       fullAnswer = await coach.handleVoiceQuery(question, (token) => {
         pushToRenderer("coach:voiceChunk", { token });
@@ -1104,18 +1198,21 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
     },
   );
 
-  ipcMain.handle("ace:readSetup", async (_event, { filePath }: { filePath: string }) => {
-    const fs = await import("fs");
-    const pathMod = await import("path");
-    const buf = fs.readFileSync(filePath);
-    const parts = filePath.split(/[\\/]/);
-    const carIdx = parts.findIndex((p) => p.toLowerCase() === "car setups");
-    const carId =
-      carIdx >= 0
-        ? (parts[carIdx + 1] ?? "")
-        : pathMod.basename(pathMod.dirname(pathMod.dirname(filePath)));
-    return decodeCarSetup(buf, carId);
-  });
+  ipcMain.handle(
+    "ace:readSetup",
+    async (_event, { filePath }: { filePath: string }) => {
+      const fs = await import("fs");
+      const pathMod = await import("path");
+      const buf = fs.readFileSync(filePath);
+      const parts = filePath.split(/[\\/]/);
+      const carIdx = parts.findIndex((p) => p.toLowerCase() === "car setups");
+      const carId =
+        carIdx >= 0
+          ? (parts[carIdx + 1] ?? "")
+          : pathMod.basename(pathMod.dirname(pathMod.dirname(filePath)));
+      return decodeCarSetup(buf, carId);
+    },
+  );
 
   ipcMain.handle("ace:listSetupCars", async () => {
     const fs = await import("fs");

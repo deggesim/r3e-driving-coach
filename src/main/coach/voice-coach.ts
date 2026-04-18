@@ -150,6 +150,7 @@ const t = (base: string, game: GameSource): string =>
 export const createVoiceCoachEngine = (
   db: Database.Database,
   apiKey: string,
+  model: string = "claude-haiku-4-5-20251001",
 ): VoiceCoachEngine => {
   const client = new Anthropic({ apiKey });
   const currentContext: SessionContext = {
@@ -240,9 +241,12 @@ export const createVoiceCoachEngine = (
       if (ctx.layout !== undefined) currentContext.layout = ctx.layout;
       if (ctx.carName !== undefined) currentContext.carName = ctx.carName;
       if (ctx.trackName !== undefined) currentContext.trackName = ctx.trackName;
-      if (ctx.layoutName !== undefined) currentContext.layoutName = ctx.layoutName;
-      if (ctx.lastLapZones !== undefined) currentContext.lastLapZones = ctx.lastLapZones;
-      if (ctx.deviations !== undefined) currentContext.deviations = ctx.deviations;
+      if (ctx.layoutName !== undefined)
+        currentContext.layoutName = ctx.layoutName;
+      if (ctx.lastLapZones !== undefined)
+        currentContext.lastLapZones = ctx.lastLapZones;
+      if (ctx.deviations !== undefined)
+        currentContext.deviations = ctx.deviations;
       if (ctx.cornerMap !== undefined) currentContext.cornerMap = ctx.cornerMap;
       if (ctx.laps !== undefined) currentContext.laps = ctx.laps;
       if (ctx.setups !== undefined) currentContext.setups = ctx.setups;
@@ -256,7 +260,7 @@ export const createVoiceCoachEngine = (
 
       let fullText = "";
       const stream = client.messages.stream({
-        model: "claude-haiku-4-5-20251001",
+        model,
         max_tokens: 500,
         system: VOICE_SYSTEM_PROMPT,
         messages: [{ role: "user", content: userMessage }],

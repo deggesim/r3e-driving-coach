@@ -11,6 +11,7 @@ type SettingsStore = {
   apiKey: string;
   assistantName: string;
   gamepadButton: number;
+  anthropicModel: string;
 
   // Game selection
   activeGame: GameSource;
@@ -33,6 +34,7 @@ type SettingsStore = {
   setAssistantName: (v: string) => void;
   setGamepadButton: (v: number) => void;
   setActiveGame: (v: GameSource) => void;
+  setAnthropicModel: (v: string) => void;
   setTtsEnabled: (v: boolean) => void;
   setAzureTtsEnabled: (v: boolean) => void;
   setAzureSpeechKey: (v: string) => void;
@@ -47,6 +49,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   apiKey: "",
   assistantName: "Aria",
   gamepadButton: 0,
+  anthropicModel: "claude-haiku-4-5-20251001",
   activeGame: "r3e",
   ttsEnabled: true,
   azureTtsEnabled: false,
@@ -60,6 +63,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   setAssistantName: (assistantName) => set({ assistantName }),
   setGamepadButton: (gamepadButton) => set({ gamepadButton }),
   setActiveGame: (activeGame) => set({ activeGame }),
+  setAnthropicModel: (anthropicModel) => set({ anthropicModel }),
   setTtsEnabled: (ttsEnabled) => set({ ttsEnabled }),
   setAzureTtsEnabled: (azureTtsEnabled) => set({ azureTtsEnabled }),
   setAzureSpeechKey: (azureSpeechKey) => set({ azureSpeechKey }),
