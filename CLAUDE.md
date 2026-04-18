@@ -199,3 +199,7 @@ If `npm run test:reader` shows all zeros or -1: struct offset mismatch. Check:
 ## Code Style
 
 See [CODE_STYLE.md](CODE_STYLE.md).
+
+## UI Theme
+
+The app uses a **dark theme** exclusively. All UI components must use the CSS custom properties defined in `:root` (`--bg`, `--bg2`, `--bg3`, `--border`, `--text`, `--text-dim`, `--accent`). Never use Bootstrap's default light-background components without overriding them with the dark theme variables. When adding new Bootstrap components (Modal, Accordion, Card, etc.), always add corresponding dark-theme CSS overrides in `global.css`.

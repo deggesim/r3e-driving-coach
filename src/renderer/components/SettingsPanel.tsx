@@ -199,7 +199,6 @@ const SettingsPanel = () => {
     [configSet, setAzureVoiceName],
   );
 
-  // Gamepad button capture: polls all buttons until one is pressed
   useEffect(() => {
     if (!isCapturingButton) return;
     const id = setInterval(() => {
@@ -228,308 +227,335 @@ const SettingsPanel = () => {
       <Row className="mb-4 g-4">
         <Col md={6}>
           <div className="settings-section">
-            {/* Claude API Key */}
-            <Form.Group>
-              <Form.Label className="setting-section-label">
-                API Key Anthropic
-              </Form.Label>
-              <Row className="g-2 align-items-center mb-2">
-                <Col>
-                  <Form.Control
-                    id="api-key"
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="sk-ant-..."
-                  />
-                </Col>
-                <Col xs="auto">
-                  <Button variant="danger" onClick={handleSaveApiKey}>
-                    {settingSaved === "apiKey" ? (
-                      <>
-                        <FontAwesomeIcon icon={faCheck} /> Salvata
-                      </>
-                    ) : (
-                      "Salva"
-                    )}
-                  </Button>
-                </Col>
-              </Row>
-              <Form.Text>
-                Necessaria per il debriefing post-giro e il coach vocale via
-                Claude API.
-              </Form.Text>
+            <Form.Label className="setting-section-label">
+              API Key Anthropic
+            </Form.Label>
 
-              <Form.Label htmlFor="anthropic-model" className="mt-3 mb-2">
-                Modello Anthropic
+            <Form.Group as={Row} className="mb-2" controlId="api-key">
+              <Form.Label column sm={3}>
+                Chiave
               </Form.Label>
-              <Row className="g-2 align-items-center">
-                <Col>
-                  <Form.Select
-                    id="anthropic-model"
-                    value={anthropicModel}
-                    onChange={(e) => setAnthropicModel(e.target.value)}
-                  >
-                    <option value="claude-haiku-4-5-20251001">
-                      Haiku 4.5 (veloce, consigliato)
-                    </option>
-                    <option value="claude-sonnet-4-6">
-                      Sonnet 4.6 (bilanciato)
-                    </option>
-                    <option value="claude-opus-4-7">Opus 4.7 (potente)</option>
-                  </Form.Select>
-                </Col>
-              </Row>
-              <Form.Text>
-                Il modello viene usato per debriefing e coach vocale. Le
-                modifiche hanno effetto al prossimo utilizzo.
-              </Form.Text>
+              <Col sm={7}>
+                <Form.Control
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="sk-ant-..."
+                />
+              </Col>
+              <Col sm={2}>
+                <Button variant="danger" onClick={handleSaveApiKey}>
+                  {settingSaved === "apiKey" ? (
+                    <>
+                      <FontAwesomeIcon icon={faCheck} /> Salvata
+                    </>
+                  ) : (
+                    "Salva"
+                  )}
+                </Button>
+              </Col>
             </Form.Group>
+            <Row className="mb-3">
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Form.Text>
+                  Necessaria per il debriefing post-giro e il coach vocale via
+                  Claude API.
+                </Form.Text>
+              </Col>
+            </Row>
+
+            <Form.Group as={Row} className="mb-2" controlId="anthropic-model">
+              <Form.Label column sm={3}>
+                Modello
+              </Form.Label>
+              <Col sm={9}>
+                <Form.Select
+                  value={anthropicModel}
+                  onChange={(e) => setAnthropicModel(e.target.value)}
+                >
+                  <option value="claude-haiku-4-5-20251001">
+                    Haiku 4.5 (veloce, consigliato)
+                  </option>
+                  <option value="claude-sonnet-4-6">
+                    Sonnet 4.6 (bilanciato)
+                  </option>
+                  <option value="claude-opus-4-7">Opus 4.7 (potente)</option>
+                </Form.Select>
+              </Col>
+            </Form.Group>
+            <Row>
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Form.Text>
+                  Usato per debriefing e coach vocale. Le modifiche hanno
+                  effetto al prossimo utilizzo.
+                </Form.Text>
+              </Col>
+            </Row>
           </div>
         </Col>
 
         <Col md={6}>
           <div className="settings-section">
-            {/* Azure TTS */}
-            <Form.Group>
-              <Form.Label className="setting-section-label">
-                Azure Text-to-Speech
+            <Form.Label className="setting-section-label">
+              Azure Text-to-Speech
+            </Form.Label>
+
+            <Form.Group as={Row} className="mb-2">
+              <Form.Label column sm={3}>
+                Stato
               </Form.Label>
-              <Form.Check
-                type="switch"
-                id="azure-tts-toggle"
-                label={azureTtsEnabled ? "Attivo" : "Disattivo"}
-                checked={azureTtsEnabled}
-                onChange={handleToggleAzure}
-                className="mb-2"
-              />
-              <Row className="g-2 align-items-center mb-2">
-                <Col xs="auto">
-                  <Form.Label htmlFor="azure-key" className="mb-0">
-                    Chiave servizio
-                  </Form.Label>
-                </Col>
-                <Col>
-                  <Form.Control
-                    id="azure-key"
-                    type="password"
-                    value={azureSpeechKey}
-                    onChange={(e) => setAzureSpeechKey(e.target.value)}
-                    placeholder="Chiave Azure Speech"
-                  />
+              <Col sm={9} className="d-flex align-items-center">
+                <Form.Check
+                  type="switch"
+                  id="azure-tts-toggle"
+                  label={azureTtsEnabled ? "Attivo" : "Disattivo"}
+                  checked={azureTtsEnabled}
+                  onChange={handleToggleAzure}
+                />
+              </Col>
+            </Form.Group>
+
+            <Form.Group as={Row} className="mb-2" controlId="azure-key">
+              <Form.Label column sm={3}>
+                Chiave
+              </Form.Label>
+              <Col sm={7}>
+                <Form.Control
+                  type="password"
+                  value={azureSpeechKey}
+                  onChange={(e) => setAzureSpeechKey(e.target.value)}
+                  placeholder="Chiave Azure Speech"
+                />
+              </Col>
+              <Col sm={2}>
+                <Button variant="danger" onClick={handleSaveAzureKey}>
+                  {settingSaved === "azureKey" ? "✓ Salvata" : "Salva"}
+                </Button>
+              </Col>
+            </Form.Group>
+
+            <Form.Group as={Row} className="mb-2" controlId="azure-region">
+              <Form.Label column sm={3}>
+                Regione
+              </Form.Label>
+              <Col sm={9}>
+                <Form.Select
+                  value={azureRegion}
+                  onChange={(e) => setAzureRegion(e.target.value)}
+                >
+                  {AZURE_REGIONS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </Form.Select>
+              </Col>
+            </Form.Group>
+
+            <Row className="mb-2">
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Button
+                  variant="secondary"
+                  onClick={handleLoadVoices}
+                  disabled={voicesLoading || !azureSpeechKey}
+                >
+                  {voicesLoading ? (
+                    <>
+                      <Spinner className="me-1" />
+                      Caricamento...
+                    </>
+                  ) : (
+                    "Carica voci"
+                  )}
+                </Button>
+              </Col>
+            </Row>
+
+            {voicesError && (
+              <Row className="mb-2">
+                <Col sm={{ span: 9, offset: 3 }}>
+                  <p className="text-danger small mb-0">{voicesError}</p>
                 </Col>
               </Row>
-              <Row className="g-2 align-items-center mb-2">
-                <Col xs="auto">
-                  <Form.Label htmlFor="azure-region" className="mb-0">
-                    Regione
-                  </Form.Label>
-                </Col>
-                <Col>
+            )}
+
+            {azureVoices.length > 0 && (
+              <Form.Group as={Row} className="mb-2" controlId="azure-voice">
+                <Form.Label column sm={3}>
+                  Voce
+                </Form.Label>
+                <Col sm={9}>
                   <Form.Select
-                    id="azure-region"
-                    value={azureRegion}
-                    onChange={(e) => setAzureRegion(e.target.value)}
+                    value={azureVoiceName}
+                    onChange={(e) => handleVoiceChange(e.target.value)}
                   >
-                    {AZURE_REGIONS.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
+                    {azureVoices.map((v) => (
+                      <option key={v.ShortName} value={v.ShortName}>
+                        {v.LocalName} ({v.Gender === "Female" ? "F" : "M"})
                       </option>
                     ))}
                   </Form.Select>
                 </Col>
-                <Col xs="auto">
-                  <Button variant="danger" onClick={handleSaveAzureKey}>
-                    {settingSaved === "azureKey" ? "✓ Salvata" : "Salva"}
-                  </Button>
-                </Col>
-              </Row>
-              <Row className="g-2 align-items-center mb-2">
-                <Col xs="auto">
-                  <Button
-                    variant="secondary"
-                    onClick={handleLoadVoices}
-                    disabled={voicesLoading || !azureSpeechKey}
-                  >
-                    {voicesLoading ? (
-                      <>
-                        <Spinner className="me-1" />
-                        Caricamento...
-                      </>
-                    ) : (
-                      "Carica voci"
-                    )}
-                  </Button>
-                </Col>
-              </Row>
-              {voicesError && (
-                <p className="text-danger small mt-1 mb-2">{voicesError}</p>
-              )}
-              {azureVoices.length > 0 && (
-                <Row className="g-2 align-items-center mb-2">
-                  <Col xs="auto">
-                    <Form.Label htmlFor="azure-voice" className="mb-0">
-                      Voce
-                    </Form.Label>
-                  </Col>
-                  <Col>
-                    <Form.Select
-                      id="azure-voice"
-                      value={azureVoiceName}
-                      onChange={(e) => handleVoiceChange(e.target.value)}
-                    >
-                      {azureVoices.map((v) => (
-                        <option key={v.ShortName} value={v.ShortName}>
-                          {v.LocalName} ({v.Gender === "Female" ? "F" : "M"})
-                        </option>
-                      ))}
-                    </Form.Select>
-                  </Col>
-                </Row>
-              )}
-              <Form.Text>
-                Selezionando una voce viene riprodotta un&apos;anteprima:
-                &quot;Ciao, sono {assistantName} e oggi sono il tuo insegnante
-                virtuale&quot;. Richiede una sottoscrizione Azure Cognitive
-                Services.
-              </Form.Text>
-            </Form.Group>
+              </Form.Group>
+            )}
+
+            <Row>
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Form.Text>
+                  Selezionando una voce viene riprodotta un&apos;anteprima:
+                  &quot;Ciao, sono {assistantName} e oggi sono il tuo
+                  insegnante virtuale&quot;. Richiede una sottoscrizione Azure
+                  Cognitive Services.
+                </Form.Text>
+              </Col>
+            </Row>
           </div>
         </Col>
       </Row>
 
-      {/* Row 2: Assistente Vocale + Voce TTS */}
+      {/* Row 2: Assistente Vocale + Test & sviluppo */}
       <Row className="mb-4 g-4">
         <Col md={6}>
           <div className="settings-section">
-            {/* Assistente Vocale */}
-            <Form.Group>
-              <Form.Label className="setting-section-label">
-                Assistente Vocale
-              </Form.Label>
-              <Row className="g-2 align-items-center mb-2">
-                <Col xs="auto">
-                  <Form.Label htmlFor="assistant-name" className="mb-0">
-                    Nome assistente
-                  </Form.Label>
-                </Col>
-                <Col xs={3}>
-                  <Form.Control
-                    id="assistant-name"
-                    type="text"
-                    value={assistantName}
-                    onChange={(e) => setAssistantName(e.target.value)}
-                    placeholder="Aria"
-                    maxLength={16}
-                  />
-                </Col>
-                <Col xs="auto">
-                  <Button variant="danger" onClick={handleSaveAssistant}>
-                    {settingSaved === "assistant" ? (
-                      <>
-                        <FontAwesomeIcon icon={faCheck} /> Salvato
-                      </>
-                    ) : (
-                      "Salva"
-                    )}
-                  </Button>
-                </Col>
-              </Row>
+            <Form.Label className="setting-section-label">
+              Assistente Vocale
+            </Form.Label>
 
-              <Row className="g-2 align-items-center mb-2">
-                <Col xs="auto">
-                  <Form.Label className="mb-0">Tasto controller</Form.Label>
-                </Col>
-                <Col xs="auto">
-                  {isCapturingButton ? (
+            <Form.Group as={Row} className="mb-2" controlId="assistant-name">
+              <Form.Label column sm={3}>
+                Nome
+              </Form.Label>
+              <Col sm={5}>
+                <Form.Control
+                  type="text"
+                  value={assistantName}
+                  onChange={(e) => setAssistantName(e.target.value)}
+                  placeholder="Aria"
+                  maxLength={16}
+                />
+              </Col>
+              <Col sm={2}>
+                <Button variant="danger" onClick={handleSaveAssistant}>
+                  {settingSaved === "assistant" ? (
                     <>
-                      <Spinner animation="border" className="me-2" />
-                      <span className="text-warning me-2">
-                        Premi un tasto sul controller…
-                      </span>
-                      <Button
-                        variant="secondary"
-                        onClick={() => setIsCapturingButton(false)}
-                      >
-                        Annulla
-                      </Button>
+                      <FontAwesomeIcon icon={faCheck} /> Salvato
                     </>
                   ) : (
-                    <>
-                      <Badge bg="secondary" className="me-2">
-                        {gamepadButton !== null
-                          ? getButtonLabel(gamepadButton)
-                          : "Nessun tasto assegnato"}
-                      </Badge>
-                      <Button
-                        variant="outline-light"
-                        onClick={() => setIsCapturingButton(true)}
-                      >
-                        Assegna
-                      </Button>
-                      {settingSaved === "gamepadButton" && (
-                        <span className="text-success ms-2">
-                          <FontAwesomeIcon icon={faCheck} /> Salvato
-                        </span>
-                      )}
-                    </>
+                    "Salva"
                   )}
-                </Col>
-              </Row>
-              <Form.Text>
-                Premi il tasto configurato sul controller per attivare il
-                microfono e fare domande al coach. Il tasto 0 corrisponde al
-                tasto A su controller Xbox.
-              </Form.Text>
-
-              <Form.Check
-                type="switch"
-                id="tts-toggle"
-                label={
-                  ttsEnabled
-                    ? "Output vocale attivo"
-                    : "Output vocale disattivato"
-                }
-                checked={ttsEnabled}
-                onChange={() => setTtsEnabled(!ttsEnabled)}
-                className="mt-3"
-              />
-              <Form.Text>
-                Attiva/disattiva tutti gli output vocali (alert, debriefing,
-                coach).
-              </Form.Text>
+                </Button>
+              </Col>
             </Form.Group>
+
+            <Form.Group as={Row} className="mb-2">
+              <Form.Label column sm={3}>
+                Controller
+              </Form.Label>
+              <Col sm={9} className="d-flex align-items-center gap-2 flex-wrap">
+                {isCapturingButton ? (
+                  <>
+                    <Spinner animation="border" />
+                    <span className="text-warning">
+                      Premi un tasto sul controller…
+                    </span>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setIsCapturingButton(false)}
+                    >
+                      Annulla
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Badge bg="secondary">
+                      {gamepadButton !== null
+                        ? getButtonLabel(gamepadButton)
+                        : "Nessun tasto assegnato"}
+                    </Badge>
+                    <Button
+                      variant="outline-light"
+                      onClick={() => setIsCapturingButton(true)}
+                    >
+                      Assegna
+                    </Button>
+                    {settingSaved === "gamepadButton" && (
+                      <span className="text-success">
+                        <FontAwesomeIcon icon={faCheck} /> Salvato
+                      </span>
+                    )}
+                  </>
+                )}
+              </Col>
+            </Form.Group>
+            <Row className="mb-3">
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Form.Text>
+                  Premi il tasto configurato sul controller per attivare il
+                  microfono e fare domande al coach. Il tasto 0 corrisponde al
+                  tasto A su controller Xbox.
+                </Form.Text>
+              </Col>
+            </Row>
+
+            <Form.Group as={Row} className="mb-2">
+              <Form.Label column sm={3}>
+                Output vocale
+              </Form.Label>
+              <Col sm={9} className="d-flex align-items-center">
+                <Form.Check
+                  type="switch"
+                  id="tts-toggle"
+                  label={ttsEnabled ? "Attivo" : "Disattivo"}
+                  checked={ttsEnabled}
+                  onChange={() => setTtsEnabled(!ttsEnabled)}
+                />
+              </Col>
+            </Form.Group>
+            <Row>
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Form.Text>
+                  Attiva/disattiva tutti gli output vocali (alert, debriefing,
+                  coach).
+                </Form.Text>
+              </Col>
+            </Row>
           </div>
         </Col>
 
-        {/* Row 3: Test & sviluppo */}
-
         <Col md={6}>
           <div className="settings-section">
-            {/* Dev / Test */}
             <Form.Label className="setting-section-label">
               Test &amp; sviluppo
             </Form.Label>
-            <Row className="g-2 align-items-center mb-1">
-              <Col xs="auto">
+
+            <Form.Group as={Row} className="mb-2">
+              <Form.Label column sm={3}>
+                Sessioni mock
+              </Form.Label>
+              <Col sm={9} className="d-flex align-items-center gap-2">
                 <Button
                   variant={mockHistoryMode ? "warning" : "outline-secondary"}
                   onClick={() => setMockHistoryMode(!mockHistoryMode)}
                 >
                   {mockHistoryMode ? "Mock attivo" : "Mock disattivo"}
                 </Button>
-              </Col>
-              <Col>
                 <span className="text-secondary" style={{ fontSize: 12 }}>
-                  Mostra analisi mock nello storico
+                  {mockHistoryMode
+                    ? "2 sessioni mock visibili nello storico (R3E + ACE, 3 giri ciascuna)"
+                    : "Inserisce sessioni fittizie nello storico per test UI"}
                 </span>
               </Col>
+            </Form.Group>
+            <Row>
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Form.Text>
+                  Quando attivo, aggiunge nello storico una sessione R3E (BMW M4 GT3 –
+                  Nürburgring) e una ACE (Porsche 718 GT4 – Monza), ognuna con 3 giri
+                  e un&apos;analisi Template v3 precompilata. Utile per testare la UI
+                  senza una sessione reale in corso.
+                </Form.Text>
+              </Col>
             </Row>
-            <Form.Text>
-              Quando attivo, lo storico mostra un giro fittizio con analisi e
-              setup precompilati. Utile per testare la selezione screenshot e
-              l&apos;esportazione PDF senza una sessione reale.
-            </Form.Text>
           </div>
         </Col>
       </Row>

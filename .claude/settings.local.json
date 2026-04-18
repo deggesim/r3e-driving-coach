@@ -8,7 +8,9 @@
       "mcp__plugin_chrome-devtools-mcp_chrome-devtools__evaluate_script",
       "Skill(update-config)",
       "Bash(*)",
-      "WebFetch(domain:www.electronjs.org)"
+      "WebFetch(domain:www.electronjs.org)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs"
     ]
   },
   "hooks": {

@@ -16,6 +16,8 @@ import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
 import type { GameSource, SessionRow } from "../../shared/types";
 import { formatLapTime } from "../../shared/format";
 import { useSessionStore } from "../store/sessionStore";
+import { useSettingsStore } from "../store/settingsStore";
+import { MOCK_SESSIONS, MOCK_DETAILS } from "../mocks/mockData";
 
 const PAGE_SIZE = 10;
 const FETCH_SIZE = 500; // upper bound — load all, paginate/filter client-side
@@ -39,6 +41,8 @@ type Props = {
 
 const SessionHistory = ({ onOpenSession }: Props) => {
   const loadById = useSessionStore((s) => s.loadById);
+  const setDetail = useSessionStore((s) => s.setDetail);
+  const mockHistoryMode = useSettingsStore((s) => s.mockHistoryMode);
 
   const [allSessions, setAllSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -72,9 +76,14 @@ const SessionHistory = ({ onOpenSession }: Props) => {
     setPage(1);
   }, [filterGame, filterCar, filterTrack, sort]);
 
+  const visibleSessions = useMemo(
+    () => (mockHistoryMode ? [...MOCK_SESSIONS, ...allSessions] : allSessions),
+    [allSessions, mockHistoryMode],
+  );
+
   const gameSessions = useMemo(
-    () => (filterGame ? allSessions.filter((s) => s.game === filterGame) : allSessions),
-    [allSessions, filterGame],
+    () => (filterGame ? visibleSessions.filter((s) => s.game === filterGame) : visibleSessions),
+    [visibleSessions, filterGame],
   );
 
   const carOptions = useMemo(() => {
@@ -125,7 +134,11 @@ const SessionHistory = ({ onOpenSession }: Props) => {
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleRowClick = (s: SessionRow): void => {
-    void loadById(s.id, s.game);
+    if (s.id < 0) {
+      setDetail(MOCK_DETAILS[s.id] ?? null, "historical");
+    } else {
+      void loadById(s.id, s.game);
+    }
     onOpenSession();
   };
 
@@ -138,7 +151,7 @@ const SessionHistory = ({ onOpenSession }: Props) => {
         prev.filter((s) => !(s.id === session.id && s.game === session.game)),
       );
     } else {
-      const items = filtered.map((s) => ({ id: s.id, game: s.game }));
+      const items = filtered.filter((s) => s.id >= 0).map((s) => ({ id: s.id, game: s.game }));
       await window.electronAPI.sessionDeleteAll(items);
       const keys = new Set(items.map(({ id, game }) => `${game}-${id}`));
       setAllSessions((prev) => prev.filter((s) => !keys.has(`${s.game}-${s.id}`)));
@@ -249,6 +262,12 @@ const SessionHistory = ({ onOpenSession }: Props) => {
                     >
                       {s.game === "ace" ? "ACE" : "R3E"}
                     </Badge>
+                    {s.id < 0 && (
+                      <Badge bg="warning" text="dark" className="ms-1" style={{ fontSize: 10 }}>
+                        <FontAwesomeIcon icon={faFlask} className="me-1" />
+                        mock
+                      </Badge>
+                    )}
                   </td>
                   <td>
                     {s.car_name ?? s.car}
@@ -282,15 +301,17 @@ const SessionHistory = ({ onOpenSession }: Props) => {
                     )}
                   </td>
                   <td className="sh-actions" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="sh-del-btn"
-                      onClick={() => setDeleteTarget({ type: "single", session: s })}
-                      aria-label="Elimina sessione"
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                    </Button>
+                    {s.id >= 0 && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="sh-del-btn"
+                        onClick={() => setDeleteTarget({ type: "single", session: s })}
+                        aria-label="Elimina sessione"
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
