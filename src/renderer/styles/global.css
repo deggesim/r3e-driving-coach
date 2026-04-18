@@ -454,6 +454,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 16px;
+  height: 100%;
 }
 
 /* ── Status bar ── */

@@ -295,16 +295,14 @@ const SettingsPanel = () => {
               <Form.Label className="setting-section-label">
                 Azure Text-to-Speech
               </Form.Label>
-              <Row className="g-2 align-items-center mb-2">
-                <Col xs="auto">
-                  <Button
-                    variant={azureTtsEnabled ? "success" : "secondary"}
-                    onClick={handleToggleAzure}
-                  >
-                    {azureTtsEnabled ? "Attivo" : "Disattivo"}
-                  </Button>
-                </Col>
-              </Row>
+              <Form.Check
+                type="switch"
+                id="azure-tts-toggle"
+                label={azureTtsEnabled ? "Attivo" : "Disattivo"}
+                checked={azureTtsEnabled}
+                onChange={handleToggleAzure}
+                className="mb-2"
+              />
               <Row className="g-2 align-items-center mb-2">
                 <Col xs="auto">
                   <Form.Label htmlFor="azure-key" className="mb-0">
@@ -483,27 +481,19 @@ const SettingsPanel = () => {
                 microfono e fare domande al coach. Il tasto 0 corrisponde al
                 tasto A su controller Xbox.
               </Form.Text>
-            </Form.Group>
-          </div>
-        </Col>
 
-        <Col md={6}>
-          <div className="settings-section">
-            {/* Voce TTS */}
-            <Form.Group>
-              <Form.Label className="setting-section-label">
-                Voce TTS
-              </Form.Label>
-              <Row className="g-2 align-items-center">
-                <Col xs="auto">
-                  <Button
-                    variant={ttsEnabled ? "success" : "secondary"}
-                    onClick={() => setTtsEnabled(!ttsEnabled)}
-                  >
-                    {ttsEnabled ? "Attiva" : "Disattiva"}
-                  </Button>
-                </Col>
-              </Row>
+              <Form.Check
+                type="switch"
+                id="tts-toggle"
+                label={
+                  ttsEnabled
+                    ? "Output vocale attivo"
+                    : "Output vocale disattivato"
+                }
+                checked={ttsEnabled}
+                onChange={() => setTtsEnabled(!ttsEnabled)}
+                className="mt-3"
+              />
               <Form.Text>
                 Attiva/disattiva tutti gli output vocali (alert, debriefing,
                 coach).
@@ -511,10 +501,9 @@ const SettingsPanel = () => {
             </Form.Group>
           </div>
         </Col>
-      </Row>
 
-      {/* Row 3: Test & sviluppo */}
-      <Row className="mb-4 g-4">
+        {/* Row 3: Test & sviluppo */}
+
         <Col md={6}>
           <div className="settings-section">
             {/* Dev / Test */}
