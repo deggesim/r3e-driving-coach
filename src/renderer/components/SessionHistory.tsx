@@ -1,471 +1,165 @@
 /**
- * SessionHistory — List of past laps + detail panel with setup and PDF export.
- * Loads all laps from the DB (all cars/tracks, works offline).
- * Filter dropdowns: car (name + class) and circuit/layout.
- * Sortable by saved date (default, newest first) or lap time (fastest first).
+ * SessionList — Paginated list of past sessions (R3E + ACE).
+ * Columns: Simulator / Car / Track / Date. 10 rows per page.
+ * Filters: game / car / track. Sort: started_at asc|desc.
+ * Row click → loads session into sessionStore (historical mode) and switches
+ * the parent tab to the realtime analysis view.
  */
 
 import {
-  faArrowLeft,
-  faCheck,
-  faFilePdf,
   faFlask,
-  faGear,
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { marked } from "marked";
 import { useEffect, useMemo, useState } from "react";
-import { Badge, Button, Col, Form, Modal, Row, Spinner } from "react-bootstrap";
-import type { GameSource, LapRowFull, SetupData, SetupParam } from "../../shared/types";
+import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
+import type { GameSource, SessionRow } from "../../shared/types";
 import { formatLapTime } from "../../shared/format";
-import { MOCK_LAP, MOCK_LAP_ACE } from "../mocks/mockLap";
-import { useSettingsStore } from "../store/settingsStore";
-import { useIPCStore } from "../store/ipcStore";
-import ScreenshotPicker from "./ScreenshotPicker";
-import AceSetupPicker from "./AceSetupPicker";
+import { useSessionStore } from "../store/sessionStore";
 
 const PAGE_SIZE = 10;
-
-const renderMarkdown = (md: string): string =>
-  marked.parse(md, { async: false }) as string;
+const FETCH_SIZE = 500; // upper bound — load all, paginate/filter client-side
 
 const formatDate = (iso: string | null | undefined): string => {
   if (!iso) return "—";
-  // SQLite datetime('now') returns "YYYY-MM-DD HH:MM:SS" (UTC, no indicator).
-  // Without explicit UTC marker V8 parses it as local time — normalize first.
   const normalized = iso.includes("T") ? iso : iso.replace(" ", "T") + "Z";
   return new Date(normalized).toLocaleString("it-IT", {
     timeZone: "Europe/Rome",
     day: "2-digit",
     month: "2-digit",
+    year: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
 };
 
-type DetailPanelProps = {
-  lap: LapRowFull;
-  fromPage: number;
-  onBack: () => void;
-  onSetupSaved: (lapId: number, setup: SetupData) => void;
+type Props = {
+  onOpenSession: () => void;
 };
 
-const DetailPanel = ({
-  lap,
-  fromPage,
-  onBack,
-  onSetupSaved,
-}: DetailPanelProps) => {
-  const [showPicker, setShowPicker] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [exportMsg, setExportMsg] = useState<string | null>(null);
-  const activeGame = useSettingsStore((s) => s.activeGame);
+const SessionHistory = ({ onOpenSession }: Props) => {
+  const loadById = useSessionStore((s) => s.loadById);
 
-  const analysis = lap.analysis_json ? JSON.parse(lap.analysis_json) : null;
-  const setup: SetupData | null = lap.setup_json
-    ? JSON.parse(lap.setup_json)
-    : null;
-  const screenshots: string[] = (() => {
-    if (!lap.setup_screenshots) return [];
-    try { return JSON.parse(lap.setup_screenshots) as string[]; } catch { return []; }
-  })();
-
-  const handleSetupSaved = async (decoded: SetupData): Promise<void> => {
-    setShowPicker(false);
-    await window.electronAPI.saveSetup({ lapId: lap.id, game: lap.game as GameSource, setup: decoded });
-    onSetupSaved(lap.id, decoded);
-  };
-
-  const handleExportPdf = async (): Promise<void> => {
-    setExporting(true);
-    setExportMsg(null);
-    try {
-      let path: string | null;
-      if (lap.id === -1) {
-        path = await window.electronAPI.exportPdfFromData({
-          lapNumber: lap.lap_number,
-          lapTime: lap.lap_time,
-          sector1: lap.sector1,
-          sector2: lap.sector2,
-          sector3: lap.sector3,
-          car: lap.car_name,
-          track: lap.track_name,
-          layout: lap.layout_name,
-          recordedAt: lap.recorded_at,
-          analysisJson: lap.analysis_json,
-          setupJson: lap.setup_json,
-          game: lap.game,
-        });
-      } else {
-        path = await window.electronAPI.exportPdf({ lapId: lap.id, game: lap.game });
-      }
-      setExportMsg(path ? `Salvato: ${path}` : null);
-    } catch {
-      setExportMsg("Errore durante l'esportazione.");
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  return (
-    <div className="detail-panel d-flex flex-column h-100">
-      {/* Panel header */}
-      <div className="detail-header d-flex align-items-center gap-2">
-        <Button
-          variant="link"
-          size="sm"
-          className="detail-back-btn"
-          onClick={onBack}
-        >
-          <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
-          Pag. {fromPage}
-        </Button>
-        <span className="deb-sep">·</span>
-        <span className="detail-lap">Giro {lap.lap_number}</span>
-        <span className="deb-sep">·</span>
-        <span className="detail-time">{formatLapTime(lap.lap_time)}</span>
-        {lap.sector1 && (
-          <span className="detail-sectors">
-            S1 {formatLapTime(lap.sector1)} · S2 {formatLapTime(lap.sector2)} ·
-            S3 {formatLapTime(lap.sector3)}
-          </span>
-        )}
-        {!lap.valid && (
-          <Badge bg="warning" text="dark" className="ms-1">
-            Non valido
-          </Badge>
-        )}
-        <div className="ms-auto d-flex gap-2 align-items-center">
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            className="detail-action-btn"
-            onClick={() => setShowPicker(true)}
-          >
-            <FontAwesomeIcon icon={faGear} className="me-1" />
-            {setup ? "Aggiorna Setup" : "Aggiungi Setup"}
-          </Button>
-          {analysis && (
-            <Button
-              variant="danger"
-              size="sm"
-              className="detail-action-btn"
-              disabled={exporting}
-              onClick={handleExportPdf}
-            >
-              {exporting ? (
-                <Spinner size="sm" className="me-1" />
-              ) : (
-                <FontAwesomeIcon icon={faFilePdf} className="me-1" />
-              )}
-              Esporta PDF
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {exportMsg && (
-        <div className="detail-export-msg px-3 py-1">
-          <FontAwesomeIcon icon={faCheck} className="me-1 text-success" />
-          {exportMsg}
-        </div>
-      )}
-
-      {/* Panel body: analysis + setup side by side when both present */}
-      <div className="detail-body flex-grow-1 overflow-y-auto">
-        {!analysis && !setup && (
-          <div className="d-flex align-items-center justify-content-center h-100 text-secondary">
-            Nessuna analisi disponibile per questo giro.
-          </div>
-        )}
-
-        {analysis?.templateV3 && (
-          <div
-            className="deb-content p-3"
-            // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
-            dangerouslySetInnerHTML={{
-              __html: renderMarkdown(analysis.templateV3),
-            }}
-          />
-        )}
-
-        {setup && (
-          <div className="setup-section p-3 mt-2">
-            <div className="setup-section-header d-flex align-items-center gap-2 mb-2">
-              <FontAwesomeIcon icon={faGear} />
-              <span className="setup-section-title">Setup Auto</span>
-              {setup.carVerified ? (
-                <Badge bg="success" className="ms-2">
-                  <FontAwesomeIcon icon={faCheck} className="me-1" />
-                  {setup.carFound}
-                </Badge>
-              ) : (
-                <Badge bg="warning" text="dark" className="ms-2">
-                  {setup.carFound || "Auto non verificata"}
-                </Badge>
-              )}
-              {screenshots.length > 0 && (
-                <span
-                  className="text-secondary ms-auto"
-                  style={{ fontSize: 11 }}
-                >
-                  {screenshots.length} screenshot
-                </span>
-              )}
-            </div>
-
-            {setup.params.length > 0 ? (
-              <table className="setup-table w-100">
-                <thead>
-                  <tr>
-                    <th>Categoria</th>
-                    <th>Parametro</th>
-                    <th>Valore</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {setup.params.map((p: SetupParam) => (
-                    <tr key={`${p.category}-${p.parameter}`}>
-                      <td className="text-dim">{p.category}</td>
-                      <td>{p.parameter}</td>
-                      <td className="setup-value">{p.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              setup.setupText && (
-                <div
-                  className="deb-content"
-                  // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
-                  dangerouslySetInnerHTML={{
-                    __html: renderMarkdown(setup.setupText),
-                  }}
-                />
-              )
-            )}
-          </div>
-        )}
-      </div>
-
-      {activeGame === "ace" ? (
-        <AceSetupPicker
-          show={showPicker}
-          expectedCar={lap.car}
-          expectedTrack={lap.track}
-          onClose={() => setShowPicker(false)}
-          onConfirm={handleSetupSaved}
-        />
-      ) : (
-        <ScreenshotPicker
-          show={showPicker}
-          expectedCar={lap.car_name}
-          onClose={() => setShowPicker(false)}
-          onConfirm={handleSetupSaved}
-        />
-      )}
-    </div>
-  );
-};
-
-const SessionHistory = () => {
-  const mockHistoryMode = useSettingsStore((s) => s.mockHistoryMode);
-  const lastAnalysis = useIPCStore((s) => s.lastAnalysis);
-
-  const [allLaps, setAllLaps] = useState<LapRowFull[]>([]);
+  const [allSessions, setAllSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedLap, setSelectedLap] = useState<LapRowFull | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [filterGame, setFilterGame] = useState<"" | "r3e" | "ace">("");
+  const [page, setPage] = useState(1);
+  const [filterGame, setFilterGame] = useState<"" | GameSource>("");
   const [filterCar, setFilterCar] = useState("");
   const [filterTrack, setFilterTrack] = useState("");
-  const [sortBy, setSortBy] = useState<"date" | "laptime">("date");
-  type DeleteTarget = { type: "single"; lap: LapRowFull } | { type: "all" };
+  const [sort, setSort] = useState<"desc" | "asc">("desc");
+  type DeleteTarget =
+    | { type: "single"; session: SessionRow }
+    | { type: "all" };
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const loadLaps = (): void => {
-    if (mockHistoryMode) {
-      setAllLaps([MOCK_LAP, MOCK_LAP_ACE]);
-      setSelectedLap(null);
-      setCurrentPage(1);
-      return;
-    }
+  const loadSessions = (): void => {
     if (!window.electronAPI) return;
     setLoading(true);
     window.electronAPI
-      .getAllLaps()
-      .then((data) => {
-        setAllLaps(data);
-        setLoading(false);
+      .sessionList({ page: 1, pageSize: FETCH_SIZE, sort: "desc" })
+      .then((res) => {
+        setAllSessions(res.items);
       })
-      .catch(() => setLoading(false));
+      .catch(() => { /* ignore */ })
+      .finally(() => setLoading(false));
   };
 
-  // Load on mount and when mock mode changes
   useEffect(() => {
-    loadLaps();
-    // Reset filters when switching mode
-    setFilterCar("");
-    setFilterTrack("");
-    setCurrentPage(1);
-    setSelectedLap(null);
-  }, [mockHistoryMode]);
+    loadSessions();
+  }, []);
 
-  // Reload when a new lap analysis is saved
   useEffect(() => {
-    if (!mockHistoryMode && lastAnalysis) {
-      loadLaps();
-    }
-  }, [lastAnalysis]);
+    setPage(1);
+  }, [filterGame, filterCar, filterTrack, sort]);
 
-  // Reset page when filters or sort change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterGame, filterCar, filterTrack, sortBy]);
-
-  // Laps scoped to the selected game (used to populate car/track dropdowns)
-  const gameLaps = useMemo(
-    () => (filterGame ? allLaps.filter((l) => l.game === filterGame) : allLaps),
-    [allLaps, filterGame],
+  const gameSessions = useMemo(
+    () => (filterGame ? allSessions.filter((s) => s.game === filterGame) : allSessions),
+    [allSessions, filterGame],
   );
 
-  // Distinct cars for the dropdown (scoped to selected game)
   const carOptions = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const lap of gameLaps) {
-      if (!seen.has(lap.car)) {
-        const label = lap.car_class_name
-          ? `${lap.car_name} (${lap.car_class_name})`
-          : lap.car_name;
-        seen.set(lap.car, label);
+    for (const s of gameSessions) {
+      if (!seen.has(s.car)) {
+        const label = s.car_class_name
+          ? `${s.car_name ?? s.car} (${s.car_class_name})`
+          : (s.car_name ?? s.car);
+        seen.set(s.car, label);
       }
     }
     return Array.from(seen.entries())
       .map(([id, label]) => ({ id, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [gameLaps]);
+  }, [gameSessions]);
 
-  // Distinct track+layout combos for the dropdown (scoped to selected game)
   const trackOptions = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const lap of gameLaps) {
-      const key = `${lap.track}|${lap.layout}`;
+    for (const s of gameSessions) {
+      const key = `${s.track}|${s.layout}`;
       if (!seen.has(key)) {
-        seen.set(key, `${lap.track_name} (${lap.layout_name})`);
+        seen.set(
+          key,
+          `${s.track_name ?? s.track} (${s.layout_name ?? s.layout})`,
+        );
       }
     }
     return Array.from(seen.entries())
       .map(([id, label]) => ({ id, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [gameLaps]);
+  }, [gameSessions]);
 
-  // Filtered + sorted laps
-  const filteredLaps = useMemo(() => {
-    let result = gameLaps;
-    if (filterCar) result = result.filter((l) => l.car === filterCar);
+  const filtered = useMemo(() => {
+    let result = gameSessions;
+    if (filterCar) result = result.filter((s) => s.car === filterCar);
     if (filterTrack) {
-      const [trackId, layoutId] = filterTrack.split("|");
-      result = result.filter(
-        (l) => l.track === trackId && l.layout === layoutId,
-      );
+      const [t, l] = filterTrack.split("|");
+      result = result.filter((s) => s.track === t && s.layout === l);
     }
-    if (sortBy === "laptime") {
-      return [...result].sort((a, b) => {
-        // Laps with no recorded time (out-lap, lap_time = -1) go to the bottom
-        const aValid = a.lap_time > 0;
-        const bValid = b.lap_time > 0;
-        if (aValid && !bValid) return -1;
-        if (!aValid && bValid) return 1;
-        return a.lap_time - b.lap_time;
-      });
-    }
-    // "date": already ordered DESC from the DB query
-    return result;
-  }, [gameLaps, filterCar, filterTrack, sortBy]);
+    const mul = sort === "asc" ? 1 : -1;
+    return [...result].sort(
+      (a, b) => mul * a.started_at.localeCompare(b.started_at),
+    );
+  }, [gameSessions, filterCar, filterTrack, sort]);
 
-  const handleSetupSaved = (lapId: number, setup: SetupData): void => {
-    setAllLaps((prev) =>
-      prev.map((l) =>
-        l.id === lapId
-          ? {
-              ...l,
-              setup_json: JSON.stringify(setup),
-              setup_screenshots: JSON.stringify(setup.screenshots),
-            }
-          : l,
-      ),
-    );
-    setSelectedLap((prev) =>
-      prev && prev.id === lapId
-        ? {
-            ...prev,
-            setup_json: JSON.stringify(setup),
-            setup_screenshots: JSON.stringify(setup.screenshots),
-          }
-        : prev,
-    );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const handleRowClick = (s: SessionRow): void => {
+    void loadById(s.id, s.game);
+    onOpenSession();
   };
 
   const executeDelete = async (): Promise<void> => {
     if (!deleteTarget) return;
     if (deleteTarget.type === "single") {
-      const { lap } = deleteTarget;
-      await window.electronAPI.deleteLap({ id: lap.id, game: lap.game });
-      setAllLaps((prev) => prev.filter((l) => !(l.id === lap.id && l.game === lap.game)));
+      const { session } = deleteTarget;
+      await window.electronAPI.sessionDelete({ id: session.id, game: session.game });
+      setAllSessions((prev) =>
+        prev.filter((s) => !(s.id === session.id && s.game === session.game)),
+      );
     } else {
-      const items = filteredLaps.map(({ id, game }) => ({ id, game }));
-      await window.electronAPI.deleteAllLaps(items);
-      const deletedKeys = new Set(items.map(({ id, game }) => `${game}-${id}`));
-      setAllLaps((prev) => prev.filter((l) => !deletedKeys.has(`${l.game}-${l.id}`)));
+      const items = filtered.map((s) => ({ id: s.id, game: s.game }));
+      await window.electronAPI.sessionDeleteAll(items);
+      const keys = new Set(items.map(({ id, game }) => `${game}-${id}`));
+      setAllSessions((prev) => prev.filter((s) => !keys.has(`${s.game}-${s.id}`)));
     }
     setDeleteTarget(null);
   };
 
-  const totalPages = Math.max(1, Math.ceil(filteredLaps.length / PAGE_SIZE));
-  const pagedLaps = filteredLaps.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
-
-  if (selectedLap) {
-    return (
-      <div className="session-history h-100 d-flex flex-column overflow-hidden">
-        <DetailPanel
-          lap={selectedLap}
-          fromPage={currentPage}
-          onBack={() => setSelectedLap(null)}
-          onSetupSaved={handleSetupSaved}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="session-history h-100 d-flex flex-column overflow-hidden">
-      {/* Title row */}
-      <Row className="mb-0 align-items-baseline g-0 flex-shrink-0 px-3 pt-3 pb-2">
-        <Col xs="auto" className="sh-title me-2">
-          Storico giri
-        </Col>
-        {mockHistoryMode && (
-          <Col xs="auto">
-            <Badge bg="warning" text="dark" style={{ fontSize: 10 }}>
-              <FontAwesomeIcon icon={faFlask} className="me-1" />
-              Mock
-            </Badge>
-          </Col>
-        )}
-      </Row>
+      <div className="px-3 pt-3 pb-2 flex-shrink-0 d-flex align-items-center gap-2">
+        <span className="sh-title">Elenco sessioni</span>
+        {loading && <Spinner size="sm" variant="danger" />}
+      </div>
 
-      {/* Filter + sort bar */}
       <div className="sh-filter-bar flex-shrink-0">
         <Form.Select
           size="sm"
           className="sh-filter-select"
           value={filterGame}
-          onChange={(e) => setFilterGame(e.target.value as "" | "r3e" | "ace")}
-          style={{ maxWidth: 110 }}
+          onChange={(e) => setFilterGame(e.target.value as "" | GameSource)}
+          style={{ maxWidth: 120 }}
         >
           <option value="">Tutti i giochi</option>
           <option value="r3e">RaceRoom</option>
@@ -481,9 +175,7 @@ const SessionHistory = () => {
         >
           <option value="">Tutte le auto</option>
           {carOptions.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label}
-            </option>
+            <option key={o.id} value={o.id}>{o.label}</option>
           ))}
         </Form.Select>
 
@@ -496,24 +188,22 @@ const SessionHistory = () => {
         >
           <option value="">Tutti i circuiti</option>
           {trackOptions.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label}
-            </option>
+            <option key={o.id} value={o.id}>{o.label}</option>
           ))}
         </Form.Select>
 
         <Form.Select
           size="sm"
           className="sh-filter-select ms-auto"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as "date" | "laptime")}
-          style={{ maxWidth: 160 }}
+          value={sort}
+          onChange={(e) => setSort(e.target.value as "asc" | "desc")}
+          style={{ maxWidth: 140 }}
         >
-          <option value="date">Data ↓</option>
-          <option value="laptime">Tempo sul giro </option>
+          <option value="desc">Data ↓</option>
+          <option value="asc">Data ↑</option>
         </Form.Select>
 
-        {!mockHistoryMode && !!filterCar && !!filterTrack && filteredLaps.length > 0 && (
+        {filtered.length > 0 && (
           <Button
             variant="outline-danger"
             size="sm"
@@ -527,70 +217,77 @@ const SessionHistory = () => {
       </div>
 
       <div className="overflow-y-auto flex-grow-1 px-3">
-        {loading ? (
-          <div className="d-flex align-items-center gap-2 text-secondary py-3">
-            <Spinner size="sm" variant="danger" /> Caricamento...
-          </div>
-        ) : !mockHistoryMode && (!filterCar || !filterTrack) ? (
+        {!loading && filtered.length === 0 ? (
           <p className="text-secondary py-2 mb-0">
-            Seleziona auto e circuito per visualizzare i giri.
-            {!filterGame && " Puoi anche filtrare per gioco."}
-          </p>
-        ) : filteredLaps.length === 0 ? (
-          <p className="text-secondary py-2 mb-0">
-            Nessun giro registrato per questa combinazione.
+            Nessuna sessione registrata.
           </p>
         ) : (
           <table className="sh-table w-100">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Tempo</th>
-                <th>S1</th>
-                <th>S2</th>
-                <th>S3</th>
+                <th>Sim</th>
+                <th>Auto</th>
+                <th>Circuito</th>
+                <th>Giri</th>
+                <th>Best</th>
                 <th>Data</th>
-                {!filterGame && <th>Gioco</th>}
+                <th>Stato</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {pagedLaps.map((lap) => (
+              {pageItems.map((s) => (
                 <tr
-                  key={`${lap.game}-${lap.id}`}
+                  key={`${s.game}-${s.id}`}
                   className="sh-row"
-                  onClick={() => setSelectedLap(lap)}
+                  onClick={() => handleRowClick(s)}
                 >
-                  <td>{lap.lap_number}</td>
-                  <td className="sh-laptime">{formatLapTime(lap.lap_time)}</td>
-                  <td>{formatLapTime(lap.sector1)}</td>
-                  <td>{formatLapTime(lap.sector2)}</td>
-                  <td>{formatLapTime(lap.sector3)}</td>
-                  <td className="sh-date">{formatDate(lap.recorded_at)}</td>
-                  {!filterGame && (
-                    <td>
-                      <Badge
-                        bg={lap.game === "ace" ? "info" : "secondary"}
-                        style={{ fontSize: 10 }}
-                      >
-                        {lap.game === "ace" ? "ACE" : "R3E"}
-                      </Badge>
-                    </td>
-                  )}
-                  <td className="sh-actions" onClick={(e) => e.stopPropagation()}>
-                    {lap.setup_json && (
-                      <FontAwesomeIcon
-                        icon={faGear}
-                        className="sh-has-setup me-2"
-                        aria-label="Setup disponibile"
-                      />
+                  <td>
+                    <Badge
+                      bg={s.game === "ace" ? "info" : "secondary"}
+                      style={{ fontSize: 10 }}
+                    >
+                      {s.game === "ace" ? "ACE" : "R3E"}
+                    </Badge>
+                  </td>
+                  <td>
+                    {s.car_name ?? s.car}
+                    {s.car_class_name && (
+                      <span className="text-secondary ms-1" style={{ fontSize: 11 }}>
+                        ({s.car_class_name})
+                      </span>
                     )}
+                  </td>
+                  <td>
+                    {s.track_name ?? s.track}
+                    {s.layout_name && s.layout_name !== s.track_name && (
+                      <span className="text-secondary ms-1" style={{ fontSize: 11 }}>
+                        — {s.layout_name}
+                      </span>
+                    )}
+                  </td>
+                  <td>{s.lap_count}</td>
+                  <td className="sh-laptime">
+                    {s.best_lap != null ? formatLapTime(s.best_lap) : "—"}
+                  </td>
+                  <td className="sh-date">{formatDate(s.started_at)}</td>
+                  <td>
+                    {s.ended_at ? (
+                      <Badge bg="secondary" style={{ fontSize: 10 }}>Chiusa</Badge>
+                    ) : (
+                      <Badge bg="success" style={{ fontSize: 10 }}>
+                        <FontAwesomeIcon icon={faFlask} className="me-1" />
+                        Attiva
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="sh-actions" onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="link"
                       size="sm"
                       className="sh-del-btn"
-                      onClick={() => setDeleteTarget({ type: "single", lap })}
-                      aria-label="Elimina giro"
+                      onClick={() => setDeleteTarget({ type: "single", session: s })}
+                      aria-label="Elimina sessione"
                     >
                       <FontAwesomeIcon icon={faTrash} />
                     </Button>
@@ -608,20 +305,20 @@ const SessionHistory = () => {
             variant="link"
             size="sm"
             className="sh-page-btn"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
           >
             ‹ Prec
           </Button>
           <div className="sh-page-numbers d-flex gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
               <button
-                key={page}
-                className={`sh-page-num ${page === currentPage ? "active" : ""}`}
-                onClick={() => setCurrentPage(page)}
+                key={p}
+                className={`sh-page-num ${p === page ? "active" : ""}`}
+                onClick={() => setPage(p)}
                 type="button"
               >
-                {page}
+                {p}
               </button>
             ))}
           </div>
@@ -629,13 +326,14 @@ const SessionHistory = () => {
             variant="link"
             size="sm"
             className="sh-page-btn"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
           >
             Succ ›
           </Button>
         </div>
       )}
+
       <Modal
         show={deleteTarget !== null}
         onHide={() => setDeleteTarget(null)}
@@ -649,18 +347,19 @@ const SessionHistory = () => {
         <Modal.Body>
           {deleteTarget?.type === "single" ? (
             <p className="mb-0">
-              Stai per eliminare il <strong>Giro {deleteTarget.lap.lap_number}</strong>
-              {" "}({formatLapTime(deleteTarget.lap.lap_time)}) del{" "}
-              {formatDate(deleteTarget.lap.recorded_at)}.
+              Stai per eliminare la sessione del{" "}
+              {formatDate(deleteTarget.session.started_at)} (
+              {deleteTarget.session.car_name ?? deleteTarget.session.car} —{" "}
+              {deleteTarget.session.track_name ?? deleteTarget.session.track}).
               <br />
               <span className="text-danger">L'operazione è irreversibile.</span>
             </p>
           ) : (
             <p className="mb-0">
-              Stai per eliminare <strong>tutti i {filteredLaps.length} giri</strong> della
-              selezione corrente.
+              Stai per eliminare <strong>tutte le {filtered.length} sessioni</strong>{" "}
+              della selezione corrente.
               <br />
-              <span className="text-danger">L'operazione è irreversibile e non può essere annullata.</span>
+              <span className="text-danger">L'operazione è irreversibile.</span>
             </p>
           )}
         </Modal.Body>

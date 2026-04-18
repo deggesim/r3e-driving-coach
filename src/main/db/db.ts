@@ -47,27 +47,45 @@ const initSchema = (db: Database.Database): void => {
       layout       TEXT NOT NULL,
       session_type TEXT NOT NULL DEFAULT 'practice',
       started_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      ended_at     TEXT,
       best_lap     REAL,
       lap_count    INTEGER NOT NULL DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS session_setups_r3e (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id        INTEGER NOT NULL REFERENCES sessions_r3e(id) ON DELETE CASCADE,
+      loaded_at         TEXT NOT NULL DEFAULT (datetime('now')),
+      setup_json        TEXT NOT NULL,
+      setup_screenshots TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_setups_r3e_session ON session_setups_r3e(session_id);
+
     CREATE TABLE IF NOT EXISTS laps_r3e (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id    INTEGER NOT NULL REFERENCES sessions_r3e(id),
+      session_id    INTEGER NOT NULL REFERENCES sessions_r3e(id) ON DELETE CASCADE,
+      setup_id      INTEGER REFERENCES session_setups_r3e(id) ON DELETE SET NULL,
       lap_number    INTEGER NOT NULL,
       lap_time      REAL NOT NULL,
       sector1       REAL,
       sector2       REAL,
       sector3       REAL,
       valid         INTEGER NOT NULL DEFAULT 1,
-      analysis_json     TEXT,
-      pdf_path          TEXT,
-      setup_json        TEXT,
-      setup_screenshots TEXT,
-      recorded_at       TEXT NOT NULL DEFAULT (datetime('now'))
+      zones_json    TEXT,
+      recorded_at   TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE INDEX IF NOT EXISTS idx_laps_r3e_session ON laps_r3e(session_id);
 
-    CREATE INDEX IF NOT EXISTS idx_laps_session ON laps_r3e(session_id);
+    CREATE TABLE IF NOT EXISTS session_analyses_r3e (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id        INTEGER NOT NULL REFERENCES sessions_r3e(id) ON DELETE CASCADE,
+      version           INTEGER NOT NULL,
+      template_v3       TEXT NOT NULL,
+      section5_summary  TEXT,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(session_id, version)
+    );
+    CREATE INDEX IF NOT EXISTS idx_analyses_r3e_session ON session_analyses_r3e(session_id);
 
     CREATE TABLE IF NOT EXISTS sessions_ace (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,27 +94,45 @@ const initSchema = (db: Database.Database): void => {
       layout       TEXT NOT NULL,
       session_type TEXT NOT NULL DEFAULT 'practice',
       started_at   TEXT NOT NULL DEFAULT (datetime('now')),
+      ended_at     TEXT,
       best_lap     REAL,
       lap_count    INTEGER NOT NULL DEFAULT 0
     );
 
-    CREATE TABLE IF NOT EXISTS laps_ace (
+    CREATE TABLE IF NOT EXISTS session_setups_ace (
       id                INTEGER PRIMARY KEY AUTOINCREMENT,
-      session_id        INTEGER NOT NULL REFERENCES sessions_ace(id),
-      lap_number        INTEGER NOT NULL,
-      lap_time          REAL NOT NULL,
-      sector1           REAL,
-      sector2           REAL,
-      sector3           REAL,
-      valid             INTEGER NOT NULL DEFAULT 1,
-      analysis_json     TEXT,
-      pdf_path          TEXT,
-      setup_json        TEXT,
-      setup_screenshots TEXT,
-      recorded_at       TEXT NOT NULL DEFAULT (datetime('now'))
+      session_id        INTEGER NOT NULL REFERENCES sessions_ace(id) ON DELETE CASCADE,
+      loaded_at         TEXT NOT NULL DEFAULT (datetime('now')),
+      setup_json        TEXT NOT NULL,
+      setup_screenshots TEXT
     );
+    CREATE INDEX IF NOT EXISTS idx_setups_ace_session ON session_setups_ace(session_id);
 
+    CREATE TABLE IF NOT EXISTS laps_ace (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id    INTEGER NOT NULL REFERENCES sessions_ace(id) ON DELETE CASCADE,
+      setup_id      INTEGER REFERENCES session_setups_ace(id) ON DELETE SET NULL,
+      lap_number    INTEGER NOT NULL,
+      lap_time      REAL NOT NULL,
+      sector1       REAL,
+      sector2       REAL,
+      sector3       REAL,
+      valid         INTEGER NOT NULL DEFAULT 1,
+      zones_json    TEXT,
+      recorded_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE INDEX IF NOT EXISTS idx_laps_ace_session ON laps_ace(session_id);
+
+    CREATE TABLE IF NOT EXISTS session_analyses_ace (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id        INTEGER NOT NULL REFERENCES sessions_ace(id) ON DELETE CASCADE,
+      version           INTEGER NOT NULL,
+      template_v3       TEXT NOT NULL,
+      section5_summary  TEXT,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(session_id, version)
+    );
+    CREATE INDEX IF NOT EXISTS idx_analyses_ace_session ON session_analyses_ace(session_id);
 
     CREATE TABLE IF NOT EXISTS app_config (
       key   TEXT PRIMARY KEY,

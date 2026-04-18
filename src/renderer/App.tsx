@@ -17,6 +17,7 @@ import {
 import { useIPC, useConfig } from "./hooks/useIPC";
 import { useIPCStore } from "./store/ipcStore";
 import { useSettingsStore } from "./store/settingsStore";
+import { subscribeSessionIPC } from "./store/sessionStore";
 import { useVoiceCoach } from "./hooks/useVoiceCoach";
 import iconUrl from "/icon.png";
 import TTSManager from "./components/TTSManager";
@@ -32,11 +33,14 @@ const App = () => {
   // Bootstrap IPC subscriptions (writes to ipcStore)
   useIPC();
 
+  // Subscribe once to session:* push channels
+  useEffect(() => {
+    subscribeSessionIPC();
+  }, []);
+
   // Read IPC state from store
   const lastAlert = useIPCStore((s) => s.lastAlert);
-  const lastLap = useIPCStore((s) => s.lastLap);
   const status = useIPCStore((s) => s.status);
-  const lastAnalysis = useIPCStore((s) => s.lastAnalysis);
 
   // Settings state from Zustand store
   const {
@@ -115,14 +119,12 @@ const App = () => {
     setAlerts((prev) => [...prev.slice(-19), lastAlert]);
   }, [lastAlert]);
 
-  const postLapText = lastAnalysis?.section5Summary ?? null;
-
   return (
     <div className="app">
       {/* Headless TTS */}
       <TTSManager
         alerts={alerts}
-        postLapText={postLapText}
+        postLapText={null}
         enabled={ttsEnabled}
         azureEnabled={azureTtsEnabled}
         assistantName={assistantName}
@@ -146,14 +148,14 @@ const App = () => {
             className={`tab-btn ${tab === "debriefing" ? "active" : ""}`}
             onClick={() => setTab("debriefing")}
           >
-            Debriefing
+            Analisi in tempo reale
           </Button>
           <Button
             variant="link"
             className={`tab-btn ${tab === "history" ? "active" : ""}`}
             onClick={() => setTab("history")}
           >
-            Storico
+            Elenco sessioni
           </Button>
           <Button
             variant="link"
@@ -208,10 +210,10 @@ const App = () => {
 
       {/* Main content */}
       <div className="main-content">
-        {tab === "debriefing" && (
-          <Debriefing lastLap={lastLap} lastAnalysis={lastAnalysis} />
+        {tab === "debriefing" && <Debriefing />}
+        {tab === "history" && (
+          <SessionHistory onOpenSession={() => setTab("debriefing")} />
         )}
-        {tab === "history" && <SessionHistory />}
         {tab === "settings" && <SettingsPanel />}
       </div>
 

@@ -148,41 +148,58 @@ export type GameStatus = {
 
 export type SessionRow = {
   id: number;
+  game: GameSource;
   car: string;
   track: string;
   layout: string;
   session_type: string;
   started_at: string;
+  ended_at: string | null;
   best_lap: number | null;
   lap_count: number;
+  // Resolved display names (populated by queries)
+  car_name?: string;
+  track_name?: string;
+  layout_name?: string;
+  car_class_name?: string;
 };
 
 export type LapRow = {
   id: number;
   session_id: number;
+  setup_id: number | null;
   lap_number: number;
   lap_time: number;
   sector1: number | null;
   sector2: number | null;
   sector3: number | null;
   valid: boolean;
-  analysis_json: string | null;
-  pdf_path: string | null;
-  setup_json: string | null;
-  setup_screenshots: string | null;
+  zones_json: string | null;
   recorded_at: string;
 };
 
-/** LapRow enriched with session info and resolved display names. */
-export type LapRowFull = LapRow & {
-  car: string; // numeric ID from session (R3E) or slug (ACE)
-  track: string;
-  layout: string;
-  game: GameSource; // 'r3e' | 'ace'
-  car_name: string; // resolved display name
-  track_name: string;
-  layout_name: string;
-  car_class_name: string; // resolved class name (may be empty)
+export type SessionSetupRow = {
+  id: number;
+  session_id: number;
+  loaded_at: string;
+  setup: SetupData;
+  setup_screenshots: string | null;
+};
+
+export type SessionAnalysisRow = {
+  id: number;
+  session_id: number;
+  version: number;
+  template_v3: string;
+  section5_summary: string | null;
+  created_at: string;
+};
+
+export type SessionDetail = {
+  session: SessionRow;
+  laps: LapRow[];
+  setups: SessionSetupRow[];
+  analyses: SessionAnalysisRow[];
 };
 
 // --- Setup decoding ---
@@ -199,16 +216,6 @@ export type SetupData = {
   setupText: string; // free-form markdown summary
   params: SetupParam[]; // structured list of parameters
   screenshots: string[]; // filenames used
-};
-
-// --- Analysis result from Claude API ---
-
-export type LapAnalysis = {
-  lapNumber: number;
-  lapTime: number;
-  templateV3: string; // Full Template v3 markdown
-  section5Summary: string; // Section [5] text for TTS
-  generatedAt: string;
 };
 
 // --- Parsed frame from R3E shared memory (full) ---
@@ -320,25 +327,59 @@ export type AzureVoice = {
 
 // --- electronAPI exposed via preload ---
 
+export type SessionStartResult =
+  | { ok: true; sessionId: number; game: GameSource }
+  | { ok: false; reason: string };
+
+export type SessionListParams = {
+  page?: number;
+  pageSize?: number;
+  game?: GameSource | null;
+  car?: string | null;
+  track?: string | null;
+  sort?: "asc" | "desc";
+};
+
+export type SessionListResult = {
+  items: SessionRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type ElectronAPI = {
   // Push channels (Main → Renderer)
   onFrame: (callback: (data: R3EFrame) => void) => void;
   onAlert: (callback: (data: Alert) => void) => void;
   onLapComplete: (callback: (data: LapRecord) => void) => void;
   onStatus: (callback: (data: GameStatus) => void) => void;
-  onAnalysis: (callback: (data: LapAnalysis) => void) => void;
   onVoiceChunk: (callback: (data: { token: string }) => void) => void;
   onVoiceDone: (callback: (data: { answer: string }) => void) => void;
   onVoiceAudio: (callback: (data: unknown) => void) => void;
 
-  // Request/response
-  getLaps: (params: { car: string; track: string }) => Promise<LapRow[]>;
-  getAllLaps: () => Promise<LapRowFull[]>;
-  deleteLap: (params: { id: number; game: string }) => Promise<void>;
-  deleteAllLaps: (items: Array<{ id: number; game: string }>) => Promise<void>;
-  getSession: (id: number, game: string) => Promise<SessionRow | null>;
+  // Session push channels
+  onSessionStarted: (callback: (data: SessionRow) => void) => void;
+  onSessionClosed: (callback: (data: { id: number; game: GameSource }) => void) => void;
+  onSessionLapAdded: (callback: (data: { sessionId: number; game: GameSource; lap: LapRow }) => void) => void;
+  onSessionSetupLoaded: (callback: (data: { sessionId: number; game: GameSource; setup: SessionSetupRow }) => void) => void;
+  onSessionAnalysisChunk: (callback: (data: { sessionId: number; version: number; token: string }) => void) => void;
+  onSessionAnalysisDone: (callback: (data: { sessionId: number; analysis: SessionAnalysisRow }) => void) => void;
+
+  // Config
   configGet: (key: string) => Promise<unknown>;
   configSet: (key: string, value: unknown) => Promise<void>;
+
+  // Session lifecycle
+  sessionStart: () => Promise<SessionStartResult>;
+  sessionEnd: () => Promise<void>;
+  sessionAnalyze: (params?: { sessionId?: number; game?: GameSource }) => Promise<{ ok: boolean; reason?: string }>;
+  sessionLoadSetup: (params: { setup: SetupData }) => Promise<{ setupId: number }>;
+  sessionList: (params: SessionListParams) => Promise<SessionListResult>;
+  sessionGetCurrent: () => Promise<SessionDetail | null>;
+  sessionGetDetail: (params: { id: number; game: GameSource }) => Promise<SessionDetail | null>;
+  sessionExportPdf: (params: { id: number; game: GameSource }) => Promise<string | null>;
+  sessionDelete: (params: { id: number; game: GameSource }) => Promise<void>;
+  sessionDeleteAll: (items: Array<{ id: number; game: GameSource }>) => Promise<void>;
 
   // Voice coach
   voiceQuery: (question: string) => Promise<void>;
@@ -360,14 +401,12 @@ export type ElectronAPI = {
   windowMaximize: () => void;
   removeAllListeners: (channel: string) => void;
 
-  // R3E Setup analysis (screenshot-based)
+  // R3E Setup analysis (screenshot-based) — still used to produce SetupData
   listScreenshots: () => Promise<Array<{ name: string; thumbnailB64: string }>>;
   decodeSetup: (params: {
     filenames: string[];
     expectedCar: string;
   }) => Promise<SetupData>;
-  saveSetup: (params: { lapId: number; game: GameSource; setup: SetupData }) => Promise<void>;
-  exportPdf: (params: { lapId: number; game?: GameSource }) => Promise<string | null>;
 
   // ACE Setup analysis (file-based)
   aceListSetupCars: () => Promise<string[]>;
@@ -379,23 +418,6 @@ export type ElectronAPI = {
     Array<{ filename: string; filePath: string; modifiedAt: string }>
   >;
   aceReadSetup: (params: { filePath: string }) => Promise<SetupData>;
-
-  // Real-time session setup
-  sessionSetSetup: (setup: SetupData | null) => Promise<void>;
-  exportPdfFromData: (params: {
-    lapNumber: number;
-    lapTime: number;
-    sector1: number | null;
-    sector2: number | null;
-    sector3: number | null;
-    car: string;
-    track: string;
-    layout: string;
-    recordedAt: string;
-    analysisJson: string | null;
-    setupJson: string | null;
-    game?: GameSource;
-  }) => Promise<string | null>;
 };
 
 declare global {

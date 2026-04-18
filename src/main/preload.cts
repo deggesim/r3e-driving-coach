@@ -20,9 +20,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onStatus: (callback: (data: unknown) => void) => {
     ipcRenderer.on('r3e:status', (_event, data) => callback(data));
   },
-  onAnalysis: (callback: (data: unknown) => void) => {
-    ipcRenderer.on('r3e:analysis', (_event, data) => callback(data));
-  },
 
   // Voice coach push channels (Main → Renderer)
   onVoiceChunk: (callback: (data: unknown) => void) => {
@@ -35,21 +32,51 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('coach:voiceAudio', (_event, data) => callback(data));
   },
 
-  // Renderer → Main (request/response)
-  getLaps: (params: { car: string; track: string }) =>
-    ipcRenderer.invoke('db:getLaps', params),
-  getAllLaps: () =>
-    ipcRenderer.invoke('db:getAllLaps'),
-  deleteLap: (params: { id: number; game: string }) =>
-    ipcRenderer.invoke('db:deleteLap', params),
-  deleteAllLaps: (items: Array<{ id: number; game: string }>) =>
-    ipcRenderer.invoke('db:deleteAllLaps', items),
-  getSession: (id: number, game: string) =>
-    ipcRenderer.invoke('db:getSession', { id, game }),
+  // Session push channels
+  onSessionStarted: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('session:started', (_event, data) => callback(data));
+  },
+  onSessionClosed: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('session:closed', (_event, data) => callback(data));
+  },
+  onSessionLapAdded: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('session:lapAdded', (_event, data) => callback(data));
+  },
+  onSessionSetupLoaded: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('session:setupLoaded', (_event, data) => callback(data));
+  },
+  onSessionAnalysisChunk: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('session:analysisChunk', (_event, data) => callback(data));
+  },
+  onSessionAnalysisDone: (callback: (data: unknown) => void) => {
+    ipcRenderer.on('session:analysisDone', (_event, data) => callback(data));
+  },
+
+  // Config
   configGet: (key: string) =>
     ipcRenderer.invoke('config:get', key),
   configSet: (key: string, value: unknown) =>
     ipcRenderer.invoke('config:set', key, value),
+
+  // Session lifecycle
+  sessionStart: () => ipcRenderer.invoke('session:start'),
+  sessionEnd: () => ipcRenderer.invoke('session:end'),
+  sessionAnalyze: (params?: { sessionId?: number; game?: string }) =>
+    ipcRenderer.invoke('session:analyze', params ?? {}),
+  sessionLoadSetup: (params: { setup: unknown }) =>
+    ipcRenderer.invoke('session:loadSetup', params),
+  sessionList: (params: unknown) =>
+    ipcRenderer.invoke('session:list', params),
+  sessionGetCurrent: () =>
+    ipcRenderer.invoke('session:getCurrent'),
+  sessionGetDetail: (params: { id: number; game: string }) =>
+    ipcRenderer.invoke('session:getDetail', params),
+  sessionExportPdf: (params: { id: number; game: string }) =>
+    ipcRenderer.invoke('session:exportPdf', params),
+  sessionDelete: (params: { id: number; game: string }) =>
+    ipcRenderer.invoke('session:delete', params),
+  sessionDeleteAll: (items: Array<{ id: number; game: string }>) =>
+    ipcRenderer.invoke('session:deleteAll', items),
 
   // Voice coach query
   voiceQuery: (question: string) =>
@@ -77,29 +104,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners(channel);
   },
 
-  // Setup analysis
+  // Setup analysis (used to produce SetupData, then passed to sessionLoadSetup)
   listScreenshots: () =>
     ipcRenderer.invoke('setup:listScreenshots'),
   decodeSetup: (params: { filenames: string[]; expectedCar: string }) =>
     ipcRenderer.invoke('setup:decodeSetup', params),
-  saveSetup: (params: { lapId: number; setup: unknown }) =>
-    ipcRenderer.invoke('setup:saveSetup', params),
-  exportPdf: (params: { lapId: number; game?: string }) =>
-    ipcRenderer.invoke('setup:exportPdf', params),
-  exportPdfFromData: (params: {
-    lapNumber: number;
-    lapTime: number;
-    sector1: number | null;
-    sector2: number | null;
-    sector3: number | null;
-    car: string;
-    track: string;
-    layout: string;
-    recordedAt: string;
-    analysisJson: string | null;
-    setupJson: string | null;
-    game?: string;
-  }) => ipcRenderer.invoke('setup:exportPdfFromData', params),
 
   // ACE setup (file-based)
   aceListSetupCars: () =>
@@ -110,8 +119,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('ace:listSetupFiles', params),
   aceReadSetup: (params: { filePath: string }) =>
     ipcRenderer.invoke('ace:readSetup', params),
-
-  // Real-time session setup
-  sessionSetSetup: (setup: unknown) =>
-    ipcRenderer.invoke('session:setSetup', setup),
 });

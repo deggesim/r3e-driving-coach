@@ -11,7 +11,16 @@
  */
 
 import { BRAKE_TEMP } from "../../shared/alert-types.js";
-import type { LapRecord, Deviation, ZoneData, SetupData } from "../../shared/types.js";
+import type {
+  LapRecord,
+  Deviation,
+  ZoneData,
+  SetupData,
+  LapRow,
+  SessionRow,
+  SessionSetupRow,
+  SessionAnalysisRow,
+} from "../../shared/types.js";
 import { formatLapTime } from "../../shared/format.js";
 
 export const SYSTEM_PROMPT = `Sei un ingegnere di pista esperto che analizza la telemetria di gare automobilistiche.
@@ -236,7 +245,7 @@ const buildBrakeTempSummary = (lap: LapRecord): string | null => {
  * Select zones that are "interesting" for the analysis:
  * zones with deviations, braking zones, or high TC/ABS activity.
  */
-const getSignificantZones = (
+export const getSignificantZones = (
   zones: ZoneData[],
   deviations: Deviation[] | null,
 ): ZoneData[] => {
@@ -250,4 +259,151 @@ const getSignificantZones = (
       z.absActivations > 2 ||
       z.overlapFrames > 3,
   );
+};
+
+export const SESSION_SYSTEM_PROMPT = `Sei un ingegnere di pista esperto che analizza l'intera sessione di guida di un pilota.
+Rispondi SEMPRE in italiano con tono tecnico da ingegnere. Includi SEMPRE dati numerici.
+
+Analizzi più giri e più setup caricati nella sessione. Devi:
+- Identificare trend (miglioramento/peggioramento tra giri).
+- Confrontare l'effetto dei diversi setup caricati (se più di uno) sulla telemetria e sui tempi.
+- Segnalare problemi ricorrenti per curva.
+- Se esistono analisi precedenti nella sessione, tieni conto di quanto già detto e aggiungi nuove osservazioni o conferma/smentisci raccomandazioni.
+
+Output Template v3 con le stesse 5 sezioni:
+[1] Analisi Telemetria — panoramica sessione, trend giri, curve critiche.
+[2] Setup Attuale vs Proposto — confronto tra setup caricati se presenti, proposte concrete. Ometti se nessun setup.
+[3] Problemi Identificati — elenco ordinato per impatto sul tempo giro.
+[4] Raccomandazioni Modifiche — azioni concrete per i prossimi giri.
+[5] Sintesi e Prossimo Step — max 3 frasi senza markdown: SOLO il problema più critico della sessione e l'unica azione prioritaria.
+
+Regole:
+- Usa @XXXm per la posizione e il nome curva quando disponibile.
+- Temperatura freni ideale: 550°C ±137.5°C (finestra 413-688°C).
+- Pressioni gomme in PSI (ACE) o kPa (R3E).
+- Se temperature freni = -1, ignora.
+- R3E Leaderboard: gomme fisse 85°C → non è un problema.`;
+
+const summarizeLapZones = (
+  zones: ZoneData[],
+  cornerNames: Map<number, string>,
+): string[] => {
+  const significant = getSignificantZones(zones, null).slice(0, 8);
+  const lines: string[] = [];
+  for (const z of significant) {
+    const cname = cornerNames.get(z.zone);
+    const label = cname ? `${cname} (@${z.dist}m)` : `@${z.dist}m`;
+    const bits: string[] = [];
+    bits.push(`min ${z.minSpeedKmh.toFixed(0)}km/h`);
+    bits.push(`freno ${(z.maxBrakePct * 100).toFixed(0)}%`);
+    bits.push(`gas ${(z.avgThrottlePct * 100).toFixed(0)}%`);
+    if (z.tcActivations > 0) bits.push(`TC:${z.tcActivations}`);
+    if (z.absActivations > 0) bits.push(`ABS:${z.absActivations}`);
+    if (z.overlapFrames > 3) bits.push(`overlap:${z.overlapFrames}`);
+    lines.push(`  - ${label} → ${bits.join(", ")}`);
+  }
+  return lines;
+};
+
+export type SessionPromptInput = {
+  session: SessionRow;
+  laps: LapRow[]; // ordered by lap_number asc
+  setups: SessionSetupRow[]; // ordered by loaded_at asc
+  priorAnalyses: SessionAnalysisRow[]; // ordered by version asc
+  cornerNames: Map<number, string>;
+  carName?: string;
+  trackName?: string;
+  layoutName?: string;
+};
+
+export const buildSessionPrompt = (input: SessionPromptInput): string => {
+  const { session, laps, setups, priorAnalyses, cornerNames } = input;
+  const parts: string[] = [];
+
+  parts.push(`## Sessione`);
+  parts.push(`- Gioco: ${session.game.toUpperCase()}`);
+  parts.push(`- Auto: ${input.carName ?? session.car}`);
+  parts.push(
+    `- Circuito: ${input.trackName ?? session.track} (${input.layoutName ?? session.layout})`,
+  );
+  parts.push(`- Inizio: ${session.started_at}`);
+  if (session.ended_at) parts.push(`- Fine: ${session.ended_at}`);
+  parts.push(`- Giri registrati: ${laps.length}`);
+  if (session.best_lap != null)
+    parts.push(`- Miglior giro: ${formatLapTime(session.best_lap)}`);
+  parts.push("");
+
+  if (laps.length > 0) {
+    parts.push(`## Giri`);
+    for (const lap of laps) {
+      const s1 = lap.sector1 != null ? formatLapTime(lap.sector1) : "--";
+      const s2 = lap.sector2 != null ? formatLapTime(lap.sector2) : "--";
+      const s3 = lap.sector3 != null ? formatLapTime(lap.sector3) : "--";
+      const valid = lap.valid ? "✓" : "✗";
+      const setupTag = lap.setup_id != null ? ` [setup #${lap.setup_id}]` : "";
+      parts.push(
+        `- Giro ${lap.lap_number}: ${formatLapTime(lap.lap_time)} [S1:${s1} S2:${s2} S3:${s3}] ${valid}${setupTag}`,
+      );
+      if (lap.zones_json) {
+        try {
+          const zones = JSON.parse(lap.zones_json) as ZoneData[];
+          const summary = summarizeLapZones(zones, cornerNames);
+          if (summary.length > 0) parts.push(...summary);
+        } catch {
+          // ignore malformed
+        }
+      }
+    }
+    parts.push("");
+  }
+
+  if (setups.length > 0) {
+    parts.push(`## Setup caricati in sessione (ordine cronologico)`);
+    setups.forEach((s, idx) => {
+      parts.push(
+        `### Setup #${idx + 1} (id=${s.id}, caricato ${s.loaded_at})`,
+      );
+      parts.push(
+        `- Auto: ${s.setup.carFound}${s.setup.carVerified ? " (verificata)" : " (non verificata)"}`,
+      );
+      for (const p of s.setup.params) {
+        parts.push(`- ${p.category} / ${p.parameter}: ${p.value}`);
+      }
+      parts.push("");
+    });
+    if (setups.length > 1) {
+      parts.push(
+        `Confronta i setup sopra elencati in sezione [2] evidenziando le differenze e l'impatto sulla telemetria dei giri associati.`,
+      );
+      parts.push("");
+    }
+  } else {
+    parts.push(
+      `## Setup\nNessun setup caricato in sessione. Ometti la sezione [2] o proponi suggerimenti generici.`,
+    );
+    parts.push("");
+  }
+
+  if (priorAnalyses.length > 0) {
+    parts.push(`## Analisi precedenti (riassunto)`);
+    for (const a of priorAnalyses) {
+      parts.push(
+        `### Analisi #${a.version} (${a.created_at})`,
+      );
+      if (a.section5_summary) {
+        parts.push(`Sintesi: ${a.section5_summary}`);
+      } else {
+        // Fallback: first ~500 chars of templateV3
+        parts.push(a.template_v3.slice(0, 500));
+      }
+      parts.push("");
+    }
+    parts.push(
+      `Questa è l'analisi #${priorAnalyses.length + 1}: tieni conto delle precedenti, conferma o aggiorna i consigli in base ai nuovi dati.`,
+    );
+    parts.push("");
+  }
+
+  parts.push(`Produci l'analisi nel formato Template v3 (sezioni [1]-[5]).`);
+  return parts.join("\n");
 };

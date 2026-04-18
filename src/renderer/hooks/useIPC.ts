@@ -10,7 +10,6 @@ import type {
   Alert,
   LapRecord,
   GameStatus,
-  LapAnalysis,
 } from "../../shared/types";
 
 export const useIPC = (): void => {
@@ -18,7 +17,6 @@ export const useIPC = (): void => {
   const setLastAlert = useIPCStore((s) => s.setLastAlert);
   const setLastLap = useIPCStore((s) => s.setLastLap);
   const setStatus = useIPCStore((s) => s.setStatus);
-  const setLastAnalysis = useIPCStore((s) => s.setLastAnalysis);
 
   useEffect(() => {
     if (!window.electronAPI) return;
@@ -27,18 +25,14 @@ export const useIPC = (): void => {
     window.electronAPI.onAlert((data) => setLastAlert(data as Alert));
     window.electronAPI.onLapComplete((data) => setLastLap(data as LapRecord));
     window.electronAPI.onStatus((data) => setStatus(data as GameStatus));
-    window.electronAPI.onAnalysis((data) =>
-      setLastAnalysis(data as LapAnalysis),
-    );
 
     return () => {
       window.electronAPI.removeAllListeners("r3e:frame");
       window.electronAPI.removeAllListeners("r3e:alert");
       window.electronAPI.removeAllListeners("r3e:lapComplete");
       window.electronAPI.removeAllListeners("r3e:status");
-      window.electronAPI.removeAllListeners("r3e:analysis");
     };
-  }, [setFrame, setLastAlert, setLastLap, setStatus, setLastAnalysis]);
+  }, [setFrame, setLastAlert, setLastLap, setStatus]);
 };
 
 /** Config helpers — thin IPC wrappers, stable references via useCallback. */
