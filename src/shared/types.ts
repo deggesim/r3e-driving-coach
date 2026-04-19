@@ -22,6 +22,7 @@ export type Alert = {
   priority: AlertPriority;
   zone: number;
   dist: number;
+  lap: number;
   message: string;
   immediate: boolean;
   data?: Record<string, unknown>;

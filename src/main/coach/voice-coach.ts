@@ -8,6 +8,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type Database from "better-sqlite3";
 import type {
+  Alert,
   Deviation,
   GameSource,
   LapRow,
@@ -36,6 +37,7 @@ type SessionContext = {
   cornerMap: Map<number, string>;
   setups: SessionSetupRow[];
   analyses: SessionAnalysisRow[];
+  alerts: Alert[];
 };
 
 const buildVoiceContext = (ctx: SessionContext): string => {
@@ -112,6 +114,15 @@ const buildVoiceContext = (ctx: SessionContext): string => {
     }
   }
 
+  if (ctx.alerts.length > 0) {
+    const PRIORITY_LABEL: Record<number, string> = { 1: "P1", 2: "P2", 3: "P3" };
+    parts.push(`\n## Alert generati in sessione (${ctx.alerts.length})`);
+    for (const a of ctx.alerts) {
+      const prio = PRIORITY_LABEL[a.priority] ?? `P${a.priority}`;
+      parts.push(`- [${prio}] @${a.dist}m zona ${a.zone}: ${a.message}`);
+    }
+  }
+
   if (ctx.setups.length > 0) {
     parts.push(`\n## Setup caricati in sessione (${ctx.setups.length})`);
     ctx.setups.forEach((s, idx) => {
@@ -167,6 +178,7 @@ export const createVoiceCoachEngine = (
     cornerMap: new Map(),
     setups: [],
     analyses: [],
+    alerts: [],
   };
 
   /**
@@ -251,6 +263,7 @@ export const createVoiceCoachEngine = (
       if (ctx.laps !== undefined) currentContext.laps = ctx.laps;
       if (ctx.setups !== undefined) currentContext.setups = ctx.setups;
       if (ctx.analyses !== undefined) currentContext.analyses = ctx.analyses;
+      if (ctx.alerts !== undefined) currentContext.alerts = ctx.alerts;
     },
 
     handleVoiceQuery: async (question, onChunk) => {

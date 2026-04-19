@@ -13,6 +13,7 @@ import {
   buildSessionPrompt,
 } from "./prompt-builder.js";
 import type {
+  Alert,
   GameSource,
   LapRow,
   SessionAnalysisRow,
@@ -43,6 +44,7 @@ export type SessionCoachEngine = {
     sessionId: number,
     game: GameSource,
     resolved?: { carName?: string; trackName?: string; layoutName?: string },
+    alerts?: Alert[],
   ) => Promise<SessionAnalysisRow | null>;
 };
 
@@ -83,7 +85,7 @@ export const createSessionCoachEngine = (
       cornerNames = names;
     },
 
-    analyzeSession: async (sessionId, game, resolved) => {
+    analyzeSession: async (sessionId, game, resolved, alerts) => {
       const sessionsTable = tableFor(game, "sessions");
       const lapsTable = tableFor(game, "laps");
       const setupsTable = tableFor(game, "session_setups");
@@ -162,6 +164,7 @@ export const createSessionCoachEngine = (
         carName: resolved?.carName,
         trackName: resolved?.trackName,
         layoutName: resolved?.layoutName,
+        alerts,
       });
 
       const nextVersion = (priorAnalyses.at(-1)?.version ?? 0) + 1;

@@ -1,12 +1,13 @@
 /**
  * AlertDispatcher + RuleEngine
  *
- * AlertDispatcher: Priority queue, dedup per zone×type per lap, 4s silence window.
+ * AlertDispatcher: Emits every alert immediately (no spam filtering) — alerts
+ * are consumed by the analysis pipeline and must not be dropped.
  * RuleEngine: Frame-level P1/P2, post-lap P3 from AdaptiveBaseline deviations.
  */
 
 import { EventEmitter } from 'events';
-import { ANTI_SPAM, BRAKE_TEMP } from '../../shared/alert-types.js';
+import { BRAKE_TEMP } from '../../shared/alert-types.js';
 import type { Alert, AlertType, Deviation, GameFrame } from '../../shared/types.js';
 import type { AdaptiveBaseline } from './adaptive-baseline.js';
 
@@ -20,69 +21,13 @@ export type AlertDispatcher = {
 
 export const createAlertDispatcher = (): AlertDispatcher => {
   const emitter = new EventEmitter();
-  const firedThisLap = new Set<string>(); // "zone:type"
-  let lastAlertTime = 0;
-  let queue: Alert[] = [];
-  let processing = false;
-
-  const scheduleFlush = (delayMs: number): void => {
-    if (processing) return;
-    processing = true;
-    setTimeout(() => {
-      processing = false;
-      flushQueue();
-    }, delayMs);
-  };
-
-  const flushQueue = (): void => {
-    queue.sort((a, b) => a.priority - b.priority);
-
-    while (queue.length > 0) {
-      const elapsed = Date.now() - lastAlertTime;
-      if (elapsed < ANTI_SPAM.silenceWindowMs) {
-        scheduleFlush(ANTI_SPAM.silenceWindowMs - elapsed);
-        return;
-      }
-
-      const alert = queue.shift()!;
-      const key = `${alert.zone}:${alert.type}`;
-      if (firedThisLap.has(key)) continue;
-
-      firedThisLap.add(key);
-      lastAlertTime = Date.now();
-      emitter.emit('alert', alert);
-    }
-  };
 
   return {
     dispatch: (alert) => {
-      const key = `${alert.zone}:${alert.type}`;
-      if (firedThisLap.has(key)) return;
-
-      // P1 bypasses silence window
-      if (alert.priority === 1) {
-        firedThisLap.add(key);
-        lastAlertTime = Date.now();
-        emitter.emit('alert', alert);
-        return;
-      }
-
-      const elapsed = Date.now() - lastAlertTime;
-      if (elapsed < ANTI_SPAM.silenceWindowMs) {
-        queue.push(alert);
-        scheduleFlush(ANTI_SPAM.silenceWindowMs - elapsed);
-        return;
-      }
-
-      firedThisLap.add(key);
-      lastAlertTime = Date.now();
       emitter.emit('alert', alert);
     },
 
-    resetLap: () => {
-      firedThisLap.clear();
-      queue = [];
-    },
+    resetLap: () => {},
 
     on: (event, listener) => emitter.on(event, listener),
   };
@@ -93,8 +38,8 @@ export const createAlertDispatcher = (): AlertDispatcher => {
 type GetCornerNameFn = (dist: number) => string | null;
 
 export type RuleEngine = {
-  processFrame: (frame: GameFrame) => void;
-  processLapDeviations: (deviations: Deviation[]) => void;
+  processFrame: (frame: GameFrame, currentLap: number) => void;
+  processLapDeviations: (deviations: Deviation[], lap: number) => void;
   resetLap: () => void;
 };
 
@@ -103,7 +48,7 @@ export const createRuleEngine = (
   baseline: AdaptiveBaseline,
   getCornerName: GetCornerNameFn,
 ): RuleEngine => {
-  const checkBrakeTemp = (frame: GameFrame, zone: number, _location: string): void => {
+  const checkBrakeTemp = (frame: GameFrame, zone: number, _location: string, lap: number): void => {
     const temps = [
       { label: 'anteriore sinistro', value: frame.brakeTempFL },
       { label: 'anteriore destro', value: frame.brakeTempFR },
@@ -120,6 +65,7 @@ export const createRuleEngine = (
           priority: 1,
           zone,
           dist: frame.lapDistance,
+          lap,
           message: `Freno ${t.label} a ${Math.round(t.value)} gradi — zona critica`,
           immediate: true,
           data: { temp: t.value, wheel: t.label },
@@ -129,7 +75,7 @@ export const createRuleEngine = (
     }
   };
 
-  const checkTcAbsAnomaly = (frame: GameFrame, zone: number, location: string): void => {
+  const checkTcAbsAnomaly = (frame: GameFrame, zone: number, location: string, lap: number): void => {
     const check = baseline.checkZoneRealtime({
       zone,
       tcActive: frame.tcActive > 0,
@@ -142,6 +88,7 @@ export const createRuleEngine = (
         priority: 2,
         zone,
         dist: frame.lapDistance,
+        lap,
         message: `TC attivo a ${location} — zona insolita`,
         immediate: true,
         timestamp: Date.now(),
@@ -154,6 +101,7 @@ export const createRuleEngine = (
         priority: 2,
         zone,
         dist: frame.lapDistance,
+        lap,
         message: `ABS attivo a ${location} — zona insolita`,
         immediate: true,
         timestamp: Date.now(),
@@ -162,18 +110,18 @@ export const createRuleEngine = (
   };
 
   return {
-    processFrame: (frame: GameFrame) => {
+    processFrame: (frame: GameFrame, currentLap: number) => {
       const zone = Math.floor(frame.lapDistance / 50);
       const cornerName = getCornerName(frame.lapDistance);
       const location = cornerName
         ? `${cornerName}, metro ${Math.round(frame.lapDistance)}`
         : `metro ${Math.round(frame.lapDistance)}`;
 
-      checkBrakeTemp(frame, zone, location);
-      if (baseline.isReady()) checkTcAbsAnomaly(frame, zone, location);
+      checkBrakeTemp(frame, zone, location, currentLap);
+      if (baseline.isReady()) checkTcAbsAnomaly(frame, zone, location, currentLap);
     },
 
-    processLapDeviations: (deviations) => {
+    processLapDeviations: (deviations, lap) => {
       for (const dev of deviations) {
         const cornerName = getCornerName(dev.dist);
         const location = cornerName
@@ -185,6 +133,7 @@ export const createRuleEngine = (
           priority: 3,
           zone: dev.zone,
           dist: dev.dist,
+          lap,
           message: `${location}: ${dev.message}`,
           immediate: false,
           data: { delta: dev.delta },

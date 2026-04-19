@@ -12,6 +12,7 @@
 
 import { BRAKE_TEMP } from "../../shared/alert-types.js";
 import type {
+  Alert,
   LapRecord,
   Deviation,
   ZoneData,
@@ -314,10 +315,11 @@ export type SessionPromptInput = {
   carName?: string;
   trackName?: string;
   layoutName?: string;
+  alerts?: Alert[];
 };
 
 export const buildSessionPrompt = (input: SessionPromptInput): string => {
-  const { session, laps, setups, priorAnalyses, cornerNames } = input;
+  const { session, laps, setups, priorAnalyses, cornerNames, alerts } = input;
   const parts: string[] = [];
 
   parts.push(`## Sessione`);
@@ -401,6 +403,16 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
     parts.push(
       `Questa è l'analisi #${priorAnalyses.length + 1}: tieni conto delle precedenti, conferma o aggiorna i consigli in base ai nuovi dati.`,
     );
+    parts.push("");
+  }
+
+  if (alerts && alerts.length > 0) {
+    const PRIORITY_LABEL: Record<number, string> = { 1: "P1", 2: "P2", 3: "P3" };
+    parts.push(`## Alert generati in sessione (${alerts.length})`);
+    for (const a of alerts) {
+      const prio = PRIORITY_LABEL[a.priority] ?? `P${a.priority}`;
+      parts.push(`- [${prio}] @${a.dist}m zona ${a.zone}: ${a.message}`);
+    }
     parts.push("");
   }
 

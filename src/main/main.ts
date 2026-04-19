@@ -227,6 +227,7 @@ const setupPipeline = (): void => {
   // Session lifecycle state
   let currentSessionId: number | null = null;
   let currentSetupId: number | null = null;
+  let currentLapNumber = 0;
   let lastDeviations: Deviation[] | null = null;
 
   const lookupCorner = (dist: number): string | null => {
@@ -328,8 +329,11 @@ const setupPipeline = (): void => {
     return voiceCoach;
   };
 
+  const sessionAlerts: Alert[] = [];
+
   dispatcher.on("alert", (alert: Alert) => {
     pushToRenderer("r3e:alert", alert);
+    sessionAlerts.push(alert);
   });
 
   // ──────────────────────────────────────────────
@@ -508,7 +512,7 @@ const setupPipeline = (): void => {
     const gameFrame = toGameFrame(frame);
     if (currentSessionId) {
       zoneTracker.update(gameFrame);
-      ruleEngine.processFrame(gameFrame);
+      ruleEngine.processFrame(gameFrame, currentLapNumber);
     }
     pushToRenderer("r3e:frame", frame);
   });
@@ -522,7 +526,7 @@ const setupPipeline = (): void => {
     }
     if (currentSessionId) {
       zoneTracker.update(frame);
-      ruleEngine.processFrame(frame);
+      ruleEngine.processFrame(frame, currentLapNumber);
     }
     pushToRenderer("r3e:frame", frame);
   });
@@ -607,6 +611,7 @@ const setupPipeline = (): void => {
         layoutName: names.layoutName,
       };
 
+      currentLapNumber = lap.lapNumber;
       pushToRenderer("r3e:lapComplete", lapWithNames);
       pushStatus();
 
@@ -616,7 +621,7 @@ const setupPipeline = (): void => {
         calibrating,
       );
       if (currentSessionId && deviations && deviations.length > 0) {
-        ruleEngine.processLapDeviations(deviations);
+        ruleEngine.processLapDeviations(deviations, lap.lapNumber);
       }
       lastDeviations = deviations;
 
@@ -633,6 +638,7 @@ const setupPipeline = (): void => {
         lastLapZones: zonesJson,
         deviations: lastDeviations,
         cornerMap: buildCornerMap(),
+        alerts: [...sessionAlerts],
       });
     },
   );
@@ -691,6 +697,7 @@ const setupPipeline = (): void => {
         .run(currentCar, currentTrack, currentLayout);
       currentSessionId = Number(result.lastInsertRowid);
       currentSetupId = null;
+      sessionAlerts.length = 0;
 
       const row = db
         .prepare(`SELECT * FROM ${t("sessions")} WHERE id = ?`)
@@ -776,8 +783,10 @@ const setupPipeline = (): void => {
         ? resolveNames(game, sRow.car, sRow.track, sRow.layout)
         : undefined;
 
+      const alertsForSession =
+        sessionId === currentSessionId ? [...sessionAlerts] : undefined;
       sessionCoach
-        .analyzeSession(sessionId, game, resolved)
+        .analyzeSession(sessionId, game, resolved, alertsForSession)
         .catch((err) => console.error("[SessionCoach] error:", err));
 
       return { ok: true };
@@ -1081,6 +1090,7 @@ const setupPipeline = (): void => {
         currentSessionId,
         activeGame,
         resolved,
+        [...sessionAlerts],
       );
       if (analysis?.section5_summary) {
         await speakText(analysis.section5_summary);
