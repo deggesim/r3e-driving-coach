@@ -240,7 +240,7 @@ const AceSetupPicker = ({
                 bg="warning"
                 text="dark"
                 className="d-flex align-items-center gap-1"
-                style={{ fontSize: 11 }}
+                style={{ fontSize: 12 }}
               >
                 <FontAwesomeIcon icon={faTriangleExclamation} />
                 Diverso dal giro selezionato
@@ -249,7 +249,7 @@ const AceSetupPicker = ({
               <Badge
                 bg="success"
                 className="d-flex align-items-center gap-1"
-                style={{ fontSize: 11 }}
+                style={{ fontSize: 12 }}
               >
                 <FontAwesomeIcon icon={faCheck} />
                 Auto/circuito corretti

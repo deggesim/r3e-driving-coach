@@ -251,11 +251,7 @@ const RealtimeAnalysis = () => {
                     <span className="text-muted">—</span>
                   )}
                 </td>
-                <td>
-                  <small>
-                    {new Date(l.recorded_at).toLocaleTimeString("it-IT")}
-                  </small>
-                </td>
+                <td>{new Date(l.recorded_at).toLocaleTimeString("it-IT")}</td>
               </tr>
             ))}
           </tbody>

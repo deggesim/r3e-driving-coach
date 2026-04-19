@@ -957,7 +957,7 @@ const setupPipeline = (): void => {
     if (!keyRow?.value || !regionRow?.value)
       throw new Error("Azure Speech Key e Region non configurati");
     const assistantName = nameRow?.value ?? "Aria";
-    const testPhrase = `Ciao, sono ${assistantName} e oggi sono il tuo insegnante virtuale`;
+    const testPhrase = `Ciao, sono ${assistantName} e oggi sono il tuo assistente in pista.`;
     return synthesizeAzure(
       testPhrase,
       keyRow.value,
@@ -1048,11 +1048,15 @@ const setupPipeline = (): void => {
 
     if (intent === "newSession") {
       const res = startSession();
-      await speakText(
-        res.ok
-          ? "Sessione aperta."
-          : `Impossibile aprire la sessione. ${res.reason}`,
-      );
+      if (res.ok) {
+        const names = resolveNames(activeGame, currentCar, currentTrack, currentLayout);
+        const car = names.carName || "auto sconosciuta";
+        const track = names.trackName || "circuito sconosciuto";
+        const layout = names.layoutName && names.layoutName !== track ? `, ${names.layoutName}` : "";
+        await speakText(`Sessione aperta. ${car} — ${track}${layout}.`);
+      } else {
+        await speakText(`Impossibile aprire la sessione. ${res.reason}`);
+      }
       return;
     }
     if (intent === "closeSession") {

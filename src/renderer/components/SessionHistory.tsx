@@ -6,10 +6,7 @@
  * the parent tab to the realtime analysis view.
  */
 
-import {
-  faFlask,
-  faTrash,
-} from "@fortawesome/free-solid-svg-icons";
+import { faFlask, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
@@ -51,9 +48,7 @@ const SessionHistory = ({ onOpenSession }: Props) => {
   const [filterCar, setFilterCar] = useState("");
   const [filterTrack, setFilterTrack] = useState("");
   const [sort, setSort] = useState<"desc" | "asc">("desc");
-  type DeleteTarget =
-    | { type: "single"; session: SessionRow }
-    | { type: "all" };
+  type DeleteTarget = { type: "single"; session: SessionRow } | { type: "all" };
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const loadSessions = (): void => {
@@ -64,7 +59,9 @@ const SessionHistory = ({ onOpenSession }: Props) => {
       .then((res) => {
         setAllSessions(res.items);
       })
-      .catch(() => { /* ignore */ })
+      .catch(() => {
+        /* ignore */
+      })
       .finally(() => setLoading(false));
   };
 
@@ -82,7 +79,10 @@ const SessionHistory = ({ onOpenSession }: Props) => {
   );
 
   const gameSessions = useMemo(
-    () => (filterGame ? visibleSessions.filter((s) => s.game === filterGame) : visibleSessions),
+    () =>
+      filterGame
+        ? visibleSessions.filter((s) => s.game === filterGame)
+        : visibleSessions,
     [visibleSessions, filterGame],
   );
 
@@ -146,15 +146,22 @@ const SessionHistory = ({ onOpenSession }: Props) => {
     if (!deleteTarget) return;
     if (deleteTarget.type === "single") {
       const { session } = deleteTarget;
-      await window.electronAPI.sessionDelete({ id: session.id, game: session.game });
+      await window.electronAPI.sessionDelete({
+        id: session.id,
+        game: session.game,
+      });
       setAllSessions((prev) =>
         prev.filter((s) => !(s.id === session.id && s.game === session.game)),
       );
     } else {
-      const items = filtered.filter((s) => s.id >= 0).map((s) => ({ id: s.id, game: s.game }));
+      const items = filtered
+        .filter((s) => s.id >= 0)
+        .map((s) => ({ id: s.id, game: s.game }));
       await window.electronAPI.sessionDeleteAll(items);
       const keys = new Set(items.map(({ id, game }) => `${game}-${id}`));
-      setAllSessions((prev) => prev.filter((s) => !keys.has(`${s.game}-${s.id}`)));
+      setAllSessions((prev) =>
+        prev.filter((s) => !keys.has(`${s.game}-${s.id}`)),
+      );
     }
     setDeleteTarget(null);
   };
@@ -188,7 +195,9 @@ const SessionHistory = ({ onOpenSession }: Props) => {
         >
           <option value="">Tutte le auto</option>
           {carOptions.map((o) => (
-            <option key={o.id} value={o.id}>{o.label}</option>
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
           ))}
         </Form.Select>
 
@@ -201,7 +210,9 @@ const SessionHistory = ({ onOpenSession }: Props) => {
         >
           <option value="">Tutti i circuiti</option>
           {trackOptions.map((o) => (
-            <option key={o.id} value={o.id}>{o.label}</option>
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
           ))}
         </Form.Select>
 
@@ -258,12 +269,17 @@ const SessionHistory = ({ onOpenSession }: Props) => {
                   <td>
                     <Badge
                       bg={s.game === "ace" ? "info" : "secondary"}
-                      style={{ fontSize: 10 }}
+                      style={{ fontSize: 12 }}
                     >
                       {s.game === "ace" ? "ACE" : "R3E"}
                     </Badge>
                     {s.id < 0 && (
-                      <Badge bg="warning" text="dark" className="ms-1" style={{ fontSize: 10 }}>
+                      <Badge
+                        bg="warning"
+                        text="dark"
+                        className="ms-1"
+                        style={{ fontSize: 12 }}
+                      >
                         <FontAwesomeIcon icon={faFlask} className="me-1" />
                         mock
                       </Badge>
@@ -272,7 +288,10 @@ const SessionHistory = ({ onOpenSession }: Props) => {
                   <td>
                     {s.car_name ?? s.car}
                     {s.car_class_name && (
-                      <span className="text-secondary ms-1" style={{ fontSize: 11 }}>
+                      <span
+                        className="text-secondary ms-1"
+                        style={{ fontSize: 12 }}
+                      >
                         ({s.car_class_name})
                       </span>
                     )}
@@ -280,7 +299,10 @@ const SessionHistory = ({ onOpenSession }: Props) => {
                   <td>
                     {s.track_name ?? s.track}
                     {s.layout_name && s.layout_name !== s.track_name && (
-                      <span className="text-secondary ms-1" style={{ fontSize: 11 }}>
+                      <span
+                        className="text-secondary ms-1"
+                        style={{ fontSize: 12 }}
+                      >
                         — {s.layout_name}
                       </span>
                     )}
@@ -292,21 +314,28 @@ const SessionHistory = ({ onOpenSession }: Props) => {
                   <td className="sh-date">{formatDate(s.started_at)}</td>
                   <td>
                     {s.ended_at ? (
-                      <Badge bg="secondary" style={{ fontSize: 10 }}>Chiusa</Badge>
+                      <Badge bg="secondary" style={{ fontSize: 12 }}>
+                        Chiusa
+                      </Badge>
                     ) : (
-                      <Badge bg="success" style={{ fontSize: 10 }}>
+                      <Badge bg="success" style={{ fontSize: 12 }}>
                         <FontAwesomeIcon icon={faFlask} className="me-1" />
                         Attiva
                       </Badge>
                     )}
                   </td>
-                  <td className="sh-actions" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="sh-actions"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     {s.id >= 0 && (
                       <Button
                         variant="link"
                         size="sm"
                         className="sh-del-btn"
-                        onClick={() => setDeleteTarget({ type: "single", session: s })}
+                        onClick={() =>
+                          setDeleteTarget({ type: "single", session: s })
+                        }
                         aria-label="Elimina sessione"
                       >
                         <FontAwesomeIcon icon={faTrash} />
@@ -363,7 +392,9 @@ const SessionHistory = ({ onOpenSession }: Props) => {
         className="delete-confirm-modal"
       >
         <Modal.Header closeButton>
-          <Modal.Title style={{ fontSize: 15 }}>Conferma eliminazione</Modal.Title>
+          <Modal.Title style={{ fontSize: 16 }}>
+            Conferma eliminazione
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {deleteTarget?.type === "single" ? (
@@ -377,15 +408,20 @@ const SessionHistory = ({ onOpenSession }: Props) => {
             </p>
           ) : (
             <p className="mb-0">
-              Stai per eliminare <strong>tutte le {filtered.length} sessioni</strong>{" "}
-              della selezione corrente.
+              Stai per eliminare{" "}
+              <strong>tutte le {filtered.length} sessioni</strong> della
+              selezione corrente.
               <br />
               <span className="text-danger">L'operazione è irreversibile.</span>
             </p>
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setDeleteTarget(null)}
+          >
             Annulla
           </Button>
           <Button variant="danger" size="sm" onClick={executeDelete}>
