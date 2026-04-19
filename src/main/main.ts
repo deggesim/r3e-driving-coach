@@ -485,6 +485,11 @@ const setupPipeline = (): void => {
   aceReader.on("connected", () => {
     aceConnected = true;
     if (!r3eConnected) activeGame = "ace";
+    // Track/layout come from StaticEvo and are available immediately on connect
+    const info = aceReader.getSessionInfo();
+    if (info.track)  currentTrack  = info.track;
+    if (info.layout) currentLayout = info.layout;
+    if (info.car)    currentCar    = info.car;
     pushStatus();
   });
 
@@ -501,15 +506,24 @@ const setupPipeline = (): void => {
     if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
 
     const gameFrame = toGameFrame(frame);
-    zoneTracker.update(gameFrame);
-    ruleEngine.processFrame(gameFrame);
+    if (currentSessionId) {
+      zoneTracker.update(gameFrame);
+      ruleEngine.processFrame(gameFrame);
+    }
     pushToRenderer("r3e:frame", frame);
   });
 
   aceReader.on("frame", (frame: import("../shared/types.js").GameFrame) => {
     if (activeGame !== "ace") return;
-    zoneTracker.update(frame);
-    ruleEngine.processFrame(frame);
+    // Populate car as soon as the first AC_LIVE frame makes it available
+    if (!currentCar) {
+      const info = aceReader.getSessionInfo();
+      if (info.car) { currentCar = info.car; pushStatus(); }
+    }
+    if (currentSessionId) {
+      zoneTracker.update(frame);
+      ruleEngine.processFrame(frame);
+    }
     pushToRenderer("r3e:frame", frame);
   });
 
@@ -601,7 +615,7 @@ const setupPipeline = (): void => {
         lap.lapNumber,
         calibrating,
       );
-      if (deviations && deviations.length > 0) {
+      if (currentSessionId && deviations && deviations.length > 0) {
         ruleEngine.processLapDeviations(deviations);
       }
       lastDeviations = deviations;
@@ -969,9 +983,18 @@ const setupPipeline = (): void => {
     q: string,
   ): "newSession" | "closeSession" | "analyze" | "freeform" => {
     const s = q.toLowerCase();
-    if (/\b(nuova|apri|inizia|avvia|comincia)\s+session/.test(s))
+    const hasSession = /\bsession/.test(s);
+    if (
+      hasSession &&
+      /\b(nuova|apri|inizia|inizio|avvia|avvio|comincia|crea|start|apre|partenza|parti)\b/.test(
+        s,
+      )
+    )
       return "newSession";
-    if (/\b(chiudi|termina|fine|ferma|concludi)\s+session/.test(s))
+    if (
+      hasSession &&
+      /\b(chiudi|termina|fine|ferma|concludi|stop|finisci|chiude)\b/.test(s)
+    )
       return "closeSession";
     if (
       /\b(analizza|analisi|valuta|valutazione|esegui\s+analisi)\b[\s\S]*\b(session|giri|ultimi\s+giri)\b/.test(

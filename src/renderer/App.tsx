@@ -62,7 +62,6 @@ const App = () => {
   const { get: configGet } = useConfig();
   const [tab, setTab] = useState<Tab>("debriefing");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
-  const [alerts, setAlerts] = useState<NonNullable<typeof lastAlert>[]>([]);
 
   // Voice coach hook
   const {
@@ -112,18 +111,11 @@ const App = () => {
     setAnthropicModel,
   ]);
 
-  // Accumulate alerts for TTSManager
-  useEffect(() => {
-    if (!lastAlert) return;
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setAlerts((prev) => [...prev.slice(-19), lastAlert]);
-  }, [lastAlert]);
-
   return (
     <div className="app">
       {/* Headless TTS */}
       <TTSManager
-        alerts={alerts}
+        alerts={[]}
         postLapText={null}
         enabled={ttsEnabled}
         azureEnabled={azureTtsEnabled}

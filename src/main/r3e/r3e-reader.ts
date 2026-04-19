@@ -88,14 +88,6 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     }
   };
 
-  const ptrStr = (ptr: NativePointer): string => {
-    try {
-      return `0x${koffi.address(ptr).toString(16)}`;
-    } catch {
-      return String(ptr);
-    }
-  };
-
   let firstPoll = true; // log version on first successful poll
   let lastCompletedLaps = -1;
   let lastTrackSector = -1;
@@ -318,15 +310,11 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 
   const tryConnect = (): void => {
     if (stopped) return;
-    console.log(
-      `[R3EReader] tryConnect — platform=${process.platform} SHM_NAME="${SHM_NAME}"`,
-    );
 
     try {
       if (!kernel32) {
         koffi = _require("koffi");
         const lib = koffi.load("kernel32.dll");
-        console.log("[R3EReader] kernel32.dll loaded");
 
         kernel32 = {
           OpenFileMappingA: lib.func(
@@ -343,21 +331,13 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       }
 
       const handle = kernel32.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
-      console.log(
-        `[R3EReader] OpenFileMappingA("${SHM_NAME}") → handle=${ptrStr(handle)}`,
-      );
       if (isNullPtr(handle)) {
-        console.log(
-          "[R3EReader] handle is null — game not running or SHM not created yet",
-        );
         scheduleReconnect();
         return;
       }
 
-      const view = kernel32.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 0); // 0 = map entire file
-      console.log(`[R3EReader] MapViewOfFile → view=${ptrStr(view)}`);
+      const view = kernel32.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 0);
       if (isNullPtr(view)) {
-        console.log("[R3EReader] MapViewOfFile failed");
         kernel32.CloseHandle(handle);
         scheduleReconnect();
         return;

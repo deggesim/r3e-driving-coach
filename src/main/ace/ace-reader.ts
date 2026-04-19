@@ -66,10 +66,18 @@ type Kernel32 = {
 
 const FILE_MAP_READ = 0x0004;
 
+export type AceSessionInfo = {
+  car: string;
+  track: string;
+  layout: string;
+  trackLength: number;
+};
+
 export type AceReader = {
   start: () => void;
   stop: () => void;
   on: EventEmitter['on'];
+  getSessionInfo: () => AceSessionInfo;
 };
 
 export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
@@ -96,7 +104,10 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
 
   // Per-lap state
   let lapFrames: CompactFrame[] = [];
-  let lastTotalLapCount = -1;
+  let ownLapCount = 0;
+  let prevNpos = -1;
+  let prevCurrentLapTimeMs = 0;
+  let prevIsValidLap = true;
 
   // Session static cache (read once on connect)
   let cachedTrack = '';
@@ -110,14 +121,6 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       return koffi.address(ptr) === 0n;
     } catch {
       return false;
-    }
-  };
-
-  const ptrStr = (ptr: NativePointer): string => {
-    try {
-      return `0x${koffi.address(ptr).toString(16)}`;
-    } catch {
-      return String(ptr);
     }
   };
 
@@ -135,6 +138,11 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
     staView  = staHandle  = null;
     if (connected) {
       connected = false;
+      lapFrames = [];
+      ownLapCount = 0;
+      prevNpos = -1;
+      prevCurrentLapTimeMs = 0;
+      prevIsValidLap = true;
       emitter.emit('disconnected');
     }
   };
@@ -169,11 +177,14 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       const gfxBuf  = decodeBuffer(gfxView,  ACE_GRAPHIC_BUF);
       const status  = readInt32(gfxBuf, GFX.status);
 
+      // Car model is readable even when paused — update cache opportunistically
+      const carModelEarly = readString(gfxBuf, GFX.carModel, 33);
+      if (carModelEarly.length > 0) cachedCarModel = carModelEarly;
+
       if (firstPoll) {
         console.log(
           `[AceReader] first poll — status=${status} (AC_LIVE=${AC_LIVE}) ` +
-          `npos=${readFloat(gfxBuf, GFX.npos).toFixed(4)} ` +
-          `totalLapCount=${readInt32(gfxBuf, GFX.totalLapCount)}`,
+          `npos=${readFloat(gfxBuf, GFX.npos).toFixed(4)} car="${cachedCarModel}"`,
         );
         firstPoll = false;
       }
@@ -213,7 +224,7 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       const npos       = readFloat(gfxBuf,  GFX.npos);
       const isValidLap = readUint8(gfxBuf, GFX.isValidLap) !== 0;
       const isInPitLane = readUint8(gfxBuf, GFX.isInPitLane) !== 0;
-      const totalLapCount = readInt32(gfxBuf, GFX.totalLapCount);
+      const currentLapTimeMs = readInt32(gfxBuf, GFX.currentLapTimeMs);
       const lastLaptimeMs = readInt32(gfxBuf, GFX.lastLaptimeMs);
       const carModel   = readString(gfxBuf, GFX.carModel, 33);
 
@@ -258,16 +269,20 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
         });
       }
 
-      // Lap completion: totalLapCount incremented
-      if (totalLapCount > lastTotalLapCount && lastTotalLapCount >= 0) {
-        const lapTime = lastLaptimeMs > 0 ? lastLaptimeMs / 1000 : 0;
+      // Lap completion: npos crosses start/finish (0.85→1.0 → 0.0→0.15).
+      // This is more reliable than totalLapCount whose SHM offset is uncertain.
+      if (prevNpos > 0.85 && npos < 0.15 && prevNpos >= 0) {
+        ownLapCount++;
+        const lapTime = prevCurrentLapTimeMs > 0
+          ? prevCurrentLapTimeMs / 1000
+          : lastLaptimeMs > 0 ? lastLaptimeMs / 1000 : 0;
         console.log(
-          `[AceReader] lapComplete — lap=${totalLapCount} lapTime=${lapTime.toFixed(3)}s ` +
-          `valid=${isValidLap} car="${cachedCarModel}" track="${cachedTrack}" ` +
+          `[AceReader] lapComplete — lap=${ownLapCount} lapTime=${lapTime.toFixed(3)}s ` +
+          `valid=${prevIsValidLap} car="${cachedCarModel}" track="${cachedTrack}" ` +
           `layout="${cachedLayout}" length=${cachedTrackLength}m frames=${lapFrames.length}`,
         );
         const lapData = {
-          lapNumber:    totalLapCount,
+          lapNumber:    ownLapCount,
           lapTime,
           sectorTimes:  [-1, -1, -1] as [number, number, number],
           frames:       [...lapFrames],
@@ -275,12 +290,14 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
           track:        cachedTrack,
           layout:       cachedLayout,
           layoutLength: cachedTrackLength,
-          valid:        isValidLap,
+          valid:        prevIsValidLap,
         };
         lapFrames = [];
         emitter.emit('lapComplete', lapData);
       }
-      lastTotalLapCount = totalLapCount;
+      prevNpos = npos;
+      prevCurrentLapTimeMs = currentLapTimeMs;
+      prevIsValidLap = isValidLap;
 
     } catch (err) {
       console.error('[AceReader] poll error:', err);
@@ -294,11 +311,9 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
 
   const openSHM = (name: string): { handle: NativePointer; view: NativePointer } | null => {
     const handle = kernel32!.OpenFileMappingA(FILE_MAP_READ, 0, name);
-    console.log(`[AceReader] OpenFileMappingA("${name}") → handle=${ptrStr(handle)}`);
     if (isNullPtr(handle)) return null;
 
     const view = kernel32!.MapViewOfFile(handle, FILE_MAP_READ, 0, 0, 0);
-    console.log(`[AceReader] MapViewOfFile("${name}") → view=${ptrStr(view)}`);
     if (isNullPtr(view)) {
       kernel32!.CloseHandle(handle);
       return null;
@@ -308,13 +323,11 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
 
   const tryConnect = (): void => {
     if (stopped) return;
-    console.log(`[AceReader] tryConnect — platform=${process.platform}`);
 
     try {
       if (!kernel32) {
         koffi = _require('koffi');
         const lib = koffi.load('kernel32.dll');
-        console.log('[AceReader] kernel32.dll loaded');
 
         kernel32 = {
           OpenFileMappingA: lib.func(
@@ -332,18 +345,15 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       // Physics page
       const phy = openSHM(ACE_SHM_PHYSICS);
       if (!phy) {
-        console.log('[AceReader] Physics SHM not available — game not running?');
         scheduleReconnect();
         return;
       }
       physHandle = phy.handle;
       physView   = phy.view;
-      console.log(`[AceReader] Physics SHM opened as "${ACE_SHM_PHYSICS}"`);
 
       // Graphic page
       const gfx = openSHM(ACE_SHM_GRAPHIC);
       if (!gfx) {
-        console.log('[AceReader] Graphic SHM not available');
         kernel32.UnmapViewOfFile(physView);
         kernel32.CloseHandle(physHandle);
         physView = physHandle = null;
@@ -356,7 +366,6 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       // Static page
       const sta = openSHM(ACE_SHM_STATIC);
       if (!sta) {
-        console.log('[AceReader] Static SHM not available');
         kernel32.UnmapViewOfFile(physView);  kernel32.CloseHandle(physHandle);
         kernel32.UnmapViewOfFile(gfxView);   kernel32.CloseHandle(gfxHandle);
         physView = physHandle = gfxView = gfxHandle = null;
@@ -497,5 +506,12 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
     },
 
     on: emitter.on.bind(emitter),
+
+    getSessionInfo: (): AceSessionInfo => ({
+      car:         cachedCarModel,
+      track:       cachedTrack,
+      layout:      cachedLayout,
+      trackLength: cachedTrackLength,
+    }),
   };
 };
