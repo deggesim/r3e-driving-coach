@@ -22,7 +22,7 @@ export const useIPC = (): void => {
     return () => {
       window.electronAPI.removeAllListeners("session:frame");
       window.electronAPI.removeAllListeners("lapComplete");
-      window.electronAPI.removeAllListeners("r3e:status");
+      window.electronAPI.removeAllListeners("status");
     };
   }, [setFrame, setLastLap, setStatus]);
 };

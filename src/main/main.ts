@@ -288,7 +288,7 @@ const setupPipeline = (): void => {
       layout: names.layoutName || null,
       game: activeGame,
     };
-    pushToRenderer("r3e:status", status);
+    pushToRenderer("status", status);
   };
 
   const getAnthropicApiKey = (): string | undefined => {
