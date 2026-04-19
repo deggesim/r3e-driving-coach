@@ -9,10 +9,8 @@
  */
 
 import { useEffect, useRef, useCallback } from "react";
-import type { Alert } from "../../shared/types";
 
 type TTSManagerProps = {
-  alerts: Alert[];
   postLapText: string | null;
   enabled?: boolean;
   azureEnabled?: boolean;
@@ -34,7 +32,6 @@ const toArrayBuffer = (data: unknown): ArrayBuffer => {
 };
 
 const TTSManager = ({
-  alerts,
   postLapText,
   enabled = true,
   azureEnabled = false,
@@ -43,7 +40,6 @@ const TTSManager = ({
 }: TTSManagerProps) => {
   const queueRef = useRef<QueuedUtterance[]>([]);
   const speakingRef = useRef(false);
-  const lastAlertRef = useRef<Alert | null>(null);
   const lastPostLapRef = useRef<string | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const welcomeSpokenRef = useRef(false);
@@ -148,15 +144,6 @@ const TTSManager = ({
     },
     [enabled, stopCurrent, speakNext],
   );
-
-  // React to new alerts
-  useEffect(() => {
-    if (alerts.length === 0) return;
-    const latest = alerts[alerts.length - 1];
-    if (latest === lastAlertRef.current) return;
-    lastAlertRef.current = latest;
-    enqueue(latest.message, latest.priority);
-  }, [alerts, enqueue]);
 
   // React to new post-lap text
   useEffect(() => {

@@ -7,14 +7,12 @@ import { useEffect, useCallback } from "react";
 import { useIPCStore } from "../store/ipcStore";
 import type {
   R3EFrame,
-  Alert,
   LapRecord,
   GameStatus,
 } from "../../shared/types";
 
 export const useIPC = (): void => {
   const setFrame = useIPCStore((s) => s.setFrame);
-  const setLastAlert = useIPCStore((s) => s.setLastAlert);
   const setLastLap = useIPCStore((s) => s.setLastLap);
   const setStatus = useIPCStore((s) => s.setStatus);
 
@@ -22,17 +20,15 @@ export const useIPC = (): void => {
     if (!window.electronAPI) return;
 
     window.electronAPI.onFrame((data) => setFrame(data as R3EFrame));
-    window.electronAPI.onAlert((data) => setLastAlert(data as Alert));
     window.electronAPI.onLapComplete((data) => setLastLap(data as LapRecord));
     window.electronAPI.onStatus((data) => setStatus(data as GameStatus));
 
     return () => {
       window.electronAPI.removeAllListeners("r3e:frame");
-      window.electronAPI.removeAllListeners("r3e:alert");
       window.electronAPI.removeAllListeners("r3e:lapComplete");
       window.electronAPI.removeAllListeners("r3e:status");
     };
-  }, [setFrame, setLastAlert, setLastLap, setStatus]);
+  }, [setFrame, setLastLap, setStatus]);
 };
 
 /** Config helpers — thin IPC wrappers, stable references via useCallback. */

@@ -353,7 +353,6 @@ export type SessionListResult = {
 export type ElectronAPI = {
   // Push channels (Main → Renderer)
   onFrame: (callback: (data: R3EFrame) => void) => void;
-  onAlert: (callback: (data: Alert) => void) => void;
   onLapComplete: (callback: (data: LapRecord) => void) => void;
   onStatus: (callback: (data: GameStatus) => void) => void;
   onVoiceChunk: (callback: (data: { token: string }) => void) => void;

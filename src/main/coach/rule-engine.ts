@@ -15,7 +15,6 @@ import type { AdaptiveBaseline } from './adaptive-baseline.js';
 
 export type AlertDispatcher = {
   dispatch: (alert: Alert) => void;
-  resetLap: () => void;
   on: (event: 'alert', listener: (alert: Alert) => void) => void;
 };
 
@@ -26,8 +25,6 @@ export const createAlertDispatcher = (): AlertDispatcher => {
     dispatch: (alert) => {
       emitter.emit('alert', alert);
     },
-
-    resetLap: () => {},
 
     on: (event, listener) => emitter.on(event, listener),
   };
@@ -40,7 +37,6 @@ type GetCornerNameFn = (dist: number) => string | null;
 export type RuleEngine = {
   processFrame: (frame: GameFrame, currentLap: number) => void;
   processLapDeviations: (deviations: Deviation[], lap: number) => void;
-  resetLap: () => void;
 };
 
 export const createRuleEngine = (
@@ -142,6 +138,5 @@ export const createRuleEngine = (
       }
     },
 
-    resetLap: () => dispatcher.resetLap(),
   };
 };

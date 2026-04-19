@@ -38,7 +38,12 @@ import {
   synthesizeAzure,
   transcribeAzure,
 } from "./tts/azure-tts.js";
-import { getDb, seedCornerNames, getCornerName } from "./db/db.js";
+import {
+  getDb,
+  hasCornerNames,
+  seedCornersFromLap,
+  getCornerName,
+} from "./db/db.js";
 import {
   loadR3EData,
   getCarName,
@@ -68,7 +73,6 @@ import type {
   SessionListResult,
   SessionStartResult,
 } from "../shared/types.js";
-import cornerNamesData from "../shared/corner-names.json" with { type: "json" };
 import type BetterSqlite3 from "better-sqlite3";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -206,14 +210,6 @@ const setupPipeline = (): void => {
 
   loadR3EData();
 
-  seedCornerNames(
-    db,
-    cornerNamesData as Record<
-      string,
-      Array<{ distMin: number; distMax: number; name: string }>
-    >,
-  );
-
   console.log(`[Main] setupPipeline — dual-reader mode`);
 
   // Live reader state
@@ -332,7 +328,6 @@ const setupPipeline = (): void => {
   const sessionAlerts: Alert[] = [];
 
   dispatcher.on("alert", (alert: Alert) => {
-    pushToRenderer("r3e:alert", alert);
     sessionAlerts.push(alert);
   });
 
@@ -491,9 +486,9 @@ const setupPipeline = (): void => {
     if (!r3eConnected) activeGame = "ace";
     // Track/layout come from StaticEvo and are available immediately on connect
     const info = aceReader.getSessionInfo();
-    if (info.track)  currentTrack  = info.track;
+    if (info.track) currentTrack = info.track;
     if (info.layout) currentLayout = info.layout;
-    if (info.car)    currentCar    = info.car;
+    if (info.car) currentCar = info.car;
     pushStatus();
   });
 
@@ -522,7 +517,10 @@ const setupPipeline = (): void => {
     // Populate car as soon as the first AC_LIVE frame makes it available
     if (!currentCar) {
       const info = aceReader.getSessionInfo();
-      if (info.car) { currentCar = info.car; pushStatus(); }
+      if (info.car) {
+        currentCar = info.car;
+        pushStatus();
+      }
     }
     if (currentSessionId) {
       zoneTracker.update(frame);
@@ -531,10 +529,7 @@ const setupPipeline = (): void => {
     pushToRenderer("r3e:frame", frame);
   });
 
-  const handleLapComplete = (
-    lapData: LapRecord,
-    game: GameSource,
-  ): void => {
+  const handleLapComplete = (lapData: LapRecord, game: GameSource): void => {
     if (activeGame !== game) return;
     console.log(
       `[Main] ${game}:lapComplete — lap=${lapData.lapNumber} time=${lapData.lapTime.toFixed(3)}s ` +
@@ -560,7 +555,6 @@ const setupPipeline = (): void => {
     }
 
     zoneTracker.reset();
-    ruleEngine.resetLap();
 
     // Auto-close session if car/track/layout differ from the current session's
     if (currentSessionId) {
@@ -614,6 +608,11 @@ const setupPipeline = (): void => {
       currentLapNumber = lap.lapNumber;
       pushToRenderer("r3e:lapComplete", lapWithNames);
       pushStatus();
+
+      // Seed corner names from first lap on a new track/layout
+      if (!hasCornerNames(db, names.trackName, names.layoutName)) {
+        seedCornersFromLap(db, names.trackName, names.layoutName, lap.zones);
+      }
 
       const deviations = baseline.ingestLap(
         lap.zones,

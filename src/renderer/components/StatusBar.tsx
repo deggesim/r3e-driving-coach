@@ -6,35 +6,14 @@
 import { faMicrophone } from "@fortawesome/free-solid-svg-icons/faMicrophone";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
 import { Badge } from "react-bootstrap";
-import type { Alert, GameStatus } from "../../shared/types";
+import type { GameStatus } from "../../shared/types";
 
 type StatusBarProps = {
   status: GameStatus;
-  lastAlert: Alert | null;
 };
 
-const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
-  const [visibleAlert, setVisibleAlert] = useState<string | null>(null);
-  const [fadeOut, setFadeOut] = useState(false);
-
-  // Show alert for 5s then fade
-  useEffect(() => {
-    if (!lastAlert) return;
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setVisibleAlert(lastAlert.message);
-    // eslint-disable-next-line @eslint-react/set-state-in-effect
-    setFadeOut(false);
-
-    const fadeTimer = setTimeout(() => setFadeOut(true), 4000);
-    const clearTimer = setTimeout(() => setVisibleAlert(null), 5000);
-
-    return () => {
-      clearTimeout(fadeTimer);
-      clearTimeout(clearTimer);
-    };
-  }, [lastAlert]);
+const StatusBar = ({ status }: StatusBarProps) => {
 
   const calibrationText: ReactNode = status.calibrating ? (
     `Calibrazione: ${status.lapsToCalibration} ${status.lapsToCalibration === 1 ? "giro rimanente" : "giri rimanenti"}`
@@ -83,10 +62,7 @@ const StatusBar = ({ status, lastAlert }: StatusBarProps) => {
         {status.connected ? calibrationText : "—"}
       </div>
 
-      {/* Last alert */}
-      <div className={`status-alert ${fadeOut ? "fade-out" : ""}`}>
-        {visibleAlert ?? ""}
-      </div>
+
     </div>
   );
 };

@@ -39,7 +39,6 @@ const App = () => {
   }, []);
 
   // Read IPC state from store
-  const lastAlert = useIPCStore((s) => s.lastAlert);
   const status = useIPCStore((s) => s.status);
 
   // Settings state from Zustand store
@@ -115,7 +114,6 @@ const App = () => {
     <div className="app">
       {/* Headless TTS */}
       <TTSManager
-        alerts={[]}
         postLapText={null}
         enabled={ttsEnabled}
         azureEnabled={azureTtsEnabled}
@@ -210,7 +208,7 @@ const App = () => {
       </div>
 
       {/* Status bar */}
-      <StatusBar status={status} lastAlert={lastAlert} />
+      <StatusBar status={status} />
     </div>
   );
 };

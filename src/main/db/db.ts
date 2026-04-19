@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import path from "path";
+import type { ZoneData } from "../../shared/types.js";
 
 let _db: Database.Database | null = null;
 
@@ -176,41 +177,67 @@ export const getCornerName = (
   return row?.name ?? null;
 };
 
-/**
- * Seed corner names from the shared JSON data.
- */
-export const seedCornerNames = (
+export const hasCornerNames = (
   db: Database.Database,
-  data: Record<
-    string,
-    Array<{ distMin: number; distMax: number; name: string }>
-  >,
+  track: string,
+  layout: string,
+): boolean => {
+  const row = db
+    .prepare(
+      "SELECT 1 FROM corner_names WHERE track = ? AND layout = ? LIMIT 1",
+    )
+    .get(track, layout);
+  return row !== undefined;
+};
+
+/**
+ * Derive corner names from the first lap's zone data.
+ * Zones with significant braking (maxBrakePct >= 0.2) are grouped into corners
+ * and named "Curva 1", "Curva 2", etc. by distance order.
+ */
+export const seedCornersFromLap = (
+  db: Database.Database,
+  track: string,
+  layout: string,
+  zones: ZoneData[],
 ): void => {
+  const ZONE_M = 50;
+  const BRAKE_THRESHOLD = 0.2;
+
+  const brakingZones = zones
+    .filter((z) => z.maxBrakePct >= BRAKE_THRESHOLD)
+    .map((z) => z.zone)
+    .sort((a, b) => a - b);
+
+  if (brakingZones.length === 0) return;
+
+  // Group consecutive zone IDs (gap ≤ 2 allowed to bridge short coasting frames)
+  const groups: Array<{ start: number; end: number }> = [];
+  let current: { start: number; end: number } | null = null;
+  for (const zoneId of brakingZones) {
+    if (!current) {
+      current = { start: zoneId, end: zoneId };
+    } else if (zoneId <= current.end + 2) {
+      current.end = zoneId;
+    } else {
+      groups.push(current);
+      current = { start: zoneId, end: zoneId };
+    }
+  }
+  if (current) groups.push(current);
+
   const insert = db.prepare(`
-    INSERT OR REPLACE INTO corner_names (track, layout, dist_min, dist_max, name)
+    INSERT OR IGNORE INTO corner_names (track, layout, dist_min, dist_max, name)
     VALUES (?, ?, ?, ?, ?)
   `);
 
-  const insertMany = db.transaction(
-    (
-      entries: Array<{
-        key: string;
-        distMin: number;
-        distMax: number;
-        name: string;
-      }>,
-    ) => {
-      for (const entry of entries) {
-        const [track, layout] = entry.key.split("|");
-        insert.run(track, layout, entry.distMin, entry.distMax, entry.name);
-      }
-    },
-  );
+  db.transaction(() => {
+    groups.forEach((g, i) => {
+      insert.run(track, layout, g.start * ZONE_M, (g.end + 1) * ZONE_M, `Curva ${i + 1}`);
+    });
+  })();
 
-  const flat = Object.entries(data).flatMap(([key, corners]) =>
-    corners.map((c) => ({ key, ...c })),
-  );
-  insertMany(flat);
+  console.log(`[DB] Seeded ${groups.length} corner(s) for ${track}|${layout}`);
 };
 
 export const closeDb = (): void => {

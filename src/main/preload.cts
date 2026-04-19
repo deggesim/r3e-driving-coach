@@ -11,9 +11,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onFrame: (callback: (data: unknown) => void) => {
     ipcRenderer.on('r3e:frame', (_event, data) => callback(data));
   },
-  onAlert: (callback: (data: unknown) => void) => {
-    ipcRenderer.on('r3e:alert', (_event, data) => callback(data));
-  },
   onLapComplete: (callback: (data: unknown) => void) => {
     ipcRenderer.on('r3e:lapComplete', (_event, data) => callback(data));
   },
