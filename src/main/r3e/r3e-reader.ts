@@ -71,6 +71,8 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
   let connected = false;
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let shmProbeCounter = 0;
+  const SHM_PROBE_INTERVAL = 62; // ~1s at 16ms poll
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let koffi: any = null;
   let kernel32: Kernel32 | null = null;
@@ -266,6 +268,20 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 
   const poll = (): void => {
     if (stopped || !viewPtr) return;
+
+    // Periodically verify the named SHM object still exists.
+    // When R3E closes it removes the object from the namespace, but our
+    // existing MapViewOfFile stays valid — data freezes without throwing.
+    if (++shmProbeCounter >= SHM_PROBE_INTERVAL) {
+      shmProbeCounter = 0;
+      const probe = kernel32!.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
+      if (isNullPtr(probe)) {
+        cleanup();
+        scheduleReconnect();
+        return;
+      }
+      kernel32!.CloseHandle(probe);
+    }
 
     try {
       const raw: Uint8Array = koffi.decode(

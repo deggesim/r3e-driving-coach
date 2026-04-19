@@ -374,7 +374,7 @@ const SettingsPanel = () => {
             {voicesError && (
               <Row className="mb-2">
                 <Col sm={{ span: 9, offset: 3 }}>
-                  <p className="text-danger small mb-0">{voicesError}</p>
+                  <p className="text-danger mb-0">{voicesError}</p>
                 </Col>
               </Row>
             )}
@@ -403,9 +403,9 @@ const SettingsPanel = () => {
               <Col sm={{ span: 9, offset: 3 }}>
                 <Form.Text>
                   Selezionando una voce viene riprodotta un&apos;anteprima:
-                  &quot;Ciao, sono {assistantName} e oggi sono il tuo
-                  insegnante virtuale&quot;. Richiede una sottoscrizione Azure
-                  Cognitive Services.
+                  &quot;Ciao, sono {assistantName} e oggi sono il tuo insegnante
+                  virtuale&quot;. Richiede una sottoscrizione Azure Cognitive
+                  Services.
                 </Form.Text>
               </Col>
             </Row>
@@ -549,10 +549,10 @@ const SettingsPanel = () => {
             <Row>
               <Col sm={{ span: 9, offset: 3 }}>
                 <Form.Text>
-                  Quando attivo, aggiunge nello storico una sessione R3E (BMW M4 GT3 –
-                  Nürburgring) e una ACE (Porsche 718 GT4 – Monza), ognuna con 3 giri
-                  e un&apos;analisi Template v3 precompilata. Utile per testare la UI
-                  senza una sessione reale in corso.
+                  Quando attivo, aggiunge nello storico una sessione R3E (BMW M4
+                  GT3 – Nürburgring) e una ACE (Porsche 718 GT4 – Monza), ognuna
+                  con 3 giri e un&apos;analisi Template v3 precompilata. Utile
+                  per testare la UI senza una sessione reale in corso.
                 </Form.Text>
               </Col>
             </Row>

@@ -140,11 +140,11 @@ const RealtimeAnalysis = () => {
               </Badge>
             )}
             <span className="deb-sep">·</span>
-            <small className="text-muted">
+            <span className="text-muted">
               {laps.length} giri
               {session.best_lap != null &&
                 ` · best ${formatLapTime(session.best_lap)}`}
-            </small>
+            </span>
           </>
         ) : (
           <span className="deb-placeholder">
@@ -260,14 +260,14 @@ const RealtimeAnalysis = () => {
         {/* Analyses accordion */}
         <h6 className="text-uppercase mt-3">Analisi</h6>
         {analyses.length === 0 && !streamingVersion && (
-          <p className="small">Nessuna analisi ancora generata.</p>
+          <p>Nessuna analisi ancora generata.</p>
         )}
         <Accordion alwaysOpen>
           {analyses.map((a) => (
             <Accordion.Item key={a.id} eventKey={`v${a.version}`}>
               <Accordion.Header>
                 Analisi #{a.version}
-                <span className="ms-2 small">
+                <span className="ms-2">
                   {new Date(a.created_at).toLocaleString("it-IT")}
                 </span>
               </Accordion.Header>

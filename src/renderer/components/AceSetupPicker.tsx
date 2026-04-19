@@ -189,11 +189,10 @@ const AceSetupPicker = ({
         {/* Car / Track selectors */}
         <div className="d-flex gap-3 mb-3 align-items-end">
           <Form.Group style={{ flex: 1 }}>
-            <Form.Label className="small mb-1">Vettura</Form.Label>
+            <Form.Label className="mb-1">Vettura</Form.Label>
             {loadingCars ? (
               <div className="d-flex align-items-center gap-2">
-                <Spinner size="sm" />{" "}
-                <span className="small">Caricamento...</span>
+                <Spinner size="sm" /> Caricamento...
               </div>
             ) : (
               <Form.Select
@@ -211,11 +210,10 @@ const AceSetupPicker = ({
           </Form.Group>
 
           <Form.Group style={{ flex: 1 }}>
-            <Form.Label className="small mb-1">Circuito</Form.Label>
+            <Form.Label className="mb-1">Circuito</Form.Label>
             {loadingTracks ? (
               <div className="d-flex align-items-center gap-2">
-                <Spinner size="sm" />{" "}
-                <span className="small">Caricamento...</span>
+                <Spinner size="sm" /> Caricamento...
               </div>
             ) : (
               <Form.Select
@@ -290,9 +288,9 @@ const AceSetupPicker = ({
                 className="d-flex justify-content-between align-items-center"
               >
                 <span className="fw-medium">{f.filename}</span>
-                <small className="text-secondary">
+                <span className="text-secondary">
                   {formatDate(f.modifiedAt)}
-                </small>
+                </span>
               </ListGroup.Item>
             ))}
           </ListGroup>

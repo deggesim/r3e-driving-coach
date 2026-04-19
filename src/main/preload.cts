@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("lapComplete", (_event, data) => callback(data));
   },
   onStatus: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("r3e:status", (_event, data) => callback(data));
+    ipcRenderer.on("status", (_event, data) => callback(data));
   },
 
   // Voice coach push channels (Main → Renderer)

@@ -14,7 +14,6 @@ type StatusBarProps = {
 };
 
 const StatusBar = ({ status }: StatusBarProps) => {
-
   const calibrationText: ReactNode = status.calibrating ? (
     `Calibrazione: ${status.lapsToCalibration} ${status.lapsToCalibration === 1 ? "giro rimanente" : "giri rimanenti"}`
   ) : (
@@ -47,7 +46,7 @@ const StatusBar = ({ status }: StatusBarProps) => {
           <span className="status-car">{status.car}</span>
           {status.track && (
             <>
-              <span className="status-sep">·</span>
+              <span className="status-sep"> - </span>
               <span className="status-track">
                 {status.track}
                 {status.layout ? ` (${status.layout})` : ""}
@@ -61,8 +60,6 @@ const StatusBar = ({ status }: StatusBarProps) => {
       <div className="status-calibration">
         {status.connected ? calibrationText : "—"}
       </div>
-
-
     </div>
   );
 };

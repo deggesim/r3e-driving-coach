@@ -510,8 +510,8 @@ body {
 }
 .status-dot.connected { background: var(--green); box-shadow: 0 0 4px var(--green); }
 .status-dot.disconnected { background: var(--red); }
-.status-sep { color: var(--border); }
-.status-car { font-weight: 600; color: var(--text); }
+.status-sep { color: var(--text-dim); }
+.status-car { color: var(--text-dim); }
 .status-track { color: var(--text-dim); }
 .status-calibration { color: var(--text-dim); }
 .status-alert {
