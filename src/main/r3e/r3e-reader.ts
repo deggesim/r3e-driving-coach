@@ -13,7 +13,6 @@
 
 import { EventEmitter } from "events";
 import { createRequire } from "module";
-import { fileURLToPath } from "url";
 import {
   STRUCT_SIZE_KNOWN,
   SHM_NAME,
@@ -297,7 +296,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       }
 
       const frame = parseFrame(buf);
-      emitter.emit("frame", frame);
+      emitter.emit("r3e:frame", frame);
       detectBoundaries(frame);
     } catch {
       cleanup();
@@ -477,12 +476,12 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
           ? 1
           : 2;
     if (newSector !== mockSector) {
-      emitter.emit("sectorComplete", mockSector, 30 + Math.random() * 2);
+      emitter.emit("r3e:sectorComplete", mockSector, 30 + Math.random() * 2);
       mockSector = newSector;
     }
 
     const frame = generateMockFrame(mockLapDist, trackLength);
-    emitter.emit("frame", frame);
+    emitter.emit("r3e:frame", frame);
 
     pollTimer = setTimeout(() => pollMock(), POLL_INTERVAL_MS);
   };
@@ -517,21 +516,3 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     on: emitter.on.bind(emitter),
   };
 };
-
-// Standalone test
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const reader = createR3EReader();
-  reader.on("connected", () => console.log("[R3EReader] Connected"));
-  reader.on("disconnected", () => console.log("[R3EReader] Disconnected"));
-  reader.on("frame", (f: R3EFrame) => {
-    console.log(
-      `[Frame] speed=${f.carSpeed.toFixed(1)}km/h gear=${f.gear} thr=${f.throttle.toFixed(2)} brk=${f.brake.toFixed(2)} dist=${f.lapDistance.toFixed(0)}m`,
-    );
-  });
-  reader.on("lapComplete", (lap: unknown) => console.log("[LapComplete]", lap));
-  reader.on("sectorComplete", (n: number, t: number) =>
-    console.log(`[Sector ${n}] ${t.toFixed(3)}s`),
-  );
-  reader.start();
-  console.log("[R3EReader] Started. Press Ctrl+C to stop.");
-}

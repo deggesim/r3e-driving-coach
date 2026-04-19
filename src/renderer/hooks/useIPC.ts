@@ -5,11 +5,7 @@
 
 import { useEffect, useCallback } from "react";
 import { useIPCStore } from "../store/ipcStore";
-import type {
-  R3EFrame,
-  LapRecord,
-  GameStatus,
-} from "../../shared/types";
+import type { R3EFrame, LapRecord, GameStatus } from "../../shared/types";
 
 export const useIPC = (): void => {
   const setFrame = useIPCStore((s) => s.setFrame);
@@ -24,8 +20,8 @@ export const useIPC = (): void => {
     window.electronAPI.onStatus((data) => setStatus(data as GameStatus));
 
     return () => {
-      window.electronAPI.removeAllListeners("r3e:frame");
-      window.electronAPI.removeAllListeners("r3e:lapComplete");
+      window.electronAPI.removeAllListeners("session:frame");
+      window.electronAPI.removeAllListeners("lapComplete");
       window.electronAPI.removeAllListeners("r3e:status");
     };
   }, [setFrame, setLastLap, setStatus]);

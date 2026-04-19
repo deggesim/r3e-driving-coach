@@ -8,18 +8,33 @@
  * - Setups are cumulative per session and tagged on subsequent laps.
  */
 
+import type BetterSqlite3 from "better-sqlite3";
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  generatePdfBuffer,
-  generateSessionPdfBuffer,
-  type PdfData,
-} from "./pdf-generator.js";
-import { createR3EReader, type R3EReader } from "./r3e/r3e-reader.js";
+import type {
+  Alert,
+  Deviation,
+  GameFrame,
+  GameSource,
+  GameStatus,
+  LapRecord,
+  LapRow,
+  R3EFrame,
+  SessionAnalysisRow,
+  SessionDetail,
+  SessionListParams,
+  SessionListResult,
+  SessionRow,
+  SessionSetupRow,
+  SessionStartResult,
+  SetupData,
+} from "../shared/types.js";
 import { createAceReader, type AceReader } from "./ace/ace-reader.js";
-import { createLapRecorder } from "./r3e/lap-recorder.js";
-import { createZoneTracker } from "./r3e/zone-tracker.js";
+import {
+  decodeCarSetup,
+  type AceSetupFileInfo,
+} from "./ace/ace-setup-reader.js";
 import {
   createAdaptiveBaseline,
   type AdaptiveBaseline,
@@ -34,46 +49,32 @@ import {
   type VoiceCoachEngine,
 } from "./coach/voice-coach.js";
 import {
+  getCornerName,
+  getDb,
+  hasCornerNames,
+  seedCornersFromLap,
+} from "./db/db.js";
+import { toGameFrame } from "./game-adapter.js";
+import {
+  generatePdfBuffer,
+  generateSessionPdfBuffer,
+  type PdfData,
+} from "./pdf-generator.js";
+import { createLapRecorder } from "./r3e/lap-recorder.js";
+import {
+  getCarClassName,
+  getCarName,
+  getLayoutName,
+  getTrackName,
+  loadR3EData,
+} from "./r3e/r3e-data-loader.js";
+import { createR3EReader, type R3EReader } from "./r3e/r3e-reader.js";
+import { createZoneTracker } from "./r3e/zone-tracker.js";
+import {
   getAzureVoices,
   synthesizeAzure,
   transcribeAzure,
 } from "./tts/azure-tts.js";
-import {
-  getDb,
-  hasCornerNames,
-  seedCornersFromLap,
-  getCornerName,
-} from "./db/db.js";
-import {
-  loadR3EData,
-  getCarName,
-  getTrackName,
-  getLayoutName,
-  getCarClassName,
-} from "./r3e/r3e-data-loader.js";
-import { toGameFrame } from "./game-adapter.js";
-import {
-  decodeCarSetup,
-  type AceSetupFileInfo,
-} from "./ace/ace-setup-reader.js";
-import type {
-  LapRecord,
-  GameStatus,
-  R3EFrame,
-  GameSource,
-  Alert,
-  Deviation,
-  SetupData,
-  SessionRow,
-  SessionDetail,
-  SessionSetupRow,
-  SessionAnalysisRow,
-  LapRow,
-  SessionListParams,
-  SessionListResult,
-  SessionStartResult,
-} from "../shared/types.js";
-import type BetterSqlite3 from "better-sqlite3";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -498,8 +499,7 @@ const setupPipeline = (): void => {
     pushStatus();
   });
 
-  r3eReader.on("frame", (frame: R3EFrame) => {
-    if (activeGame !== "r3e") return;
+  r3eReader.on("r3e:frame", (frame: R3EFrame) => {
     if (frame.carModelId > 0) currentCar = String(frame.carModelId);
     if (frame.trackId > 0) currentTrack = String(frame.trackId);
     if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
@@ -509,11 +509,10 @@ const setupPipeline = (): void => {
       zoneTracker.update(gameFrame);
       ruleEngine.processFrame(gameFrame, currentLapNumber);
     }
-    pushToRenderer("r3e:frame", frame);
+    pushToRenderer("session:frame", frame);
   });
 
-  aceReader.on("frame", (frame: import("../shared/types.js").GameFrame) => {
-    if (activeGame !== "ace") return;
+  aceReader.on("ace:frame", (frame: GameFrame) => {
     // Populate car as soon as the first AC_LIVE frame makes it available
     if (!currentCar) {
       const info = aceReader.getSessionInfo();
@@ -526,7 +525,7 @@ const setupPipeline = (): void => {
       zoneTracker.update(frame);
       ruleEngine.processFrame(frame, currentLapNumber);
     }
-    pushToRenderer("r3e:frame", frame);
+    pushToRenderer("session:frame", frame);
   });
 
   const handleLapComplete = (lapData: LapRecord, game: GameSource): void => {
@@ -606,7 +605,7 @@ const setupPipeline = (): void => {
       };
 
       currentLapNumber = lap.lapNumber;
-      pushToRenderer("r3e:lapComplete", lapWithNames);
+      pushToRenderer("lapComplete", lapWithNames);
       pushStatus();
 
       // Seed corner names from first lap on a new track/layout
