@@ -41,7 +41,7 @@ const toArrayBuffer = (data: unknown): ArrayBuffer => {
 };
 
 /** Max recording duration in ms before auto-stopping. */
-const MAX_RECORD_MS = 8000;
+const MAX_RECORD_MS = 5000;
 
 /**
  * Play a short activation beep (two ascending tones) to signal mic is live.
@@ -65,7 +65,10 @@ const playActivationSound = (): void => {
       osc.type = "sine";
       osc.frequency.value = freq;
       g.gain.setValueAtTime(0.25, ctx.currentTime + start);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+      g.gain.exponentialRampToValueAtTime(
+        0.001,
+        ctx.currentTime + start + duration,
+      );
       osc.connect(g);
       g.connect(ctx.destination);
       osc.start(ctx.currentTime + start);
@@ -97,7 +100,10 @@ const playDeactivationSound = (): void => {
       osc.type = "sine";
       osc.frequency.value = freq;
       g.gain.setValueAtTime(0.25, ctx.currentTime + start);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+      g.gain.exponentialRampToValueAtTime(
+        0.001,
+        ctx.currentTime + start + duration,
+      );
       osc.connect(g);
       g.connect(ctx.destination);
       osc.start(ctx.currentTime + start);
@@ -154,20 +160,21 @@ const convertToWav = async (blob: Blob): Promise<ArrayBuffer> => {
   const view = new DataView(wav);
 
   const writeStr = (offset: number, s: string) => {
-    for (let i = 0; i < s.length; i++) view.setUint8(offset + i, s.charCodeAt(i));
+    for (let i = 0; i < s.length; i++)
+      view.setUint8(offset + i, s.charCodeAt(i));
   };
 
   writeStr(0, "RIFF");
   view.setUint32(4, 36 + dataBytes, true);
   writeStr(8, "WAVE");
   writeStr(12, "fmt ");
-  view.setUint32(16, 16, true);          // chunk size
-  view.setUint16(20, 1, true);           // PCM
-  view.setUint16(22, 1, true);           // mono
+  view.setUint32(16, 16, true); // chunk size
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
   view.setUint32(24, TARGET_RATE, true); // sample rate
   view.setUint32(28, TARGET_RATE * 2, true); // byte rate
-  view.setUint16(32, 2, true);           // block align
-  view.setUint16(34, 16, true);          // bits per sample
+  view.setUint16(32, 2, true); // block align
+  view.setUint16(34, 16, true); // bits per sample
   writeStr(36, "data");
   view.setUint32(40, dataBytes, true);
 
@@ -218,12 +225,18 @@ export const useVoiceCoach = ({
 
     const mimeType = pickMimeType();
 
-    console.log("[VoiceCoach] Requesting microphone, mimeType:", mimeType || "(browser default)");
+    console.log(
+      "[VoiceCoach] Requesting microphone, mimeType:",
+      mimeType || "(browser default)",
+    );
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((stream) => {
-        console.log("[VoiceCoach] Mic stream acquired, tracks:", stream.getAudioTracks().map((t) => t.label));
+        console.log(
+          "[VoiceCoach] Mic stream acquired, tracks:",
+          stream.getAudioTracks().map((t) => t.label),
+        );
         streamRef.current = stream;
 
         const recorder = new MediaRecorder(
@@ -247,17 +260,28 @@ export const useVoiceCoach = ({
 
           const effectiveMime = mimeType || "audio/webm;codecs=opus";
           const blob = new Blob(chunks, { type: effectiveMime });
-          console.log("[VoiceCoach] Recording stopped, blob size:", blob.size, "mime:", effectiveMime);
+          console.log(
+            "[VoiceCoach] Recording stopped, blob size:",
+            blob.size,
+            "mime:",
+            effectiveMime,
+          );
 
           if (blob.size === 0) {
-            console.warn("[VoiceCoach] Empty recording — mic may be muted or silent");
+            console.warn(
+              "[VoiceCoach] Empty recording — mic may be muted or silent",
+            );
             setState("idle");
             return;
           }
 
           convertToWav(blob)
             .then((buf) => {
-              console.log("[VoiceCoach] Converted to WAV:", buf.byteLength, "bytes");
+              console.log(
+                "[VoiceCoach] Converted to WAV:",
+                buf.byteLength,
+                "bytes",
+              );
               setState("processing");
               return window.electronAPI.sttTranscribe(buf, "audio/wav");
             })

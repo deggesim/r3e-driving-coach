@@ -672,7 +672,7 @@ const setupPipeline = (): void => {
       return {
         ok: false,
         reason:
-          "Nessun simulatore connesso. Avvia R3E o ACE prima di aprire una sessione.",
+          "Nessun simulatore connesso. Avvia RaceRoom o Assetto Corsa EVO prima di aprire una sessione.",
       };
     }
     console.log(
@@ -1053,10 +1053,18 @@ const setupPipeline = (): void => {
     if (intent === "newSession") {
       const res = startSession();
       if (res.ok) {
-        const names = resolveNames(activeGame, currentCar, currentTrack, currentLayout);
+        const names = resolveNames(
+          activeGame,
+          currentCar,
+          currentTrack,
+          currentLayout,
+        );
         const car = names.carName || "auto sconosciuta";
         const track = names.trackName || "circuito sconosciuto";
-        const layout = names.layoutName && names.layoutName !== track ? `, ${names.layoutName}` : "";
+        const layout =
+          names.layoutName && names.layoutName !== track
+            ? `, ${names.layoutName}`
+            : "";
         await speakText(`Sessione aperta. ${car} — ${track}${layout}.`);
       } else {
         await speakText(`Impossibile aprire la sessione. ${res.reason}`);
