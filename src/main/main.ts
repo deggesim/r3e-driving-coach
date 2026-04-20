@@ -1049,6 +1049,7 @@ const setupPipeline = (): void => {
   ipcMain.handle("coach:voiceQuery", async (_event, question: string) => {
     console.log("[VoiceCoach] question:", question);
     const intent = classifyVoiceIntent(question);
+    console.log("[VoiceCoach] intent:", intent);
 
     if (intent === "newSession") {
       const res = startSession();
