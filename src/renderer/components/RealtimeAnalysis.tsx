@@ -28,7 +28,6 @@ const RealtimeAnalysis = () => {
   const setups = useSessionStore((s) => s.setups);
   const analyses = useSessionStore((s) => s.analyses);
   const streaming = useSessionStore((s) => s.streaming);
-  const mode = useSessionStore((s) => s.mode);
   const loadCurrent = useSessionStore((s) => s.loadCurrent);
 
   const [showPicker, setShowPicker] = useState(false);
@@ -37,10 +36,10 @@ const RealtimeAnalysis = () => {
   );
 
   useEffect(() => {
-    if (mode === "live") void loadCurrent();
-  }, [loadCurrent, mode]);
+    void loadCurrent();
+  }, [loadCurrent]);
 
-  const isLive = mode === "live";
+  const isLive = true;
   const sessionActive = !!session && !session.ended_at;
 
   const showFlash = (variant: string, text: string): void => {
@@ -61,9 +60,7 @@ const RealtimeAnalysis = () => {
 
   const handleAnalyze = async (): Promise<void> => {
     if (!session) return;
-    const res = await window.electronAPI.sessionAnalyze(
-      isLive ? {} : { sessionId: session.id, game: session.game },
-    );
+    const res = await window.electronAPI.sessionAnalyze({});
     if (!res.ok) showFlash("danger", res.reason ?? "Errore durante l'analisi");
     else showFlash("info", "Analisi in corso…");
   };

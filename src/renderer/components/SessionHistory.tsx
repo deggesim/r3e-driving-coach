@@ -1,9 +1,8 @@
 /**
- * SessionList — Paginated list of past sessions (R3E + ACE).
+ * SessionHistory — Paginated list of past sessions (R3E + ACE).
  * Columns: Simulator / Car / Track / Date. 10 rows per page.
  * Filters: game / car / track. Sort: started_at asc|desc.
- * Row click → loads session into sessionStore (historical mode) and switches
- * the parent tab to the realtime analysis view.
+ * Row click → shows SessionDetail inline (back button returns to list).
  */
 
 import { faFlask, faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -15,6 +14,7 @@ import { formatLapTime } from "../../shared/format";
 import { useSessionStore } from "../store/sessionStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { MOCK_SESSIONS, MOCK_DETAILS } from "../mocks/mockData";
+import SessionDetail from "./SessionDetail";
 
 const PAGE_SIZE = 10;
 const FETCH_SIZE = 500; // upper bound — load all, paginate/filter client-side
@@ -32,14 +32,12 @@ const formatDate = (iso: string | null | undefined): string => {
   });
 };
 
-type Props = {
-  onOpenSession: () => void;
-};
-
-const SessionHistory = ({ onOpenSession }: Props) => {
+const SessionHistory = () => {
   const loadById = useSessionStore((s) => s.loadById);
   const setDetail = useSessionStore((s) => s.setDetail);
   const mockHistoryMode = useSettingsStore((s) => s.mockHistoryMode);
+
+  const [view, setView] = useState<"list" | "detail">("list");
 
   const [allSessions, setAllSessions] = useState<SessionRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -139,7 +137,7 @@ const SessionHistory = ({ onOpenSession }: Props) => {
     } else {
       void loadById(s.id, s.game);
     }
-    onOpenSession();
+    setView("detail");
   };
 
   const executeDelete = async (): Promise<void> => {
@@ -165,6 +163,10 @@ const SessionHistory = ({ onOpenSession }: Props) => {
     }
     setDeleteTarget(null);
   };
+
+  if (view === "detail") {
+    return <SessionDetail onBack={() => setView("list")} />;
+  }
 
   return (
     <div className="session-history h-100 d-flex flex-column overflow-hidden">

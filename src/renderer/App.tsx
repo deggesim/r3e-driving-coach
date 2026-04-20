@@ -201,9 +201,7 @@ const App = () => {
       {/* Main content */}
       <div className="main-content">
         {tab === "debriefing" && <RealtimeAnalysis />}
-        {tab === "history" && (
-          <SessionHistory onOpenSession={() => setTab("debriefing")} />
-        )}
+        {tab === "history" && <SessionHistory />}
         {tab === "settings" && <SettingsPanel />}
       </div>
 
