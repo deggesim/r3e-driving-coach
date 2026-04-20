@@ -55,7 +55,7 @@ const SessionHistory = ({ onOpenSession }: Props) => {
     if (!window.electronAPI) return;
     setLoading(true);
     window.electronAPI
-      .sessionList({ page: 1, pageSize: FETCH_SIZE, sort: "desc" })
+      .sessionList({ page: 0, pageSize: FETCH_SIZE, sort: "desc" })
       .then((res) => {
         setAllSessions(res.items);
       })

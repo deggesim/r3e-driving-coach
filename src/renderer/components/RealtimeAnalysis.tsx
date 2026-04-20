@@ -11,41 +11,25 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Button,
-  Badge,
-  Accordion,
-  Spinner,
-  Table,
-  Alert as BsAlert,
-} from "react-bootstrap";
-import { marked } from "marked";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faPlay,
-  faStop,
-  faGear,
-  faChartLine,
-  faFilePdf,
-} from "@fortawesome/free-solid-svg-icons";
+import { Alert } from "react-bootstrap";
 import type { SetupData } from "../../shared/types";
-import { formatLapTime } from "../../shared/format";
 import { useIPCStore } from "../store/ipcStore";
 import { useSessionStore } from "../store/sessionStore";
-import ScreenshotPicker from "./ScreenshotPicker";
 import AceSetupPicker from "./AceSetupPicker";
+import AnalysisHeader from "./AnalysisHeader";
+import AnalysisList from "./AnalysisList";
+import LapsTable from "./LapsTable";
+import ScreenshotPicker from "./ScreenshotPicker";
 
 const RealtimeAnalysis = () => {
   const status = useIPCStore((s) => s.status);
 
   const session = useSessionStore((s) => s.session);
-  const laps = useSessionStore((s) => s.laps);
   const setups = useSessionStore((s) => s.setups);
   const analyses = useSessionStore((s) => s.analyses);
   const streaming = useSessionStore((s) => s.streaming);
   const mode = useSessionStore((s) => s.mode);
   const loadCurrent = useSessionStore((s) => s.loadCurrent);
-  const reset = useSessionStore((s) => s.reset);
 
   const [showPicker, setShowPicker] = useState(false);
   const [flash, setFlash] = useState<{ variant: string; text: string } | null>(
@@ -113,191 +97,47 @@ const RealtimeAnalysis = () => {
     return m;
   }, [setups]);
 
-  const renderMd = (md: string): string =>
-    marked.parse(md, { async: false }) as string;
-
   const streamingVersion =
     streaming?.sessionId === session?.id ? streaming : null;
 
   return (
     <div className="d-flex flex-column h-100 overflow-hidden">
       {/* Header */}
-      <div className="debriefing-header d-flex align-items-center gap-2 flex-wrap flex-shrink-0 p-2">
-        {session ? (
-          <>
-            <span className="deb-car fw-bold">{currentCar}</span>
-            <span className="deb-sep">·</span>
-            <span className="deb-track">
-              {currentTrack} {session.layout_name ?? session.layout}
-            </span>
-            <span className="deb-sep">·</span>
-            <Badge bg={sessionActive ? "success" : "secondary"}>
-              {sessionActive ? "Attiva" : "Chiusa"}
-            </Badge>
-            {!isLive && (
-              <Badge bg="info" className="ms-1">
-                Storica
-              </Badge>
-            )}
-            <span className="deb-sep">·</span>
-            <span className="text-muted">
-              {laps.length} giri
-              {session.best_lap != null &&
-                ` · best ${formatLapTime(session.best_lap)}`}
-            </span>
-          </>
-        ) : (
-          <span className="deb-placeholder">
-            {isLive ? "Nessuna sessione aperta" : "Caricamento sessione…"}
-          </span>
-        )}
-
-        <div className="ms-auto d-flex gap-1 flex-wrap">
-          {isLive && !sessionActive && (
-            <Button size="sm" variant="success" onClick={handleStart}>
-              <FontAwesomeIcon icon={faPlay} className="me-1" /> Nuova sessione
-            </Button>
-          )}
-          {isLive && sessionActive && (
-            <Button size="sm" variant="outline-secondary" onClick={handleEnd}>
-              <FontAwesomeIcon icon={faStop} className="me-1" /> Chiudi sessione
-            </Button>
-          )}
-          {isLive && sessionActive && (
-            <Button
-              size="sm"
-              variant="outline-primary"
-              onClick={() => setShowPicker(true)}
-            >
-              <FontAwesomeIcon icon={faGear} className="me-1" /> Carica setup
-              {setups.length > 0 && ` (${setups.length})`}
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={handleAnalyze}
-            disabled={!session || (isLive && laps.length === 0)}
-          >
-            <FontAwesomeIcon icon={faChartLine} className="me-1" /> Esegui
-            analisi
-          </Button>
-          <Button
-            size="sm"
-            variant="outline-secondary"
-            onClick={handleExportPdf}
-            disabled={!session || analyses.length === 0}
-          >
-            <FontAwesomeIcon icon={faFilePdf} className="me-1" /> Esporta PDF
-          </Button>
-          {!isLive && (
-            <Button size="sm" variant="link" onClick={reset}>
-              Torna live
-            </Button>
-          )}
-        </div>
-      </div>
+      <AnalysisHeader
+        isLive={isLive}
+        sessionActive={sessionActive}
+        currentCar={currentCar}
+        currentTrack={currentTrack}
+        onStart={handleStart}
+        onEnd={handleEnd}
+        onAnalyze={handleAnalyze}
+        onExportPdf={handleExportPdf}
+        onOpenPicker={() => setShowPicker(true)}
+      />
 
       {flash && (
-        <BsAlert
+        <Alert
           variant={flash.variant}
           onClose={() => setFlash(null)}
           dismissible
           className="mb-0"
         >
           {flash.text}
-        </BsAlert>
+        </Alert>
       )}
 
       {/* Body */}
       <div className="flex-grow-1 overflow-y-auto p-3">
         {/* Laps table */}
         <h6 className="text-uppercase">Giri</h6>
-        <Table striped size="sm" variant="dark" className="align-middle">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Tempo</th>
-              <th>S1</th>
-              <th>S2</th>
-              <th>S3</th>
-              <th>Valido</th>
-              <th>Setup</th>
-              <th>Data</th>
-            </tr>
-          </thead>
-          <tbody>
-            {laps.length === 0 && (
-              <tr>
-                <td colSpan={8} className="text-center text-muted">
-                  Nessun giro
-                </td>
-              </tr>
-            )}
-            {laps.map((l) => (
-              <tr key={l.id}>
-                <td>{l.lap_number}</td>
-                <td>{formatLapTime(l.lap_time)}</td>
-                <td>{l.sector1 != null ? formatLapTime(l.sector1) : "--"}</td>
-                <td>{l.sector2 != null ? formatLapTime(l.sector2) : "--"}</td>
-                <td>{l.sector3 != null ? formatLapTime(l.sector3) : "--"}</td>
-                <td>{l.valid ? "✔" : "✗"}</td>
-                <td>
-                  {l.setup_id != null ? (
-                    <Badge bg="info">
-                      #{setupById.get(l.setup_id) ?? l.setup_id}
-                    </Badge>
-                  ) : (
-                    <span className="text-muted">—</span>
-                  )}
-                </td>
-                <td>{new Date(l.recorded_at).toLocaleTimeString("it-IT")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+        <LapsTable setupById={setupById} />
 
         {/* Analyses accordion */}
         <h6 className="text-uppercase mt-3">Analisi</h6>
         {analyses.length === 0 && !streamingVersion && (
           <p>Nessuna analisi ancora generata.</p>
         )}
-        <Accordion alwaysOpen>
-          {analyses.map((a) => (
-            <Accordion.Item key={a.id} eventKey={`v${a.version}`}>
-              <Accordion.Header>
-                Analisi #{a.version}
-                <span className="ms-2">
-                  {new Date(a.created_at).toLocaleString("it-IT")}
-                </span>
-              </Accordion.Header>
-              <Accordion.Body>
-                <div
-                  className="deb-content"
-                  // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
-                  dangerouslySetInnerHTML={{ __html: renderMd(a.template_v3) }}
-                />
-              </Accordion.Body>
-            </Accordion.Item>
-          ))}
-          {streamingVersion && (
-            <Accordion.Item eventKey={`streaming-${streamingVersion.version}`}>
-              <Accordion.Header>
-                <Spinner size="sm" className="me-2" />
-                Analisi #{streamingVersion.version} (in corso…)
-              </Accordion.Header>
-              <Accordion.Body>
-                <div
-                  className="deb-content"
-                  // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
-                  dangerouslySetInnerHTML={{
-                    __html: renderMd(streamingVersion.text),
-                  }}
-                />
-              </Accordion.Body>
-            </Accordion.Item>
-          )}
-        </Accordion>
+        <AnalysisList streamingVersion={streamingVersion} />
       </div>
 
       {/* Setup pickers */}

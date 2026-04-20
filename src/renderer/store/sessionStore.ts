@@ -92,7 +92,7 @@ export const useSessionStore = create<State>((set, get) => ({
   },
 
   loadById: async (id, game) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, mode: "historical" });
     try {
       const detail = (await window.electronAPI.sessionGetDetail({ id, game })) as SessionDetail | null;
       get().setDetail(detail, "historical");

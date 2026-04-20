@@ -675,7 +675,11 @@ const setupPipeline = (): void => {
           "Nessun simulatore connesso. Avvia R3E o ACE prima di aprire una sessione.",
       };
     }
-    if (!currentCar || !currentTrack || !currentLayout) {
+    console.log(
+      `[startSession] activeGame="${activeGame}" car="${currentCar}" track="${currentTrack}" layout="${currentLayout}"`,
+    );
+    const layoutRequired = activeGame === "r3e";
+    if (!currentCar || !currentTrack || (layoutRequired && !currentLayout)) {
       return {
         ok: false,
         reason: "Auto/circuito non ancora rilevati. Entra in pista e riprova.",
