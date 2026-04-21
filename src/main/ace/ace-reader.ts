@@ -91,6 +91,8 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
   let connected = false;
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let shmProbeCounter = 0;
+  const SHM_PROBE_INTERVAL = 62; // ~1s at 16ms poll
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let koffi: any = null;
   let kernel32: Kernel32 | null = null;
@@ -176,6 +178,28 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
 
   const poll = (): void => {
     if (stopped || !physView || !gfxView || !staView) return;
+
+    // Periodically verify ACE SHM still exists by releasing and re-acquiring
+    // the physics handle. If ACE has exited and we were the last holder, the
+    // named object disappears and OpenFileMappingA returns NULL.
+    if (++shmProbeCounter >= SHM_PROBE_INTERVAL) {
+      shmProbeCounter = 0;
+      if (physHandle) {
+        kernel32!.CloseHandle(physHandle);
+        physHandle = null;
+      }
+      const probe = kernel32!.OpenFileMappingA(
+        FILE_MAP_READ,
+        0,
+        ACE_SHM_PHYSICS,
+      );
+      if (isNullPtr(probe)) {
+        cleanup();
+        scheduleReconnect();
+        return;
+      }
+      physHandle = probe;
+    }
 
     try {
       const gfxBuf = decodeBuffer(gfxView, ACE_GRAPHIC_BUF);

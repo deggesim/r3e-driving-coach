@@ -270,17 +270,23 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     if (stopped || !viewPtr) return;
 
     // Periodically verify the named SHM object still exists.
-    // When R3E closes it removes the object from the namespace, but our
-    // existing MapViewOfFile stays valid — data freezes without throwing.
+    // We release our file-mapping handle before probing: if R3E has exited and
+    // we were the last holder, the named object disappears and OpenFileMappingA
+    // returns NULL. Keeping our handle open would keep the object alive and
+    // make the probe always succeed even after R3E closes.
     if (++shmProbeCounter >= SHM_PROBE_INTERVAL) {
       shmProbeCounter = 0;
+      if (mapHandle) {
+        kernel32!.CloseHandle(mapHandle);
+        mapHandle = null;
+      }
       const probe = kernel32!.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
       if (isNullPtr(probe)) {
         cleanup();
         scheduleReconnect();
         return;
       }
-      kernel32!.CloseHandle(probe);
+      mapHandle = probe;
     }
 
     try {
