@@ -26,6 +26,7 @@
     "koffi": "^2.16.0",
     "marked": "^18.0.1",
     "react-bootstrap": "^2.10.10",
+    "recharts": "^3.8.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

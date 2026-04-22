@@ -532,6 +532,32 @@ body {
 @keyframes cursor-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 .voice-cursor { animation: cursor-blink 0.8s step-end infinite; }
 
+/* ── Laps table expandable telemetry ── */
+.laps-table .lap-telemetry-row > td {
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+}
+.lap-telemetry-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.3s ease;
+}
+.lap-telemetry-wrapper.open {
+  grid-template-rows: 1fr;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.lap-telemetry-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.recharts-default-legend {
+  font-size: 12px !important;
+}
+.recharts-legend-item-text {
+  color: var(--text) !important;
+}
+
 /* ── Scrollbar styling ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
