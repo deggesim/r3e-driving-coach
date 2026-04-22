@@ -72,6 +72,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   sessionDeleteAll: (items: Array<{ id: number; game: string }>) =>
     ipcRenderer.invoke("session:deleteAll", items),
 
+  // Lap telemetry frames (on demand)
+  lapGetFrames: (params: { id: number; game: string }) =>
+    ipcRenderer.invoke("lap:getFrames", params),
+
   // Voice coach query
   voiceQuery: (question: string) =>
     ipcRenderer.invoke("coach:voiceQuery", question),

@@ -11,6 +11,7 @@
 import type BetterSqlite3 from "better-sqlite3";
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
+import { gzipSync, gunzipSync } from "zlib";
 import { fileURLToPath } from "url";
 import type {
   Alert,
@@ -352,7 +353,8 @@ const setupPipeline = (): void => {
 
     const laps = db
       .prepare(
-        `SELECT * FROM ${t("laps", game)} WHERE session_id = ? ORDER BY lap_number ASC`,
+        `SELECT id, session_id, setup_id, lap_number, lap_time, sector1, sector2, sector3, valid, zones_json, recorded_at
+         FROM ${t("laps", game)} WHERE session_id = ? ORDER BY lap_number ASC`,
       )
       .all(sessionId) as LapRow[];
 
@@ -420,11 +422,15 @@ const setupPipeline = (): void => {
     const lapsTable = t("laps");
     const sessionsTable = t("sessions");
     try {
+      // Downsample frames to ~30Hz (reader polls at ~60Hz) and gzip
+      const downsampled = lap.frames.filter((_, i) => i % 2 === 0);
+      const framesBlob = gzipSync(Buffer.from(JSON.stringify(downsampled), "utf8"));
+
       const insertResult = db
         .prepare(
           `INSERT INTO ${lapsTable}
-           (session_id, setup_id, lap_number, lap_time, sector1, sector2, sector3, valid, zones_json, recorded_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+           (session_id, setup_id, lap_number, lap_time, sector1, sector2, sector3, valid, zones_json, frames_blob, recorded_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
         )
         .run(
           sessionId,
@@ -436,6 +442,7 @@ const setupPipeline = (): void => {
           lap.sectorTimes[2] ?? null,
           lap.valid ? 1 : 0,
           JSON.stringify(lap.zones),
+          framesBlob,
         );
 
       db.prepare(
@@ -445,9 +452,12 @@ const setupPipeline = (): void => {
          WHERE id = ?`,
       ).run(lap.lapTime, lap.lapTime, sessionId);
 
-      // Push lap added
+      // Push lap added (exclude frames_blob — renderer fetches on demand)
       const lapRow = db
-        .prepare(`SELECT * FROM ${lapsTable} WHERE id = ?`)
+        .prepare(
+          `SELECT id, session_id, setup_id, lap_number, lap_time, sector1, sector2, sector3, valid, zones_json, recorded_at
+           FROM ${lapsTable} WHERE id = ?`,
+        )
         .get(insertResult.lastInsertRowid) as LapRow | undefined;
       if (lapRow) {
         pushToRenderer("session:lapAdded", {
@@ -804,6 +814,24 @@ const setupPipeline = (): void => {
     "session:getDetail",
     (_event, { id, game }: { id: number; game: GameSource }) => {
       return loadSessionDetail(id, game);
+    },
+  );
+
+  ipcMain.handle(
+    "lap:getFrames",
+    (_event, { id, game }: { id: number; game: GameSource }) => {
+      const lapsTable = `laps_${game === "ace" ? "ace" : "r3e"}`;
+      const row = db
+        .prepare(`SELECT frames_blob FROM ${lapsTable} WHERE id = ?`)
+        .get(id) as { frames_blob: Buffer | null } | undefined;
+      if (!row || !row.frames_blob) return [];
+      try {
+        const json = gunzipSync(row.frames_blob).toString("utf8");
+        return JSON.parse(json);
+      } catch (err) {
+        console.error("[Main] lap:getFrames decode error:", err);
+        return [];
+      }
     },
   );
 

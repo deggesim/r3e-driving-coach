@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -9,7 +9,8 @@ import {
   YAxis,
   Legend,
 } from "recharts";
-import type { LapRow, ZoneData } from "../../shared/types";
+import type { CompactFrame, GameSource, LapRow, ZoneData } from "../../shared/types";
+import { useSessionStore } from "../store/sessionStore";
 
 type ChartPoint = {
   dist: number;
@@ -21,13 +22,13 @@ type ChartPoint = {
 const AXIS_COLOR = "#888";
 const GRID_COLOR = "#2e2e2e";
 const BG_TOOLTIP = "#1a1a1a";
+const MAX_POINTS = 400;
 
 type TooltipPayloadEntry = {
   dataKey: string;
   name?: string;
   value: number;
   color: string;
-  unit?: string;
 };
 
 type CustomTooltipProps = {
@@ -83,28 +84,81 @@ const SpeedTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   );
 };
 
+const fromFrames = (frames: CompactFrame[]): ChartPoint[] => {
+  const sorted = frames.slice().sort((a, b) => a.d - b.d);
+  const stride = Math.max(1, Math.ceil(sorted.length / MAX_POINTS));
+  const out: ChartPoint[] = [];
+  for (let i = 0; i < sorted.length; i += stride) {
+    const f = sorted[i];
+    out.push({
+      dist: f.d,
+      brake: f.brk * 100,
+      throttle: f.thr * 100,
+      speed: f.spd,
+    });
+  }
+  return out;
+};
+
+const fromZones = (zonesJson: string | null): ChartPoint[] => {
+  if (!zonesJson) return [];
+  try {
+    const zones = JSON.parse(zonesJson) as ZoneData[];
+    return zones
+      .slice()
+      .sort((a, b) => a.dist - b.dist)
+      .map((z) => ({
+        dist: z.dist,
+        brake: z.maxBrakePct * 100,
+        throttle: z.avgThrottlePct * 100,
+        speed: z.avgSpeedKmh,
+      }));
+  } catch {
+    return [];
+  }
+};
+
 type Props = {
   lap: LapRow;
 };
 
 const LapTelemetryCharts = ({ lap }: Props) => {
+  const game: GameSource = useSessionStore((s) => s.session?.game ?? "r3e");
+  const [frames, setFrames] = useState<CompactFrame[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setFrames(null);
+    window.electronAPI
+      .lapGetFrames({ id: lap.id, game })
+      .then((f) => {
+        if (!cancelled) setFrames(f ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setFrames([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lap.id, game]);
+
   const data = useMemo<ChartPoint[]>(() => {
-    if (!lap.zones_json) return [];
-    try {
-      const zones = JSON.parse(lap.zones_json) as ZoneData[];
-      return zones
-        .slice()
-        .sort((a, b) => a.dist - b.dist)
-        .map((z) => ({
-          dist: z.dist,
-          brake: z.maxBrakePct,
-          throttle: z.avgThrottlePct,
-          speed: z.avgSpeedKmh,
-        }));
-    } catch {
-      return [];
-    }
-  }, [lap.zones_json]);
+    if (frames && frames.length > 0) return fromFrames(frames);
+    return fromZones(lap.zones_json);
+  }, [frames, lap.zones_json]);
+
+  if (loading) {
+    return (
+      <div className="text-muted" style={{ padding: 12, fontSize: 13 }}>
+        Caricamento telemetria…
+      </div>
+    );
+  }
 
   if (data.length === 0) {
     return (

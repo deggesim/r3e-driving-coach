@@ -384,6 +384,9 @@ export type ElectronAPI = {
   sessionDelete: (params: { id: number; game: GameSource }) => Promise<void>;
   sessionDeleteAll: (items: Array<{ id: number; game: GameSource }>) => Promise<void>;
 
+  // Lap telemetry frames (on demand)
+  lapGetFrames: (params: { id: number; game: GameSource }) => Promise<CompactFrame[]>;
+
   // Voice coach
   voiceQuery: (question: string) => Promise<void>;
 

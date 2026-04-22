@@ -73,6 +73,7 @@ const initSchema = (db: Database.Database): void => {
       sector3       REAL,
       valid         INTEGER NOT NULL DEFAULT 1,
       zones_json    TEXT,
+      frames_blob   BLOB,
       recorded_at   TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_laps_r3e_session ON laps_r3e(session_id);
@@ -120,6 +121,7 @@ const initSchema = (db: Database.Database): void => {
       sector3       REAL,
       valid         INTEGER NOT NULL DEFAULT 1,
       zones_json    TEXT,
+      frames_blob   BLOB,
       recorded_at   TEXT NOT NULL DEFAULT (datetime('now'))
     );
     CREATE INDEX IF NOT EXISTS idx_laps_ace_session ON laps_ace(session_id);
@@ -140,6 +142,18 @@ const initSchema = (db: Database.Database): void => {
       value TEXT NOT NULL
     );
   `);
+
+  // Migration: add frames_blob to pre-existing laps_* tables
+  const hasColumn = (table: string, column: string): boolean => {
+    const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    return rows.some((r) => r.name === column);
+  };
+  if (!hasColumn("laps_r3e", "frames_blob")) {
+    db.exec(`ALTER TABLE laps_r3e ADD COLUMN frames_blob BLOB`);
+  }
+  if (!hasColumn("laps_ace", "frames_blob")) {
+    db.exec(`ALTER TABLE laps_ace ADD COLUMN frames_blob BLOB`);
+  }
 };
 
 export const getDb = (userDataPath: string): Database.Database => {
