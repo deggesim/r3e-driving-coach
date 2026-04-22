@@ -77,8 +77,9 @@ const RealtimeAnalysis = () => {
   const handleSetupConfirm = async (setup: SetupData): Promise<void> => {
     setShowPicker(false);
     try {
-      await window.electronAPI.sessionLoadSetup({ setup });
-      showFlash("success", `Setup caricato: ${setup.carFound}`);
+      const named: SetupData = setup.name ? setup : { ...setup, name: setup.carFound || "Setup" };
+      await window.electronAPI.sessionLoadSetup({ setup: named });
+      showFlash("success", `Setup caricato: ${named.name}`);
     } catch (err) {
       showFlash("danger", String(err));
     }
@@ -89,8 +90,8 @@ const RealtimeAnalysis = () => {
     session?.track_name ?? session?.track ?? status?.track ?? "";
 
   const setupById = useMemo(() => {
-    const m = new Map<number, number>(); // setup.id → setup index (1-based)
-    setups.forEach((s, i) => m.set(s.id, i + 1));
+    const m = new Map<number, string>(); // setup.id → display name
+    setups.forEach((s, i) => m.set(s.id, s.setup.name ?? `#${i + 1}`));
     return m;
   }, [setups]);
 

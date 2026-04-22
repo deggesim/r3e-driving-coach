@@ -45,8 +45,8 @@ const SessionDetail = ({ onBack }: Props) => {
   const currentTrack = session?.track_name ?? session?.track ?? "";
 
   const setupById = useMemo(() => {
-    const m = new Map<number, number>();
-    setups.forEach((s, i) => m.set(s.id, i + 1));
+    const m = new Map<number, string>(); // setup.id → display name
+    setups.forEach((s, i) => m.set(s.id, s.setup.name ?? `#${i + 1}`));
     return m;
   }, [setups]);
 

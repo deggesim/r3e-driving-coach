@@ -1,9 +1,11 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { Badge, Table } from "react-bootstrap";
 import { formatLapTime } from "../../shared/format";
 import { useSessionStore } from "../store/sessionStore";
 
 type LapsTableProps = {
-  setupById: Map<number, number>;
+  setupById: Map<number, string>;
 };
 
 const LapsTable = ({ setupById }: LapsTableProps) => {
@@ -37,17 +39,23 @@ const LapsTable = ({ setupById }: LapsTableProps) => {
             <td>{l.sector1 != null ? formatLapTime(l.sector1) : "--"}</td>
             <td>{l.sector2 != null ? formatLapTime(l.sector2) : "--"}</td>
             <td>{l.sector3 != null ? formatLapTime(l.sector3) : "--"}</td>
-            <td>{l.valid ? "✔" : "✗"}</td>
+            <td>
+              {l.valid ? (
+                <FontAwesomeIcon icon={faCheck} className="text-success" />
+              ) : (
+                <FontAwesomeIcon icon={faXmark} className="text-danger" />
+              )}
+            </td>
             <td>
               {l.setup_id != null ? (
-                <Badge bg="info">
-                  #{setupById.get(l.setup_id) ?? l.setup_id}
+                <Badge bg="info" style={{ maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-block" }} title={setupById.get(l.setup_id)}>
+                  {setupById.get(l.setup_id) ?? `#${l.setup_id}`}
                 </Badge>
               ) : (
                 <span className="text-muted">—</span>
               )}
             </td>
-            <td>{new Date(l.recorded_at).toLocaleTimeString("it-IT")}</td>
+            <td>{new Date(l.recorded_at).toLocaleString("it-IT")}</td>
           </tr>
         ))}
       </tbody>

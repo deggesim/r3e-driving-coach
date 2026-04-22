@@ -5,7 +5,7 @@
  * Row click → shows SessionDetail inline (back button returns to list).
  */
 
-import { faFlask, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faArrowDownWideShort, faArrowUpWideShort, faFlask, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
@@ -218,16 +218,16 @@ const SessionHistory = () => {
           ))}
         </Form.Select>
 
-        <Form.Select
+        <Button
+          variant="outline-secondary"
           size="sm"
-          className="sh-filter-select ms-auto"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as "asc" | "desc")}
-          style={{ maxWidth: 140 }}
+          className="sh-filter-select ms-auto d-flex align-items-center gap-1"
+          onClick={() => setSort((s) => (s === "desc" ? "asc" : "desc"))}
+          title={sort === "desc" ? "Data decrescente" : "Data crescente"}
         >
-          <option value="desc">Data ↓</option>
-          <option value="asc">Data ↑</option>
-        </Form.Select>
+          <FontAwesomeIcon icon={sort === "desc" ? faArrowDownWideShort : faArrowUpWideShort} />
+          Data
+        </Button>
 
         {filtered.length > 0 && (
           <Button

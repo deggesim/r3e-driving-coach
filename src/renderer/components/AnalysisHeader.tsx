@@ -84,11 +84,7 @@ const AnalysisHeader = ({
           </Button>
         )}
         {isLive && sessionActive && (
-          <Button
-            size="sm"
-            variant="outline-primary"
-            onClick={onOpenPicker}
-          >
+          <Button size="sm" variant="outline-primary" onClick={onOpenPicker}>
             <FontAwesomeIcon icon={faGear} className="me-1" /> Carica setup
             {setups.length > 0 && ` (${setups.length})`}
           </Button>
@@ -99,8 +95,7 @@ const AnalysisHeader = ({
           onClick={onAnalyze}
           disabled={!session || (isLive && laps.length === 0)}
         >
-          <FontAwesomeIcon icon={faChartLine} className="me-1" /> Esegui
-          analisi
+          <FontAwesomeIcon icon={faChartLine} className="me-1" /> Esegui analisi
         </Button>
         <Button
           size="sm"
@@ -111,7 +106,7 @@ const AnalysisHeader = ({
           <FontAwesomeIcon icon={faFilePdf} className="me-1" /> Esporta PDF
         </Button>
         {!isLive && onBack && (
-          <Button size="sm" variant="link" onClick={onBack}>
+          <Button size="sm" variant="outline-primary" onClick={onBack}>
             <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
             Indietro
           </Button>

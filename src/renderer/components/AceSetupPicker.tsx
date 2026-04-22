@@ -146,7 +146,9 @@ const AceSetupPicker = ({
       const setup = await window.electronAPI.aceReadSetup({
         filePath: selectedFile,
       });
-      onConfirm(setup);
+      const filename = files.find((f) => f.filePath === selectedFile)?.filename ?? selectedFile;
+      const name = filename.replace(/\.carsetup$/i, "");
+      onConfirm({ ...setup, name });
       handleClose();
     } catch (err) {
       setError(

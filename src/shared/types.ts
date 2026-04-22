@@ -214,6 +214,7 @@ export type SetupParam = {
 };
 
 export type SetupData = {
+  name?: string; // display name for the setup (filename for ACE, carFound for R3E)
   carVerified: boolean;
   carFound: string;
   setupText: string; // free-form markdown summary

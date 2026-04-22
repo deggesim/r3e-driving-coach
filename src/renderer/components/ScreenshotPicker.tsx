@@ -3,10 +3,10 @@
  * Shows thumbnails, allows multi-select, then triggers Claude Vision decode.
  */
 
-import { faCheck, faCircleNotch, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheck, faCircleNotch, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
-import { Badge, Button, Modal, Spinner } from "react-bootstrap";
+import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
 import type { SetupData } from "../../shared/types";
 
 type ScreenshotEntry = { name: string; thumbnailB64: string };
@@ -26,6 +26,7 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [phase, setPhase] = useState<Phase>("pick");
   const [decodedSetup, setDecodedSetup] = useState<SetupData | null>(null);
+  const [setupName, setSetupName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const loadedRef = useRef(false);
 
@@ -69,13 +70,16 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
   };
 
   const handleConfirm = (): void => {
-    if (decodedSetup) onConfirm(decodedSetup);
+    if (decodedSetup && setupName.trim()) {
+      onConfirm({ ...decodedSetup, name: setupName.trim() });
+    }
   };
 
   const handleClose = (): void => {
     setPhase("pick");
     setSelected(new Set());
     setDecodedSetup(null);
+    setSetupName("");
     setError(null);
     onClose();
   };
@@ -150,6 +154,20 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
               )}
             </div>
 
+            <Form.Group className="mb-3" style={{ maxWidth: 360 }}>
+              <Form.Label className="text-dim" style={{ fontSize: 13 }}>
+                Nome setup <span className="text-danger">*</span>
+              </Form.Label>
+              <Form.Control
+                size="sm"
+                type="text"
+                placeholder="es. Qualifica Monza baseline"
+                value={setupName}
+                onChange={(e) => setSetupName(e.target.value)}
+                autoFocus
+              />
+            </Form.Group>
+
             {decodedSetup.params.length > 0 && (
               <div className="picker-params">
                 <table className="setup-table w-100">
@@ -198,12 +216,14 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
 
         {phase === "verify" && decodedSetup && (
           <>
-            <Button variant="secondary" size="sm" onClick={() => setPhase("pick")}>
-              ← Riseleziona
+            <Button variant="secondary" size="sm" onClick={() => { setPhase("pick"); setSetupName(""); }}>
+              <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
+              Riseleziona
             </Button>
             <Button
               variant="danger"
               size="sm"
+              disabled={!setupName.trim()}
               onClick={handleConfirm}
             >
               <FontAwesomeIcon icon={faCheck} className="me-1" />
