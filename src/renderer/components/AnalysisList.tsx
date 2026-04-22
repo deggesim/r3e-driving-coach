@@ -14,8 +14,14 @@ const renderMd = (md: string): string =>
 const AnalysisList = ({ streamingVersion }: Props) => {
   const analyses = useSessionStore((s) => s.analyses);
 
+  const latestKey = streamingVersion
+    ? `streaming-${streamingVersion.version}`
+    : analyses.length > 0
+      ? `v${analyses[analyses.length - 1].version}`
+      : undefined;
+
   return (
-    <Accordion alwaysOpen>
+    <Accordion alwaysOpen defaultActiveKey={latestKey}>
       {analyses.map((a) => (
         <Accordion.Item key={a.id} eventKey={`v${a.version}`}>
           <Accordion.Header>
