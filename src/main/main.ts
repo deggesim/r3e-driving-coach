@@ -628,29 +628,20 @@ const setupPipeline = (): void => {
 
       // Build track map geometry from the first valid lap on this car/track/layout
       if (lap.valid) {
-        const existing = getTrackMap(
-          db,
-          activeGame,
-          lap.car,
-          lap.track,
-          lap.layout,
-        );
-        if (!existing) {
-          const geometry = buildTrackMap(lap.frames, lap.layoutLength);
-          if (geometry) {
-            saveTrackMap(
-              db,
-              activeGame,
-              lap.car,
-              lap.track,
-              lap.layout,
-              geometry,
-            );
-            console.log(
-              `[Main] trackMap saved — game=${activeGame} car=${lap.car} ` +
-                `track=${lap.track} layout=${lap.layout} samples=${geometry.sampleCount}`,
-            );
-          }
+        const geometry = buildTrackMap(lap.frames, lap.layoutLength);
+        if (geometry) {
+          saveTrackMap(
+            db,
+            activeGame,
+            lap.car,
+            lap.track,
+            lap.layout,
+            geometry,
+          );
+          console.log(
+            `[Main] trackMap saved — game=${activeGame} car=${lap.car} ` +
+              `track=${lap.track} layout=${lap.layout} samples=${geometry.sampleCount}`,
+          );
         }
       }
 

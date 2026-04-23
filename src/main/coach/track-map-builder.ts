@@ -18,7 +18,6 @@ const hasWorldPos = (f: CompactFrame): boolean =>
 
 /**
  * Down-samples frames to ~1 sample per SAMPLE_INTERVAL_MS based on timestamps.
- * Keeps monotone lap distance to avoid duplicated start/finish points.
  */
 const downsample = (frames: CompactFrame[]): CompactFrame[] => {
   if (frames.length === 0) return [];
@@ -30,16 +29,12 @@ const downsample = (frames: CompactFrame[]): CompactFrame[] => {
 
   const out: CompactFrame[] = [sorted[0]];
   let lastTs = sorted[0].ts;
-  let lastDist = sorted[0].d;
 
   for (let i = 1; i < sorted.length; i++) {
     const f = sorted[i];
     if (f.ts - lastTs < SAMPLE_INTERVAL_MS) continue;
-    // Skip wrap-around: if distance dropped a lot, we've crossed the line — stop
-    if (f.d + 50 < lastDist) break;
     out.push(f);
     lastTs = f.ts;
-    lastDist = f.d;
   }
   return out;
 };
@@ -55,13 +50,16 @@ export const buildTrackMap = (
   const samples = downsample(frames);
   if (samples.length < MIN_SAMPLES) return null;
 
+  // Negate wz so that the SVG vertical axis (Y-down) matches the world
+  // orientation: world Z increases away from the viewer (north), but SVG Y
+  // increases downward, which would mirror the track top-to-bottom without negation.
   let minX = Infinity;
   let maxX = -Infinity;
-  let minZ = Infinity;
+  let minZ = Infinity; // in negated-Z space
   let maxZ = -Infinity;
   for (const f of samples) {
     const x = f.wx!;
-    const z = f.wz!;
+    const z = -f.wz!;
     if (x < minX) minX = x;
     if (x > maxX) maxX = x;
     if (z < minZ) minZ = z;
@@ -77,11 +75,14 @@ export const buildTrackMap = (
   for (let i = 0; i < samples.length; i++) {
     const cmd = i === 0 ? "M" : "L";
     const x = samples[i].wx!.toFixed(1);
-    const z = samples[i].wz!.toFixed(1);
+    const z = (-samples[i].wz!).toFixed(1);
     pathParts.push(`${cmd} ${x} ${z}`);
   }
-  // Close the loop visually back to the first sample
-  pathParts.push("Z");
+  // Close visually by returning to the first sample (avoids the arbitrary straight
+  // line that SVG "Z" draws when first and last sample aren't at the same point).
+  const x0 = samples[0].wx!.toFixed(1);
+  const z0 = (-samples[0].wz!).toFixed(1);
+  pathParts.push(`L ${x0} ${z0}`);
 
   return {
     svgPath: pathParts.join(" "),
