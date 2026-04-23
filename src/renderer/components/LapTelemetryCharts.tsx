@@ -96,12 +96,19 @@ const fromFrames = (frames: CompactFrame[]): ChartPoint[] => {
   const stride = Math.max(1, Math.ceil(frames.length / MAX_POINTS));
   const out: ChartPoint[] = [];
   for (let i = 0; i < frames.length; i += stride) {
-    const f = frames[i];
+    const end = Math.min(i + stride, frames.length);
+    const n = end - i;
+    let brk = 0, thr = 0, spd = 0;
+    for (let j = i; j < end; j++) {
+      brk += frames[j].brk;
+      thr += frames[j].thr;
+      spd += frames[j].spd;
+    }
     out.push({
-      dist: f.d,
-      brake: f.brk * 100,
-      throttle: f.thr * 100,
-      speed: f.spd,
+      dist: frames[i].d,
+      brake: (brk / n) * 100,
+      throttle: (thr / n) * 100,
+      speed: spd / n,
     });
   }
   return out;
@@ -256,7 +263,7 @@ const LapTelemetryCharts = ({ lap }: Props) => {
     if (hoverDist === null || !trackMap) return null;
     const f = findFrameByDist(sortedFrames, hoverDist);
     if (!f || f.wx === undefined || f.wz === undefined) return null;
-    return { x: f.wx, z: f.wz };
+    return { x: f.wx, z: -f.wz };
   }, [hoverDist, sortedFrames, trackMap]);
 
   if (loading) {
