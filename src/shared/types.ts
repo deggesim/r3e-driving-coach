@@ -82,6 +82,35 @@ export type CompactFrame = {
   tp?: number[]; // tyre pressures PSI [FL, FR, RL, RR]
   sr?: number[]; // slip ratios [FL, FR, RL, RR]
   sus?: number[]; // suspension travel m [FL, FR, RL, RR]
+  // World-space position (metres) — used for track-map rendering
+  wx?: number;
+  wy?: number;
+  wz?: number;
+};
+
+// --- Track map geometry (cached per game/car/track/layout) ---
+
+export type TrackMapBounds = {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+};
+
+export type TrackMapGeometry = {
+  svgPath: string; // "M x0 z0 L x1 z1 ..." in world coordinates
+  bounds: TrackMapBounds;
+  sampleCount: number;
+  layoutLength: number;
+};
+
+export type TrackMapRow = {
+  game: GameSource;
+  car: string;
+  track: string;
+  layout: string;
+  geometry: TrackMapGeometry;
+  created_at: string;
 };
 
 // --- Zone aggregate (from LapRecorder) ---
@@ -386,6 +415,14 @@ export type ElectronAPI = {
 
   // Lap telemetry frames (on demand)
   lapGetFrames: (params: { id: number; game: GameSource }) => Promise<CompactFrame[]>;
+
+  // Track map geometry (cached per game/car/track/layout)
+  trackMapGet: (params: {
+    game: GameSource;
+    car: string;
+    track: string;
+    layout: string;
+  }) => Promise<TrackMapGeometry | null>;
 
   // Voice coach
   voiceQuery: (question: string) => Promise<void>;

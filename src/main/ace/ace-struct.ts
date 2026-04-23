@@ -327,6 +327,7 @@ export const GFX = {
   carModel:        3086,   // char[33]
   isInPitLane:     3120,   // bool (uint8)
   isValidLap:      3121,   // bool (uint8)
+  carCoordinates:  3124,   // float[60][3] — player at index 0 in singleplayer
 } as const;
 
 // ── SPageFileStaticEvo offsets (Pack=4) ──────────────────────────────────────

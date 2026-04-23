@@ -76,6 +76,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   lapGetFrames: (params: { id: number; game: string }) =>
     ipcRenderer.invoke("lap:getFrames", params),
 
+  // Track map geometry (cached per game/car/track/layout)
+  trackMapGet: (params: {
+    game: string;
+    car: string;
+    track: string;
+    layout: string;
+  }) => ipcRenderer.invoke("trackMap:get", params),
+
   // Voice coach query
   voiceQuery: (question: string) =>
     ipcRenderer.invoke("coach:voiceQuery", question),

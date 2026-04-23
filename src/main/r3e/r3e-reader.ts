@@ -220,6 +220,9 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
           frame.brakeTempRR,
         ],
         ts: Date.now(),
+        wx: frame.posX,
+        wy: frame.posY,
+        wz: frame.posZ,
       });
     }
 
@@ -462,6 +465,9 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
           415 + Math.random() * 60,
         ],
         ts: Date.now(),
+        wx: Math.cos(fraction * Math.PI * 2) * 500,
+        wy: 0,
+        wz: Math.sin(fraction * Math.PI * 2) * 500,
       });
     }
     return frames;

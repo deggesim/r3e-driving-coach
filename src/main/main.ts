@@ -52,9 +52,12 @@ import {
 import {
   getCornerName,
   getDb,
+  getTrackMap,
   hasCornerNames,
+  saveTrackMap,
   seedCornersFromLap,
 } from "./db/db.js";
+import { buildTrackMap } from "./coach/track-map-builder.js";
 import { toGameFrame } from "./game-adapter.js";
 import {
   generatePdfBuffer,
@@ -623,6 +626,34 @@ const setupPipeline = (): void => {
         seedCornersFromLap(db, names.trackName, names.layoutName, lap.zones);
       }
 
+      // Build track map geometry from the first valid lap on this car/track/layout
+      if (lap.valid) {
+        const existing = getTrackMap(
+          db,
+          activeGame,
+          lap.car,
+          lap.track,
+          lap.layout,
+        );
+        if (!existing) {
+          const geometry = buildTrackMap(lap.frames, lap.layoutLength);
+          if (geometry) {
+            saveTrackMap(
+              db,
+              activeGame,
+              lap.car,
+              lap.track,
+              lap.layout,
+              geometry,
+            );
+            console.log(
+              `[Main] trackMap saved — game=${activeGame} car=${lap.car} ` +
+                `track=${lap.track} layout=${lap.layout} samples=${geometry.sampleCount}`,
+            );
+          }
+        }
+      }
+
       const deviations = baseline.ingestLap(
         lap.zones,
         lap.lapNumber,
@@ -814,6 +845,21 @@ const setupPipeline = (): void => {
     "session:getDetail",
     (_event, { id, game }: { id: number; game: GameSource }) => {
       return loadSessionDetail(id, game);
+    },
+  );
+
+  ipcMain.handle(
+    "trackMap:get",
+    (
+      _event,
+      {
+        game,
+        car,
+        track,
+        layout,
+      }: { game: GameSource; car: string; track: string; layout: string },
+    ) => {
+      return getTrackMap(db, game, car, track, layout);
     },
   );
 

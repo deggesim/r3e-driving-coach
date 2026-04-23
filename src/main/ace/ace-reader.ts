@@ -210,9 +210,13 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       if (carModelEarly.length > 0) cachedCarModel = carModelEarly;
 
       if (firstPoll) {
+        const wx = readFloat(gfxBuf, GFX.carCoordinates + 0 * 4);
+        const wy = readFloat(gfxBuf, GFX.carCoordinates + 1 * 4);
+        const wz = readFloat(gfxBuf, GFX.carCoordinates + 2 * 4);
         console.log(
           `[AceReader] first poll — status=${status} (AC_LIVE=${AC_LIVE}) ` +
-            `npos=${readFloat(gfxBuf, GFX.npos).toFixed(4)} car="${cachedCarModel}"`,
+            `npos=${readFloat(gfxBuf, GFX.npos).toFixed(4)} car="${cachedCarModel}" ` +
+            `worldPos=[${wx.toFixed(1)}, ${wy.toFixed(1)}, ${wz.toFixed(1)}]`,
         );
         firstPoll = false;
       }
@@ -256,6 +260,11 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       const lastLaptimeMs = readInt32(gfxBuf, GFX.lastLaptimeMs);
       const carModel = readString(gfxBuf, GFX.carModel, 33);
 
+      // Player world position (singleplayer: index 0 of car_coordinates[60][3])
+      const playerWx = readFloat(gfxBuf, GFX.carCoordinates + 0 * 4);
+      const playerWy = readFloat(gfxBuf, GFX.carCoordinates + 1 * 4);
+      const playerWz = readFloat(gfxBuf, GFX.carCoordinates + 2 * 4);
+
       // Update cached car model when available
       if (carModel.length > 0) cachedCarModel = carModel;
 
@@ -294,6 +303,9 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
           tp: [...wheelsPressure],
           sr: [...slipRatio],
           sus: [...suspensionTravel],
+          wx: playerWx,
+          wy: playerWy,
+          wz: playerWz,
         });
       }
 
@@ -473,6 +485,9 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
           405 + Math.random() * 70,
         ],
         ts: Date.now(),
+        wx: Math.cos(fraction * Math.PI * 2) * 800,
+        wy: 0,
+        wz: Math.sin(fraction * Math.PI * 2) * 800,
       });
     }
     return frames;

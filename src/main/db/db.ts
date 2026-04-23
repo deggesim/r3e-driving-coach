@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import path from "path";
-import type { ZoneData } from "../../shared/types.js";
+import type { GameSource, TrackMapGeometry, ZoneData } from "../../shared/types.js";
 
 let _db: Database.Database | null = null;
 
@@ -141,6 +141,16 @@ const initSchema = (db: Database.Database): void => {
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS track_maps (
+      game       TEXT NOT NULL,
+      car        TEXT NOT NULL,
+      track      TEXT NOT NULL,
+      layout     TEXT NOT NULL,
+      geometry   TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (game, car, track, layout)
+    );
   `);
 
   // Migration: add frames_blob to pre-existing laps_* tables
@@ -252,6 +262,44 @@ export const seedCornersFromLap = (
   })();
 
   console.log(`[DB] Seeded ${groups.length} corner(s) for ${track}|${layout}`);
+};
+
+/**
+ * Track map persistence (one geometry per game/car/track/layout).
+ */
+export const getTrackMap = (
+  db: Database.Database,
+  game: GameSource,
+  car: string,
+  track: string,
+  layout: string,
+): TrackMapGeometry | null => {
+  const row = db
+    .prepare(
+      `SELECT geometry FROM track_maps
+       WHERE game = ? AND car = ? AND track = ? AND layout = ?`,
+    )
+    .get(game, car, track, layout) as { geometry: string } | undefined;
+  if (!row) return null;
+  try {
+    return JSON.parse(row.geometry) as TrackMapGeometry;
+  } catch {
+    return null;
+  }
+};
+
+export const saveTrackMap = (
+  db: Database.Database,
+  game: GameSource,
+  car: string,
+  track: string,
+  layout: string,
+  geometry: TrackMapGeometry,
+): void => {
+  db.prepare(
+    `INSERT OR REPLACE INTO track_maps (game, car, track, layout, geometry, created_at)
+     VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+  ).run(game, car, track, layout, JSON.stringify(geometry));
 };
 
 export const closeDb = (): void => {
