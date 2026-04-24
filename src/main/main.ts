@@ -425,9 +425,7 @@ const setupPipeline = (): void => {
     const lapsTable = t("laps");
     const sessionsTable = t("sessions");
     try {
-      // Downsample frames to ~30Hz (reader polls at ~60Hz) and gzip
-      const downsampled = lap.frames.filter((_, i) => i % 2 === 0);
-      const framesBlob = gzipSync(Buffer.from(JSON.stringify(downsampled), "utf8"));
+      const framesBlob = gzipSync(Buffer.from(JSON.stringify(lap.frames), "utf8"));
 
       const insertResult = db
         .prepare(

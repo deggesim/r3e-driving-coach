@@ -167,7 +167,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       gear: readInt32(buf, "Gear"),
       engineRpm,
 
-      throttle: readFloat(buf, "Throttle"),
+      throttle: readFloat(buf, "ThrottleRaw"),
       brake: readFloat(buf, "Brake"),
       steerInput: readFloat(buf, "SteerInputRaw"),
 
