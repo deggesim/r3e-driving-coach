@@ -301,7 +301,7 @@ Riporta onestamente quali dati non erano disponibili (es. settori S1/S2/S3, temp
 
 (Ometti l'intera sezione se nessun setup è stato caricato.)
 
-**Setup #N Analisi:**
+**Setup "NomeSetup" Analisi:** (usa il nome esatto del setup dal contesto dati, non un numero sequenziale)
 Tabella markdown con colonne: Parametro | Valore | Valutazione
 Includi tutti i parametri rilevanti: sterzo, ripartizione freno, ARB, molle, ammortizzatori, campanatura, TC/ABS, ala posteriore, pressioni gomme.
 
@@ -414,6 +414,10 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
     parts.push(`- Miglior giro: ${formatLapTime(session.best_lap)}`);
   parts.push("");
 
+  const setupNameById = new Map<number, string>(
+    setups.map((s) => [s.id, s.setup.name ?? s.setup.carFound]),
+  );
+
   if (laps.length > 0) {
     parts.push(`## Giri`);
     for (const lap of laps) {
@@ -421,7 +425,8 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
       const s2 = lap.sector2 != null ? formatLapTime(lap.sector2) : "--";
       const s3 = lap.sector3 != null ? formatLapTime(lap.sector3) : "--";
       const valid = lap.valid ? "✓" : "✗";
-      const setupTag = lap.setup_id != null ? ` [setup #${lap.setup_id}]` : "";
+      const setupLabel = lap.setup_id != null ? setupNameById.get(lap.setup_id) : undefined;
+      const setupTag = setupLabel != null ? ` [setup "${setupLabel}"]` : "";
       parts.push(
         `- Giro ${lap.lap_number}: ${formatLapTime(lap.lap_time)} [S1:${s1} S2:${s2} S3:${s3}] ${valid}${setupTag}`,
       );
@@ -440,9 +445,10 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
 
   if (setups.length > 0) {
     parts.push(`## Setup caricati in sessione (ordine cronologico)`);
-    setups.forEach((s, idx) => {
+    setups.forEach((s) => {
+      const label = s.setup.name ?? s.setup.carFound;
       parts.push(
-        `### Setup #${idx + 1} (id=${s.id}, caricato ${s.loaded_at})`,
+        `### Setup "${label}" (id=${s.id}, caricato ${s.loaded_at})`,
       );
       parts.push(
         `- Auto: ${s.setup.carFound}${s.setup.carVerified ? " (verificata)" : " (non verificata)"}`,

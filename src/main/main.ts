@@ -425,7 +425,9 @@ const setupPipeline = (): void => {
     const lapsTable = t("laps");
     const sessionsTable = t("sessions");
     try {
-      const framesBlob = gzipSync(Buffer.from(JSON.stringify(lap.frames), "utf8"));
+      const framesBlob = gzipSync(
+        Buffer.from(JSON.stringify(lap.frames), "utf8"),
+      );
 
       const insertResult = db
         .prepare(
@@ -1071,10 +1073,11 @@ const setupPipeline = (): void => {
     )
       return "closeSession";
     if (
-      /\b(analizza|analisi|valuta|valutazione|esegui\s+analisi)\b[\s\S]*\b(session|giri|ultimi\s+giri)\b/.test(
+      /\b(analizza|analisi|valuta|valutazione|esegui\s+analisi)\b[\s\S]*\b(sessione|giri|ultimi\s+giri)\b/.test(
         s,
       ) ||
-      /\banalizza\s+gli\s+ultimi\s+giri\b/.test(s)
+      /\banalizza\s+gli\s+ultimi\s+giri\b/.test(s) ||
+      /\b(analizza|analisi|valuta|valutazione|esegui\s+analisi)\b/.test(s)
     )
       return "analyze";
     return "freeform";

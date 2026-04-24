@@ -53,6 +53,7 @@ export const buildTrackMap = (
   // Negate wz so that the SVG vertical axis (Y-down) matches the world
   // orientation: world Z increases away from the viewer (north), but SVG Y
   // increases downward, which would mirror the track top-to-bottom without negation.
+  // Game-specific X mirroring is handled at render time in TrackMapSvg.
   let minX = Infinity;
   let maxX = -Infinity;
   let minZ = Infinity; // in negated-Z space

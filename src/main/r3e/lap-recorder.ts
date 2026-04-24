@@ -64,8 +64,23 @@ const aggregateZones = (
     const coastFrames = zoneFrames.filter(
       (f) => f.brk <= 0.05 && f.thr <= 0.05,
     );
+
+    // Exclude auto-blip frames from overlap counting: mark a window of frames
+    // after each downshift-during-braking (covers rev-match in both R3E and ACE).
+    // 20 frames ≈ 320ms at 16ms poll interval.
+    const BLIP_WINDOW = 20;
+    const blipMask = new Set<number>();
+    for (let i = 1; i < zoneFrames.length; i++) {
+      const prev = zoneFrames[i - 1];
+      const curr = zoneFrames[i];
+      if (curr.brk > 0.05 && curr.gear < prev.gear && prev.gear > 0) {
+        for (let j = i; j < Math.min(i + BLIP_WINDOW, zoneFrames.length); j++) {
+          blipMask.add(j);
+        }
+      }
+    }
     const overlapFrames = zoneFrames.filter(
-      (f) => f.brk > 0.05 && f.thr > 0.05,
+      (f, i) => f.brk > 0.05 && f.thr > 0.05 && !blipMask.has(i),
     );
 
     // Brake start/end distances

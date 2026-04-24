@@ -1,4 +1,5 @@
 import { marked } from "marked";
+import { useEffect, useState } from "react";
 import { Accordion, Spinner } from "react-bootstrap";
 import { useSessionStore } from "../store/sessionStore";
 
@@ -20,8 +21,24 @@ const AnalysisList = ({ streamingVersion }: Props) => {
       ? `v${analyses[analyses.length - 1].version}`
       : undefined;
 
+  const [activeKeys, setActiveKeys] = useState<string[]>(
+    latestKey ? [latestKey] : [],
+  );
+
+  useEffect(() => {
+    if (latestKey) {
+      setActiveKeys((prev) =>
+        prev.includes(latestKey) ? prev : [...prev, latestKey],
+      );
+    }
+  }, [latestKey]);
+
   return (
-    <Accordion alwaysOpen defaultActiveKey={latestKey}>
+    <Accordion
+      alwaysOpen
+      activeKey={activeKeys}
+      onSelect={(keys) => setActiveKeys((keys as string[]) ?? [])}
+    >
       {analyses.map((a) => (
         <Accordion.Item key={a.id} eventKey={`v${a.version}`}>
           <Accordion.Header>

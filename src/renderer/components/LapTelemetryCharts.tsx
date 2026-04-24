@@ -155,13 +155,16 @@ const findFrameByDist = (
 type TrackMapSvgProps = {
   geometry: TrackMapGeometry;
   marker: { x: number; z: number } | null;
+  flipX?: boolean;
 };
 
-const TrackMapSvg = ({ geometry, marker }: TrackMapSvgProps) => {
+const TrackMapSvg = ({ geometry, marker, flipX = false }: TrackMapSvgProps) => {
   const { bounds, svgPath } = geometry;
   const width = bounds.maxX - bounds.minX;
   const height = bounds.maxZ - bounds.minZ;
   const r = Math.max(width, height) * 0.012;
+  // Mirror horizontally around the viewBox center X: translate(minX+maxX, 0) scale(-1, 1)
+  const mirrorTransform = `translate(${bounds.minX + bounds.maxX}, 0) scale(-1, 1)`;
 
   return (
     <svg
@@ -169,23 +172,25 @@ const TrackMapSvg = ({ geometry, marker }: TrackMapSvgProps) => {
       style={{ width: "100%", height: "100%", display: "block" }}
       preserveAspectRatio="xMidYMid meet"
     >
-      <path
-        d={svgPath}
-        stroke={TRACK_STROKE}
-        strokeWidth={Math.max(width, height) * 0.004}
-        fill="none"
-        vectorEffect="non-scaling-stroke"
-      />
-      {marker && (
-        <circle
-          cx={marker.x}
-          cy={marker.z}
-          r={r}
-          fill={MARKER_FILL}
-          stroke="#000"
-          strokeWidth={r * 0.15}
+      <g transform={flipX ? mirrorTransform : undefined}>
+        <path
+          d={svgPath}
+          stroke={TRACK_STROKE}
+          strokeWidth={Math.max(width, height) * 0.004}
+          fill="none"
+          vectorEffect="non-scaling-stroke"
         />
-      )}
+        {marker && (
+          <circle
+            cx={marker.x}
+            cy={marker.z}
+            r={r}
+            fill={MARKER_FILL}
+            stroke="#000"
+            strokeWidth={r * 0.15}
+          />
+        )}
+      </g>
     </svg>
   );
 };
@@ -422,7 +427,7 @@ const LapTelemetryCharts = ({ lap }: Props) => {
             Tracciato
           </div>
           <div style={{ flex: 1, minHeight: 260 }}>
-            <TrackMapSvg geometry={trackMap} marker={marker} />
+            <TrackMapSvg geometry={trackMap} marker={marker} flipX={game === "ace"} />
           </div>
         </div>
       )}
