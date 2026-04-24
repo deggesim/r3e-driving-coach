@@ -58,14 +58,35 @@ const TENTH_WORDS = [
   "cinque", "sei", "sette", "otto", "nove",
 ];
 
+/** Convert a parsed lap time to spoken Italian. Minutes omitted when zero. */
+function lapTimeToItalian(minutes: number, seconds: number, millis: number): string {
+  const parts: string[] = [];
+
+  if (minutes > 0) {
+    parts.push(minutes === 1 ? "un minuto" : `${numberToItalian(minutes)} minuti`);
+  }
+
+  parts.push(seconds === 1 ? "un secondo" : `${numberToItalian(seconds)} secondi`);
+
+  if (millis > 0) {
+    parts.push(`${numberToItalian(millis)} millesimi`);
+  }
+
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) return `${parts[0]} e ${parts[1]}`;
+  return `${parts[0]}, ${parts[1]} e ${parts[2]}`;
+}
+
 /**
  * Expand track-position markers and lap-time deltas into spoken Italian.
  *
  * Rules applied (before XML escaping):
- *   @1352m  →  "milletrecentocinquantadue metri"
- *   0.2s    →  "due decimi"          (sub-second)
- *   1.3s    →  "un secondo e tre decimi"
- *   2.0s    →  "due secondi"
+ *   @1352m      →  "milletrecentocinquantadue metri"
+ *   1:16.322    →  "un minuto, sedici secondi e trecentoventidue millesimi"
+ *   58.322s     →  "cinquantotto secondi e trecentoventidue millesimi"
+ *   0.2s        →  "due decimi"          (sub-second delta)
+ *   1.3s        →  "un secondo e tre decimi"
+ *   2.0s        →  "due secondi"
  */
 function preprocessTTSText(text: string): string {
   // Track position: @<meters>m
@@ -73,7 +94,17 @@ function preprocessTTSText(text: string): string {
     return numberToItalian(parseInt(digits, 10)) + " metri";
   });
 
-  // Lap-time delta: <sec>.<tenth>s
+  // Lap time with minutes: M:SS.mmm (e.g., 1:16.322)
+  text = text.replace(/\b(\d+):(\d{2})\.(\d{3})\b/g, (_m, mStr, sStr, msStr) => {
+    return lapTimeToItalian(parseInt(mStr, 10), parseInt(sStr, 10), parseInt(msStr, 10));
+  });
+
+  // Lap time sub-minute with 's' suffix: SS.mmms (e.g., 58.322s)
+  text = text.replace(/\b(\d{1,2})\.(\d{3})s\b/g, (_m, sStr, msStr) => {
+    return lapTimeToItalian(0, parseInt(sStr, 10), parseInt(msStr, 10));
+  });
+
+  // Lap-time delta: <sec>.<tenth>s  (single decimal digit — must come after 3-digit handler)
   text = text.replace(/\b(\d+)\.(\d)s\b/g, (_m, secStr, tenthStr) => {
     const sec = parseInt(secStr, 10);
     const tenth = parseInt(tenthStr, 10);
@@ -82,7 +113,6 @@ function preprocessTTSText(text: string): string {
       tenth === 1 ? "un decimo" : `${TENTH_WORDS[tenth]} decimi`;
 
     if (sec === 0) {
-      // Sub-second: only tenths
       return tenthPhrase;
     }
 

@@ -272,6 +272,7 @@ Analizzi più giri e più setup caricati nella sessione. Devi:
 - Se esistono analisi precedenti nella sessione, tieni conto di quanto già detto e aggiungi nuove osservazioni o conferma/smentisci raccomandazioni.
 
 Usa il simbolo ∆ per i delta di tempo. Esprimi i frame problematici come "+N frame". Calcola sempre l'impatto stimato in secondi per giro.
+Quando citi un tempo sul giro usa SEMPRE la forma "il tempo di X" (es. "il tempo di 1:16.322" oppure "il tempo di 58.322s"). Non usare mai l'articolo apostrofato davanti al numero (mai "l'1:16").
 
 ---
 
