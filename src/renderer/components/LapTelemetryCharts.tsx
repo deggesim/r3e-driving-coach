@@ -92,7 +92,27 @@ const SpeedTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   );
 };
 
-const fromFrames = (frames: CompactFrame[]): ChartPoint[] => {
+// Mark frames that are part of an auto-blip window (downshift during braking).
+// Uses object identity so zone-boundary blips are correctly caught.
+// 20 frames ≈ 320ms at 16ms poll.
+const buildBlipSet = (frames: CompactFrame[]): Set<CompactFrame> => {
+  const blipSet = new Set<CompactFrame>();
+  for (let i = 1; i < frames.length; i++) {
+    const prev = frames[i - 1];
+    const curr = frames[i];
+    if (curr.brk > 0.05 && curr.gear < prev.gear && prev.gear > 0) {
+      for (let j = i; j < Math.min(i + 20, frames.length); j++) {
+        blipSet.add(frames[j]);
+      }
+    }
+  }
+  return blipSet;
+};
+
+const fromFrames = (
+  frames: CompactFrame[],
+  blipSet: Set<CompactFrame>,
+): ChartPoint[] => {
   const stride = Math.max(1, Math.ceil(frames.length / MAX_POINTS));
   const out: ChartPoint[] = [];
   for (let i = 0; i < frames.length; i += stride) {
@@ -101,7 +121,7 @@ const fromFrames = (frames: CompactFrame[]): ChartPoint[] => {
     let brk = 0, thr = 0, spd = 0;
     for (let j = i; j < end; j++) {
       brk += frames[j].brk;
-      thr += frames[j].thr;
+      thr += blipSet.has(frames[j]) ? 0 : frames[j].thr;
       spd += frames[j].spd;
     }
     out.push({
@@ -259,10 +279,12 @@ const LapTelemetryCharts = ({ lap }: Props) => {
     [frames],
   );
 
+  const blipSet = useMemo(() => buildBlipSet(sortedFrames), [sortedFrames]);
+
   const data = useMemo<ChartPoint[]>(() => {
-    if (sortedFrames.length > 0) return fromFrames(sortedFrames);
+    if (sortedFrames.length > 0) return fromFrames(sortedFrames, blipSet);
     return fromZones(lap.zones_json);
-  }, [sortedFrames, lap.zones_json]);
+  }, [sortedFrames, lap.zones_json, blipSet]);
 
   const marker = useMemo(() => {
     if (hoverDist === null || !trackMap) return null;

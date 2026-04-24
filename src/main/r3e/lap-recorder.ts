@@ -36,6 +36,24 @@ export type LapRecorder = {
   on: EventEmitter["on"];
 };
 
+// Detect auto-blip frames over the full sorted lap, so downshifts at zone
+// boundaries are not missed. Uses object identity so zone splitting can reuse.
+// 20 frames ≈ 320ms at 16ms poll — long enough to cover any single blip.
+const BLIP_WINDOW = 20;
+const buildBlipSet = (frames: CompactFrame[]): Set<CompactFrame> => {
+  const blipSet = new Set<CompactFrame>();
+  for (let i = 1; i < frames.length; i++) {
+    const prev = frames[i - 1];
+    const curr = frames[i];
+    if (curr.brk > 0.05 && curr.gear < prev.gear && prev.gear > 0) {
+      for (let j = i; j < Math.min(i + BLIP_WINDOW, frames.length); j++) {
+        blipSet.add(frames[j]);
+      }
+    }
+  }
+  return blipSet;
+};
+
 const aggregateZones = (
   frames: CompactFrame[],
   layoutLength: number,
@@ -49,6 +67,7 @@ const aggregateZones = (
     zoneMap.get(zoneId)!.push(frame);
   }
 
+  const blipSet = buildBlipSet(frames);
   const zones: ZoneData[] = [];
 
   for (let z = 0; z < numZones; z++) {
@@ -64,23 +83,8 @@ const aggregateZones = (
     const coastFrames = zoneFrames.filter(
       (f) => f.brk <= 0.05 && f.thr <= 0.05,
     );
-
-    // Exclude auto-blip frames from overlap counting: mark a window of frames
-    // after each downshift-during-braking (covers rev-match in both R3E and ACE).
-    // 20 frames ≈ 320ms at 16ms poll interval.
-    const BLIP_WINDOW = 20;
-    const blipMask = new Set<number>();
-    for (let i = 1; i < zoneFrames.length; i++) {
-      const prev = zoneFrames[i - 1];
-      const curr = zoneFrames[i];
-      if (curr.brk > 0.05 && curr.gear < prev.gear && prev.gear > 0) {
-        for (let j = i; j < Math.min(i + BLIP_WINDOW, zoneFrames.length); j++) {
-          blipMask.add(j);
-        }
-      }
-    }
     const overlapFrames = zoneFrames.filter(
-      (f, i) => f.brk > 0.05 && f.thr > 0.05 && !blipMask.has(i),
+      (f) => f.brk > 0.05 && f.thr > 0.05 && !blipSet.has(f),
     );
 
     // Brake start/end distances
