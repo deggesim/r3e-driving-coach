@@ -1,5 +1,5 @@
 import { marked } from "marked";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Accordion, Spinner } from "react-bootstrap";
 import { useSessionStore } from "../store/sessionStore";
 
@@ -16,28 +16,32 @@ const renderMd = (md: string): string =>
 const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
   const analyses = useSessionStore((s) => s.analyses);
 
-  const latestKey = streamingVersion
-    ? `streaming-${streamingVersion.version}`
-    : analyses.length > 0 && !startClosed
-      ? `v${analyses[analyses.length - 1].version}`
-      : undefined;
+  const [activeKeys, setActiveKeys] = useState<string[]>(() => {
+    if (startClosed || analyses.length === 0) return [];
+    return [`v${analyses[analyses.length - 1].version}`];
+  });
 
-  const [activeKeys, setActiveKeys] = useState<string[]>(
-    startClosed ? [] : latestKey ? [latestKey] : [],
-  );
-
+  // Track which version was streaming so we can open it only when complete
+  const pendingVersionRef = useRef<number | null>(null);
   useEffect(() => {
-    if (latestKey) {
-      setActiveKeys((prev) =>
-        prev.includes(latestKey) ? prev : [...prev, latestKey],
-      );
+    if (streamingVersion) {
+      pendingVersionRef.current = streamingVersion.version;
+    } else if (pendingVersionRef.current !== null) {
+      const completedVersion = pendingVersionRef.current;
+      const found = analyses.find((a) => a.version === completedVersion);
+      if (found) {
+        const key = `v${completedVersion}`;
+        setActiveKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+        pendingVersionRef.current = null;
+      }
     }
-  }, [latestKey]);
+  }, [streamingVersion, analyses]);
 
   return (
     <Accordion
       activeKey={activeKeys}
       onSelect={(keys) => setActiveKeys((keys as string[]) ?? [])}
+      className="analysis-accordion"
     >
       {analyses.map((a) => (
         <Accordion.Item key={a.id} eventKey={`v${a.version}`}>
@@ -49,7 +53,6 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
           </Accordion.Header>
           <Accordion.Body
             className="overflow-y-auto"
-            style={{ maxHeight: "40vh" }}
           >
             <div
               className="deb-content"
@@ -67,7 +70,6 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
           </Accordion.Header>
           <Accordion.Body
             className="overflow-y-auto"
-            style={{ maxHeight: "40vh" }}
           >
             <div
               className="deb-content"

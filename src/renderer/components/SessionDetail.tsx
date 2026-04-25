@@ -81,15 +81,19 @@ const SessionDetail = ({ onBack }: Props) => {
         </Alert>
       )}
 
-      <div className="flex-grow-1 overflow-hidden p-3">
-        <h6 className="text-uppercase">Giri</h6>
-        <LapsTable setupById={setupById} />
+      <div className="flex-grow-1 overflow-hidden p-3 d-flex flex-column" style={{ minHeight: 0 }}>
+        <div className="flex-shrink-0">
+          <h6 className="text-uppercase">Giri</h6>
+          <LapsTable setupById={setupById} />
+        </div>
 
-        <h6 className="text-uppercase mt-3">Analisi</h6>
-        {analyses.length === 0 && !streamingVersion && (
-          <p>Nessuna analisi ancora generata.</p>
-        )}
-        <AnalysisList streamingVersion={streamingVersion} startClosed />
+        <div className="flex-grow-1 d-flex flex-column overflow-hidden mt-3" style={{ minHeight: 0 }}>
+          <h6 className="text-uppercase flex-shrink-0">Analisi</h6>
+          {analyses.length === 0 && !streamingVersion && (
+            <p>Nessuna analisi ancora generata.</p>
+          )}
+          <AnalysisList streamingVersion={streamingVersion} startClosed />
+        </div>
       </div>
     </div>
   );

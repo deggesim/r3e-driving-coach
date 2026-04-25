@@ -168,6 +168,32 @@ body {
   color: var(--text);
 }
 
+/* Analysis accordion — fill remaining vertical space when open */
+.analysis-accordion {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.analysis-accordion .accordion-item:has(.show) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.analysis-accordion .accordion-collapse.show {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.analysis-accordion .accordion-body {
+  overflow-y: auto;
+  max-height: none;
+  height: 100%;
+}
+
 .deb-content {
   font-size: 14px;
   line-height: 1.7;
