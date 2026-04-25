@@ -124,8 +124,9 @@ const fromFrames = (
       thr += blipSet.has(frames[j]) ? 0 : frames[j].thr;
       spd += frames[j].spd;
     }
+    const midIdx = i + Math.floor((end - i - 1) / 2);
     out.push({
-      dist: frames[i].d,
+      dist: frames[midIdx].d,
       brake: (brk / n) * 100,
       throttle: (thr / n) * 100,
       speed: spd / n,

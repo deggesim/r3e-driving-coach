@@ -5,29 +5,20 @@
  */
 
 import { useEffect, useState } from "react";
-import { Button } from "react-bootstrap";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faMicrophone,
-  faMicrophoneSlash,
-  faMinus,
-  faExpand,
-  faXmark,
-} from "@fortawesome/free-solid-svg-icons";
-import { useIPC, useConfig } from "./hooks/useIPC";
-import { useIPCStore } from "./store/ipcStore";
-import { useSettingsStore } from "./store/settingsStore";
-import { subscribeSessionIPC } from "./store/sessionStore";
-import { useVoiceCoach } from "./hooks/useVoiceCoach";
-import iconUrl from "/icon.png";
-import TTSManager from "./components/TTSManager";
-import StatusBar from "./components/StatusBar";
 import RealtimeAnalysis from "./components/RealtimeAnalysis";
 import SessionHistory from "./components/SessionHistory";
-import VoiceCoachOverlay from "./components/VoiceCoachOverlay";
 import SettingsPanel from "./components/SettingsPanel";
+import StatusBar from "./components/StatusBar";
+import TitleBar from "./components/TitleBar";
+import TTSManager from "./components/TTSManager";
+import VoiceCoachOverlay from "./components/VoiceCoachOverlay";
+import { useConfig, useIPC } from "./hooks/useIPC";
+import { useVoiceCoach } from "./hooks/useVoiceCoach";
+import { useIPCStore } from "./store/ipcStore";
+import { subscribeSessionIPC } from "./store/sessionStore";
+import { useSettingsStore } from "./store/settingsStore";
 
-type Tab = "debriefing" | "history" | "settings";
+type Tab = "current-session" | "session-list" | "settings";
 
 const App = () => {
   // Bootstrap IPC subscriptions (writes to ipcStore)
@@ -48,7 +39,6 @@ const App = () => {
     gamepadButton,
     setGamepadButton,
     ttsEnabled,
-    setTtsEnabled,
     azureTtsEnabled,
     setAzureTtsEnabled,
     setApiKey,
@@ -59,7 +49,7 @@ const App = () => {
   } = useSettingsStore();
 
   const { get: configGet } = useConfig();
-  const [tab, setTab] = useState<Tab>("debriefing");
+  const [tab, setTab] = useState<Tab>("current-session");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Voice coach hook
@@ -129,79 +119,12 @@ const App = () => {
       />
 
       {/* Title bar (frameless Electron drag area) */}
-      <div className="title-bar text-nowrap">
-        <img src={iconUrl} className="title-bar-icon" alt="" />
-        <span className="title-bar-name">Sim Driving Coach</span>
-        <div className="title-bar-tabs">
-          <Button
-            variant="link"
-            className={`tab-btn ${tab === "debriefing" ? "active" : ""}`}
-            onClick={() => setTab("debriefing")}
-          >
-            Analisi in tempo reale
-          </Button>
-          <Button
-            variant="link"
-            className={`tab-btn ${tab === "history" ? "active" : ""}`}
-            onClick={() => setTab("history")}
-          >
-            Elenco sessioni
-          </Button>
-          <Button
-            variant="link"
-            className={`tab-btn ${tab === "settings" ? "active" : ""}`}
-            onClick={() => setTab("settings")}
-          >
-            Impostazioni
-          </Button>
-        </div>
-        <div className="title-bar-tts">
-          <Button
-            variant="link"
-            className={`tts-toggle ${ttsEnabled ? "on" : "off"}`}
-            onClick={() => setTtsEnabled(!ttsEnabled)}
-            title={ttsEnabled ? "Voce attiva" : "Voce disattiva"}
-          >
-            {ttsEnabled ? (
-              <FontAwesomeIcon icon={faMicrophone} />
-            ) : (
-              <FontAwesomeIcon icon={faMicrophoneSlash} />
-            )}
-          </Button>
-        </div>
-        <Button
-          variant="link"
-          className="title-bar-wc"
-          onClick={() => window.electronAPI.windowMinimize()}
-          title="Riduci a icona"
-          aria-label="Riduci a icona"
-        >
-          <FontAwesomeIcon icon={faMinus} />
-        </Button>
-        <Button
-          variant="link"
-          className="title-bar-wc"
-          onClick={() => window.electronAPI.windowMaximize()}
-          title="Ingrandisci"
-          aria-label="Ingrandisci finestra"
-        >
-          <FontAwesomeIcon icon={faExpand} />
-        </Button>
-        <Button
-          variant="link"
-          className="title-bar-close"
-          onClick={() => window.electronAPI.windowClose()}
-          title="Chiudi"
-          aria-label="Chiudi finestra"
-        >
-          <FontAwesomeIcon icon={faXmark} />
-        </Button>
-      </div>
+      <TitleBar tab={tab} onTabChange={setTab} />
 
       {/* Main content */}
       <div className="main-content">
-        {tab === "debriefing" && <RealtimeAnalysis />}
-        {tab === "history" && <SessionHistory />}
+        {tab === "current-session" && <RealtimeAnalysis />}
+        {tab === "session-list" && <SessionHistory />}
         {tab === "settings" && <SettingsPanel />}
       </div>
 

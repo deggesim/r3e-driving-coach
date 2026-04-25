@@ -7,22 +7,23 @@ type StreamingVersion = { sessionId: number; version: number; text: string };
 
 type Props = {
   streamingVersion: StreamingVersion | null;
+  startClosed?: boolean;
 };
 
 const renderMd = (md: string): string =>
   marked.parse(md, { async: false }) as string;
 
-const AnalysisList = ({ streamingVersion }: Props) => {
+const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
   const analyses = useSessionStore((s) => s.analyses);
 
   const latestKey = streamingVersion
     ? `streaming-${streamingVersion.version}`
-    : analyses.length > 0
+    : analyses.length > 0 && !startClosed
       ? `v${analyses[analyses.length - 1].version}`
       : undefined;
 
   const [activeKeys, setActiveKeys] = useState<string[]>(
-    latestKey ? [latestKey] : [],
+    startClosed ? [] : latestKey ? [latestKey] : [],
   );
 
   useEffect(() => {
@@ -35,7 +36,6 @@ const AnalysisList = ({ streamingVersion }: Props) => {
 
   return (
     <Accordion
-      alwaysOpen
       activeKey={activeKeys}
       onSelect={(keys) => setActiveKeys((keys as string[]) ?? [])}
     >
@@ -47,7 +47,10 @@ const AnalysisList = ({ streamingVersion }: Props) => {
               {new Date(a.created_at).toLocaleString("it-IT")}
             </span>
           </Accordion.Header>
-          <Accordion.Body>
+          <Accordion.Body
+            className="overflow-y-auto"
+            style={{ maxHeight: "40vh" }}
+          >
             <div
               className="deb-content"
               // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
@@ -62,7 +65,10 @@ const AnalysisList = ({ streamingVersion }: Props) => {
             <Spinner size="sm" className="me-2" />
             Analisi #{streamingVersion.version} (in corso…)
           </Accordion.Header>
-          <Accordion.Body>
+          <Accordion.Body
+            className="overflow-y-auto"
+            style={{ maxHeight: "40vh" }}
+          >
             <div
               className="deb-content"
               // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml

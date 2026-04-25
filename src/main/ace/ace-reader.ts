@@ -114,6 +114,11 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
   let prevNpos = -1;
   let prevCurrentLapTimeMs = 0;
   let prevIsValidLap = true;
+  // Cumulative world-space distance: makes CompactFrame.d consistent with wx/wz
+  // so the telemetry chart cursor and track map marker are perfectly aligned.
+  let cumulativeDist = 0;
+  let lastFrameWx: number | undefined;
+  let lastFrameWz: number | undefined;
 
   // Session static cache (read once on connect)
   let cachedTrack = "";
@@ -284,10 +289,21 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
 
       emitter.emit("ace:frame", gameFrame);
 
+      // Advance cumulative world-space distance on every poll (including pit lane),
+      // so the d value in CompactFrame is always derived from the same wx/wz that
+      // is stored in the frame, eliminating the npos-vs-carCoordinates lag.
+      if (lastFrameWx !== undefined && lastFrameWz !== undefined) {
+        const dx = playerWx - lastFrameWx;
+        const dz = playerWz - lastFrameWz;
+        cumulativeDist += Math.sqrt(dx * dx + dz * dz);
+      }
+      lastFrameWx = playerWx;
+      lastFrameWz = playerWz;
+
       // Accumulate CompactFrame (exclude pit lane frames)
       if (!isInPitLane) {
         lapFrames.push({
-          d: lapDistance,
+          d: cumulativeDist,
           spd: speedKmh,
           thr: gas,
           brk: brake,
@@ -336,6 +352,9 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
           valid: prevIsValidLap,
         };
         lapFrames = [];
+        cumulativeDist = 0;
+        lastFrameWx = undefined;
+        lastFrameWz = undefined;
         emitter.emit("lapComplete", lapData);
       }
       prevNpos = npos;

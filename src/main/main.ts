@@ -1393,6 +1393,19 @@ Restituisci solo il JSON, senza testo aggiuntivo.`;
     },
   );
 
+  // Close any sessions left open by a previous crash or forced quit
+  db.prepare(
+    "UPDATE sessions_r3e SET ended_at = datetime('now') WHERE ended_at IS NULL",
+  ).run();
+  db.prepare(
+    "UPDATE sessions_ace SET ended_at = datetime('now') WHERE ended_at IS NULL",
+  ).run();
+
+  // Ensure the active session is closed when the app exits normally
+  app.on("before-quit", () => {
+    closeSession("app closing");
+  });
+
   // Start both readers
   r3eReader.start();
   aceReader.start();

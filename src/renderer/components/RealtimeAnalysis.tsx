@@ -77,7 +77,9 @@ const RealtimeAnalysis = () => {
   const handleSetupConfirm = async (setup: SetupData): Promise<void> => {
     setShowPicker(false);
     try {
-      const named: SetupData = setup.name ? setup : { ...setup, name: setup.carFound || "Setup" };
+      const named: SetupData = setup.name
+        ? setup
+        : { ...setup, name: setup.carFound || "Setup" };
       await window.electronAPI.sessionLoadSetup({ setup: named });
       showFlash("success", `Setup caricato: ${named.name}`);
     } catch (err) {
@@ -124,13 +126,13 @@ const RealtimeAnalysis = () => {
         </Alert>
       )}
 
-      {/* Body */}
-      <div className="flex-grow-1 overflow-y-auto p-3">
+      {/* Body - no scroll, accordion scrolls internally */}
+      <div className="flex-grow-1 overflow-hidden p-3">
         {/* Laps table */}
         <h6 className="text-uppercase">Giri</h6>
         <LapsTable setupById={setupById} />
 
-        {/* Analyses accordion */}
+        {/* Analyses accordion - scrollable */}
         <h6 className="text-uppercase mt-3">Analisi</h6>
         {analyses.length === 0 && !streamingVersion && (
           <p>Nessuna analisi ancora generata.</p>

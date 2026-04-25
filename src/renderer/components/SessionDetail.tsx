@@ -15,7 +15,9 @@ const SessionDetail = ({ onBack }: Props) => {
   const analyses = useSessionStore((s) => s.analyses);
   const streaming = useSessionStore((s) => s.streaming);
 
-  const [flash, setFlash] = useState<{ variant: string; text: string } | null>(null);
+  const [flash, setFlash] = useState<{ variant: string; text: string } | null>(
+    null,
+  );
 
   const showFlash = (variant: string, text: string): void => {
     setFlash({ variant, text });
@@ -50,7 +52,8 @@ const SessionDetail = ({ onBack }: Props) => {
     return m;
   }, [setups]);
 
-  const streamingVersion = streaming?.sessionId === session?.id ? streaming : null;
+  const streamingVersion =
+    streaming?.sessionId === session?.id ? streaming : null;
 
   return (
     <div className="d-flex flex-column h-100 overflow-hidden">
@@ -78,7 +81,7 @@ const SessionDetail = ({ onBack }: Props) => {
         </Alert>
       )}
 
-      <div className="flex-grow-1 overflow-y-auto p-3">
+      <div className="flex-grow-1 overflow-hidden p-3">
         <h6 className="text-uppercase">Giri</h6>
         <LapsTable setupById={setupById} />
 
@@ -86,7 +89,7 @@ const SessionDetail = ({ onBack }: Props) => {
         {analyses.length === 0 && !streamingVersion && (
           <p>Nessuna analisi ancora generata.</p>
         )}
-        <AnalysisList streamingVersion={streamingVersion} />
+        <AnalysisList streamingVersion={streamingVersion} startClosed />
       </div>
     </div>
   );
