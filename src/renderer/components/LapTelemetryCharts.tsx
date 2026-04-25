@@ -339,6 +339,7 @@ const LapTelemetryCharts = ({ lap }: Props) => {
         <ResponsiveContainer width="100%" height={180}>
           <LineChart
             data={data}
+            syncId="telemetry"
             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
             onMouseMove={onChartMove}
             onMouseLeave={onChartLeave}
@@ -390,6 +391,7 @@ const LapTelemetryCharts = ({ lap }: Props) => {
         <ResponsiveContainer width="100%" height={180}>
           <LineChart
             data={data}
+            syncId="telemetry"
             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
             onMouseMove={onChartMove}
             onMouseLeave={onChartLeave}

@@ -5,7 +5,7 @@
  * Row click → shows SessionDetail inline (back button returns to list).
  */
 
-import { faArrowDownWideShort, faArrowUpWideShort, faFlask, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faArrowDownWideShort, faArrowUpWideShort, faFlask, faRobot, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
@@ -18,6 +18,18 @@ import SessionDetail from "./SessionDetail";
 
 const PAGE_SIZE = 10;
 const FETCH_SIZE = 500; // upper bound — load all, paginate/filter client-side
+
+function buildPageWindow(current: number, total: number): (number | "…")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | "…")[] = [];
+  const addPage = (n: number) => { if (pages[pages.length - 1] !== n) pages.push(n); };
+  addPage(1);
+  if (current > 3) pages.push("…");
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) addPage(p);
+  if (current < total - 2) pages.push("…");
+  addPage(total);
+  return pages;
+}
 
 const formatDate = (iso: string | null | undefined): string => {
   if (!iso) return "—";
@@ -257,7 +269,7 @@ const SessionHistory = () => {
                 <th>Giri</th>
                 <th>Best</th>
                 <th>Data</th>
-                <th>Stato</th>
+                <th>Analisi</th>
                 <th></th>
               </tr>
             </thead>
@@ -315,14 +327,10 @@ const SessionHistory = () => {
                   </td>
                   <td className="sh-date">{formatDate(s.started_at)}</td>
                   <td>
-                    {s.ended_at ? (
-                      <Badge bg="secondary" style={{ fontSize: 12 }}>
-                        Chiusa
-                      </Badge>
-                    ) : (
-                      <Badge bg="success" style={{ fontSize: 12 }}>
-                        <FontAwesomeIcon icon={faFlask} className="me-1" />
-                        Attiva
+                    {s.analysis_count != null && s.analysis_count > 0 && (
+                      <Badge bg="primary" style={{ fontSize: 12 }}>
+                        <FontAwesomeIcon icon={faRobot} className="me-1" />
+                        {s.analysis_count}
                       </Badge>
                     )}
                   </td>
@@ -349,42 +357,52 @@ const SessionHistory = () => {
             </tbody>
           </table>
         )}
-      </div>
-
-      {totalPages > 1 && (
-        <div className="sh-pagination d-flex align-items-center gap-2 px-3 py-2 flex-shrink-0">
-          <Button
-            variant="link"
-            size="sm"
-            className="sh-page-btn"
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            ‹ Prec
-          </Button>
-          <div className="sh-page-numbers d-flex gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                className={`sh-page-num ${p === page ? "active" : ""}`}
-                onClick={() => setPage(p)}
-                type="button"
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-          <Button
-            variant="link"
-            size="sm"
-            className="sh-page-btn"
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Succ ›
-          </Button>
+        <div className="sh-pagination d-flex align-items-center gap-2 px-3 py-2">
+        <span className="sh-page-count text-secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
+          {filtered.length === 0
+            ? "0 sessioni"
+            : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} di ${filtered.length}`}
+        </span>
+        {totalPages > 1 && (
+          <>
+            <Button
+              variant="link"
+              size="sm"
+              className="sh-page-btn ms-auto"
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              ‹ Prec
+            </Button>
+            <div className="sh-page-numbers d-flex gap-1">
+              {buildPageWindow(page, totalPages).map((entry, i, arr) =>
+                entry === "…" ? (
+                  <span key={`ellipsis-${arr[i - 1] ?? 0}-${arr[i + 1] ?? 0}`} className="sh-page-ellipsis">…</span>
+                ) : (
+                  <button
+                    key={entry}
+                    className={`sh-page-num ${entry === page ? "active" : ""}`}
+                    onClick={() => setPage(entry as number)}
+                    type="button"
+                  >
+                    {entry}
+                  </button>
+                ),
+              )}
+            </div>
+            <Button
+              variant="link"
+              size="sm"
+              className="sh-page-btn"
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Succ ›
+            </Button>
+          </>
+        )}
         </div>
-      )}
+      </div>
 
       <Modal
         show={deleteTarget !== null}

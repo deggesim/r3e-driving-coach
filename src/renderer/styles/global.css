@@ -293,7 +293,7 @@ body {
 .detail-body { min-height: 0; }
 
 /* ── Pagination ── */
-.sh-pagination { border-top: 1px solid var(--border); background: var(--bg2); }
+.sh-pagination { border-top: 1px solid var(--border); background: var(--bg2); position: sticky; bottom: 0; }
 .sh-page-btn { color: var(--text-dim); font-size: 14px; padding: 2px 6px; text-decoration: none; }
 .sh-page-btn:hover:not(:disabled) { color: var(--accent); }
 .sh-page-btn:disabled { opacity: 0.3; pointer-events: none; }
@@ -311,6 +311,7 @@ body {
 }
 .sh-page-num:hover { border-color: var(--accent); color: var(--accent); }
 .sh-page-num.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.sh-page-ellipsis { color: var(--text-dim); font-size: 12px; line-height: 22px; padding: 0 2px; user-select: none; }
 
 /* ── Setup section ── */
 .setup-section { border-top: 1px solid var(--border); }

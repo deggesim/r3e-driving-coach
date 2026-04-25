@@ -194,6 +194,7 @@ export type SessionRow = {
   track_name?: string;
   layout_name?: string;
   car_class_name?: string;
+  analysis_count?: number;
 };
 
 export type LapRow = {

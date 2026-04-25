@@ -202,6 +202,7 @@ const enrichSession = (
     track_name: names.trackName,
     layout_name: names.layoutName,
     car_class_name: names.carClassName,
+    analysis_count: typeof row.analysis_count === "number" ? row.analysis_count : undefined,
   };
 };
 
@@ -902,10 +903,10 @@ const setupPipeline = (): void => {
       const w = buildWhere();
 
       const unionSql = game
-        ? `SELECT *, '${game}' AS _game FROM ${t("sessions", game)} ${w.sql}`
-        : `SELECT *, 'r3e' AS _game FROM sessions_r3e ${w.sql}
+        ? `SELECT s.*, '${game}' AS _game, (SELECT COUNT(*) FROM session_analyses_${game} WHERE session_id = s.id) AS analysis_count FROM ${t("sessions", game)} s ${w.sql}`
+        : `SELECT s.*, 'r3e' AS _game, (SELECT COUNT(*) FROM session_analyses_r3e WHERE session_id = s.id) AS analysis_count FROM sessions_r3e s ${w.sql}
            UNION ALL
-           SELECT *, 'ace' AS _game FROM sessions_ace ${w.sql}`;
+           SELECT s.*, 'ace' AS _game, (SELECT COUNT(*) FROM session_analyses_ace WHERE session_id = s.id) AS analysis_count FROM sessions_ace s ${w.sql}`;
 
       const countSql = `SELECT COUNT(*) AS c FROM (${unionSql})`;
       const countArgs = game ? w.args : [...w.args, ...w.args];
