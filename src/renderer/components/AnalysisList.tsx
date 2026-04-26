@@ -21,21 +21,23 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
     return [`v${analyses[analyses.length - 1].version}`];
   });
 
-  // Track which version was streaming so we can open it only when complete
-  const pendingVersionRef = useRef<number | null>(null);
+  // Open the accordion only when a new analysis is fully completed (not during streaming).
+  // Using a ref to track previous analyses avoids the React 18 batching issue where
+  // streaming→null and analyses update land in the same render, never letting us observe
+  // the streaming→non-null state in an effect.
+  const prevAnalysesRef = useRef(analyses);
   useEffect(() => {
-    if (streamingVersion) {
-      pendingVersionRef.current = streamingVersion.version;
-    } else if (pendingVersionRef.current !== null) {
-      const completedVersion = pendingVersionRef.current;
-      const found = analyses.find((a) => a.version === completedVersion);
-      if (found) {
-        const key = `v${completedVersion}`;
-        setActiveKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
-        pendingVersionRef.current = null;
-      }
+    const prev = prevAnalysesRef.current;
+    prevAnalysesRef.current = analyses;
+
+    if (streamingVersion) return; // still in progress — don't open yet
+
+    const newAnalysis = analyses.find((a) => !prev.some((p) => p.id === a.id));
+    if (newAnalysis) {
+      const key = `v${newAnalysis.version}`;
+      setActiveKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
     }
-  }, [streamingVersion, analyses]);
+  }, [analyses, streamingVersion]);
 
   return (
     <Accordion
