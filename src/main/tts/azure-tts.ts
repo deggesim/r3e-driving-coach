@@ -14,18 +14,43 @@ import type { AzureVoice } from "../../shared/types.js";
 // Italian TTS text preprocessing
 // ---------------------------------------------------------------------------
 
-/** Convert an integer (0–9999) to Italian words. */
+/** Convert an integer (0-9999) to Italian words. */
 function numberToItalian(n: number): string {
   if (n === 0) return "zero";
 
   const ones = [
-    "", "uno", "due", "tre", "quattro", "cinque", "sei", "sette", "otto", "nove",
-    "dieci", "undici", "dodici", "tredici", "quattordici", "quindici", "sedici",
-    "diciassette", "diciotto", "diciannove",
+    "",
+    "uno",
+    "due",
+    "tre",
+    "quattro",
+    "cinque",
+    "sei",
+    "sette",
+    "otto",
+    "nove",
+    "dieci",
+    "undici",
+    "dodici",
+    "tredici",
+    "quattordici",
+    "quindici",
+    "sedici",
+    "diciassette",
+    "diciotto",
+    "diciannove",
   ];
   const tens = [
-    "", "", "venti", "trenta", "quaranta", "cinquanta",
-    "sessanta", "settanta", "ottanta", "novanta",
+    "",
+    "",
+    "venti",
+    "trenta",
+    "quaranta",
+    "cinquanta",
+    "sessanta",
+    "settanta",
+    "ottanta",
+    "novanta",
   ];
 
   if (n < 20) return ones[n];
@@ -34,7 +59,7 @@ function numberToItalian(n: number): string {
     const t = Math.floor(n / 10);
     const u = n % 10;
     // Italian rule: drop final vowel of tens word before 1 or 8 (ventuno, ventotto…)
-    const tensWord = (u === 1 || u === 8) ? tens[t].slice(0, -1) : tens[t];
+    const tensWord = u === 1 || u === 8 ? tens[t].slice(0, -1) : tens[t];
     return tensWord + (u > 0 ? ones[u] : "");
   }
 
@@ -45,28 +70,44 @@ function numberToItalian(n: number): string {
     return hundredsWord + (rest > 0 ? numberToItalian(rest) : "");
   }
 
-  // 1 000–9 999
+  // 1000-9999
   const th = Math.floor(n / 1000);
   const rest = n % 1000;
   const thousandsWord = th === 1 ? "mille" : numberToItalian(th) + "mila";
   return thousandsWord + (rest > 0 ? numberToItalian(rest) : "");
 }
 
-/** Tenth-of-a-second words (0–9). */
+/** Tenth-of-a-second words (0-9). */
 const TENTH_WORDS = [
-  "zero", "uno", "due", "tre", "quattro",
-  "cinque", "sei", "sette", "otto", "nove",
+  "zero",
+  "uno",
+  "due",
+  "tre",
+  "quattro",
+  "cinque",
+  "sei",
+  "sette",
+  "otto",
+  "nove",
 ];
 
 /** Convert a parsed lap time to spoken Italian. Minutes omitted when zero. */
-function lapTimeToItalian(minutes: number, seconds: number, millis: number): string {
+function lapTimeToItalian(
+  minutes: number,
+  seconds: number,
+  millis: number,
+): string {
   const parts: string[] = [];
 
   if (minutes > 0) {
-    parts.push(minutes === 1 ? "un minuto" : `${numberToItalian(minutes)} minuti`);
+    parts.push(
+      minutes === 1 ? "un minuto" : `${numberToItalian(minutes)} minuti`,
+    );
   }
 
-  parts.push(seconds === 1 ? "un secondo" : `${numberToItalian(seconds)} secondi`);
+  parts.push(
+    seconds === 1 ? "un secondo" : `${numberToItalian(seconds)} secondi`,
+  );
 
   if (millis > 0) {
     parts.push(`${numberToItalian(millis)} millesimi`);
@@ -95,9 +136,16 @@ function preprocessTTSText(text: string): string {
   });
 
   // Lap time with minutes: M:SS.mmm (e.g., 1:16.322)
-  text = text.replace(/\b(\d+):(\d{2})\.(\d{3})\b/g, (_m, mStr, sStr, msStr) => {
-    return lapTimeToItalian(parseInt(mStr, 10), parseInt(sStr, 10), parseInt(msStr, 10));
-  });
+  text = text.replace(
+    /\b(\d+):(\d{2})\.(\d{3})\b/g,
+    (_m, mStr, sStr, msStr) => {
+      return lapTimeToItalian(
+        parseInt(mStr, 10),
+        parseInt(sStr, 10),
+        parseInt(msStr, 10),
+      );
+    },
+  );
 
   // Lap time sub-minute with 's' suffix: SS.mmms (e.g., 58.322s)
   text = text.replace(/\b(\d{1,2})\.(\d{3})s\b/g, (_m, sStr, msStr) => {
@@ -116,14 +164,14 @@ function preprocessTTSText(text: string): string {
       return tenthPhrase;
     }
 
-    const secPhrase = sec === 1 ? "un secondo" : `${numberToItalian(sec)} secondi`;
+    const secPhrase =
+      sec === 1 ? "un secondo" : `${numberToItalian(sec)} secondi`;
     if (tenth === 0) return secPhrase;
     return `${secPhrase} e ${tenthPhrase}`;
   });
 
   return text;
 }
-
 
 /** Create a region-scoped axios instance for Azure Speech endpoints. */
 const createAzureClient = (region: string, key: string) =>
@@ -203,18 +251,22 @@ export const transcribeAzure = async (
     `[Azure STT] Sending ${audioBuffer.byteLength} bytes as ${mimeType}`,
   );
 
-  const { data } = await axios.post<{ RecognitionStatus: string; DisplayText?: string }>(
-    url,
-    audioBuffer,
-    {
-      headers: {
-        "Ocp-Apim-Subscription-Key": key,
-        "Content-Type": mimeType,
-      },
+  const { data } = await axios.post<{
+    RecognitionStatus: string;
+    DisplayText?: string;
+  }>(url, audioBuffer, {
+    headers: {
+      "Ocp-Apim-Subscription-Key": key,
+      "Content-Type": mimeType,
     },
-  );
+  });
 
-  console.log("[Azure STT] Status:", data.RecognitionStatus, "| Text:", data.DisplayText ?? "(none)");
+  console.log(
+    "[Azure STT] Status:",
+    data.RecognitionStatus,
+    "| Text:",
+    data.DisplayText ?? "(none)",
+  );
 
   if (data.RecognitionStatus === "Success") {
     return data.DisplayText ?? "";

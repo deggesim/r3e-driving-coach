@@ -346,7 +346,7 @@ Per ogni modifica usa un H3 con label di priorità:
 - **Metrica di successo:** dato numerico misurabile (es. "alert coasting <3 frame; velocità exit +2 km/h").
 - **Cautela:** (solo se la modifica ha rischi o effetti collaterali da monitorare)
 
-Usa label "Prioritaria" per modifiche setup che impattano >0.10s/giro, "Secondaria" per 0.05–0.10s, "Terziaria" per <0.05s o condizionali.
+Usa label "Prioritaria" per modifiche setup che impattano >0.10s/giro, "Secondaria" per 0.05-0.10s, "Terziaria" per <0.05s o condizionali.
 
 ---
 
@@ -360,10 +360,14 @@ Questa sezione viene letta ad alta voce — NO elenchi, NO tabelle, NO intestazi
 
 ## Regole Generali
 - Usa @XXXm per posizione + nome curva ufficiale quando disponibile.
-- Temperatura freni ideale: 550°C ±137.5°C (finestra 413–688°C). Se valore = -1, ignora.
+- Temperatura freni ideale: 550°C ±137.5°C (finestra 413-688°C). Se valore = -1, ignora.
 - Pressioni gomme: PSI per ACE, kPa per R3E (1 bar = 14.5038 PSI).
 - R3E Leaderboard: gomme fisse 85°C → non è un problema da segnalare.
-- Ogni affermazione deve essere supportata da almeno un dato numerico proveniente dalla telemetria.`;
+- Ogni affermazione deve essere supportata da almeno un dato numerico proveniente dalla telemetria.
+
+## Sezioni obbligatorie
+Le sezioni [1], [3], [4] e [5] devono essere SEMPRE presenti, qualunque sia la quantità di dati disponibili.
+La sezione [2] è l'UNICA che può essere omessa (solo se nessun setup è stato caricato).`;
 
 const summarizeLapZones = (
   zones: ZoneData[],
@@ -426,7 +430,8 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
       const s2 = lap.sector2 != null ? formatLapTime(lap.sector2) : "--";
       const s3 = lap.sector3 != null ? formatLapTime(lap.sector3) : "--";
       const valid = lap.valid ? "✓" : "✗";
-      const setupLabel = lap.setup_id != null ? setupNameById.get(lap.setup_id) : undefined;
+      const setupLabel =
+        lap.setup_id != null ? setupNameById.get(lap.setup_id) : undefined;
       const setupTag = setupLabel != null ? ` [setup "${setupLabel}"]` : "";
       parts.push(
         `- Giro ${lap.lap_number}: ${formatLapTime(lap.lap_time)} [S1:${s1} S2:${s2} S3:${s3}] ${valid}${setupTag}`,
@@ -448,9 +453,7 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
     parts.push(`## Setup caricati in sessione (ordine cronologico)`);
     setups.forEach((s) => {
       const label = s.setup.name ?? s.setup.carFound;
-      parts.push(
-        `### Setup "${label}" (id=${s.id}, caricato ${s.loaded_at})`,
-      );
+      parts.push(`### Setup "${label}" (id=${s.id}, caricato ${s.loaded_at})`);
       parts.push(
         `- Auto: ${s.setup.carFound}${s.setup.carVerified ? " (verificata)" : " (non verificata)"}`,
       );
@@ -475,9 +478,7 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
   if (priorAnalyses.length > 0) {
     parts.push(`## Analisi precedenti (riassunto)`);
     for (const a of priorAnalyses) {
-      parts.push(
-        `### Analisi #${a.version} (${a.created_at})`,
-      );
+      parts.push(`### Analisi #${a.version} (${a.created_at})`);
       if (a.section5_summary) {
         parts.push(`Sintesi: ${a.section5_summary}`);
       } else {
@@ -493,7 +494,11 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
   }
 
   if (alerts && alerts.length > 0) {
-    const PRIORITY_LABEL: Record<number, string> = { 1: "P1", 2: "P2", 3: "P3" };
+    const PRIORITY_LABEL: Record<number, string> = {
+      1: "P1",
+      2: "P2",
+      3: "P3",
+    };
     parts.push(`## Alert generati in sessione (${alerts.length})`);
     for (const a of alerts) {
       const prio = PRIORITY_LABEL[a.priority] ?? `P${a.priority}`;
@@ -502,6 +507,8 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
     parts.push("");
   }
 
-  parts.push(`Produci l'analisi nel formato Template v3 (sezioni [1]-[5]).`);
+  parts.push(
+    `Produci l'analisi nel formato Template v3. Le sezioni [1], [3], [4] e [5] sono SEMPRE obbligatorie. Non terminare senza aver scritto [4] Raccomandazioni Modifiche e [5] Sintesi e Prossimo Step.`,
+  );
   return parts.join("\n");
 };

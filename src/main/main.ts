@@ -969,12 +969,14 @@ const setupPipeline = (): void => {
       if (!detail) return null;
 
       const pdfBuffer = await generateSessionPdfBuffer(detail);
-      const filenameSafe = (
-        detail.session.car_name ?? detail.session.car
-      ).replace(/\s+/g, "_");
+      const carLabel = detail.session.car_name ?? detail.session.car;
+      const trackLabel = detail.session.track_name ?? detail.session.track;
+      const d = new Date(detail.session.started_at);
+      const dateLabel = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const defaultFilename = `${dateLabel} - ${carLabel} - ${trackLabel}`;
       const { canceled, filePath } = await dialog.showSaveDialog({
         title: "Salva PDF sessione",
-        defaultPath: `sessione_${id}_${filenameSafe}.pdf`,
+        defaultPath: `${defaultFilename}.pdf`,
         filters: [{ name: "PDF", extensions: ["pdf"] }],
       });
       if (canceled || !filePath) return null;

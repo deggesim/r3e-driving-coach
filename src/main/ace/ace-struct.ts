@@ -25,29 +25,29 @@
 
 // Names confirmed working (acevo_pmf_* variant used by ACE and community connectors).
 // Local\ACEVO* names always return handle=0 — removed.
-export const ACE_SHM_PHYSICS = 'Local\\acevo_pmf_physics';
-export const ACE_SHM_GRAPHIC = 'Local\\acevo_pmf_graphics';
-export const ACE_SHM_STATIC  = 'Local\\acevo_pmf_static';
+export const ACE_SHM_PHYSICS = "Local\\acevo_pmf_physics";
+export const ACE_SHM_GRAPHIC = "Local\\acevo_pmf_graphics";
+export const ACE_SHM_STATIC = "Local\\acevo_pmf_static";
 
 // Read buffer sizes — must not exceed the actual SHM region size created by the
 // game, otherwise koffi.decode will access violation. Values derived from the
 // documented field sequences above; do NOT add a "generous margin" here.
-export const ACE_PHYSICS_BUF = 800;    // documented total: 800 bytes
-export const ACE_GRAPHIC_BUF = 3940;   // documented total: 3937 bytes, rounded to 4
-export const ACE_STATIC_BUF  = 256;    // documented total: 208 bytes, rounded up
+export const ACE_PHYSICS_BUF = 800; // documented total: 800 bytes
+export const ACE_GRAPHIC_BUF = 3940; // documented total: 3937 bytes, rounded to 4
+export const ACE_STATIC_BUF = 256; // documented total: 208 bytes, rounded up
 
 // ── ACEVO_STATUS enum ────────────────────────────────────────────────────────
 
-export const AC_OFF    = 0;
+export const AC_OFF = 0;
 export const AC_REPLAY = 1;
-export const AC_LIVE   = 2;
-export const AC_PAUSE  = 3;
+export const AC_LIVE = 2;
+export const AC_PAUSE = 3;
 
 // ── ACEVO_CAR_LOCATION enum ──────────────────────────────────────────────────
 
-export const ACEVO_PITLANE  = 1;
+export const ACEVO_PITLANE = 1;
 export const ACEVO_PITENTRY = 2;
-export const ACEVO_PITEXIT  = 3;
+export const ACEVO_PITEXIT = 3;
 
 // ── SPageFilePhysics offsets (Pack=4, same prefix as AC/ACC) ─────────────────
 //
@@ -140,28 +140,28 @@ export const ACEVO_PITEXIT  = 3;
 // Total documented: 800 bytes
 
 export const PHY = {
-  packetId:          0,
-  gas:               4,
-  brake:             8,
-  fuel:              12,
-  gear:              16,
-  rpms:              20,   // int32 — engine RPM
-  steerAngle:        24,
-  speedKmh:          28,
-  accG:              44,   // float[3] — G-forces: [0]=lateral, [1]=vertical, [2]=longitudinal
-  wheelsPressure:    88,   // float[4] FL,FR,RL,RR — tyre pressures (PSI)
-  wheelAngularSpeed: 104,  // float[4] FL,FR,RL,RR — wheel angular speed (rad/s)
-  suspensionTravel:  184,  // float[4] FL,FR,RL,RR — suspension travel (m)
-  rideHeight:        268,  // float[2] front,rear — aero ride height (m)
-  airTemp:           288,  // float — ambient air temperature (°C)
-  roadTemp:          292,  // float — road surface temperature (°C)
-  clutch:            364,  // float — clutch position 0-1
-  brakeTemp:         348,  // float[4] FL,FR,RL,RR
-  slipRatio:         640,  // float[4] FL,FR,RL,RR — longitudinal tyre slip ratio
-  slipAngle:         656,  // float[4] FL,FR,RL,RR — tyre slip angle (rad)
-  brakeTorque:       716,  // float[4] FL,FR,RL,RR — brake torque (Nm)
-  tcinAction:        672,  // int32 — 1 when TC cutting power
-  absInAction:       676,  // int32 — 1 when ABS modulating brakes
+  packetId: 0,
+  gas: 4,
+  brake: 8,
+  fuel: 12,
+  gear: 16,
+  rpms: 20, // int32 — engine RPM
+  steerAngle: 24,
+  speedKmh: 28,
+  accG: 44, // float[3] — G-forces: [0]=lateral, [1]=vertical, [2]=longitudinal
+  wheelsPressure: 88, // float[4] FL,FR,RL,RR — tyre pressures (PSI)
+  wheelAngularSpeed: 104, // float[4] FL,FR,RL,RR — wheel angular speed (rad/s)
+  suspensionTravel: 184, // float[4] FL,FR,RL,RR — suspension travel (m)
+  rideHeight: 268, // float[2] front,rear — aero ride height (m)
+  airTemp: 288, // float — ambient air temperature (°C)
+  roadTemp: 292, // float — road surface temperature (°C)
+  clutch: 364, // float — clutch position 0-1
+  brakeTemp: 348, // float[4] FL,FR,RL,RR
+  slipRatio: 640, // float[4] FL,FR,RL,RR — longitudinal tyre slip ratio
+  slipAngle: 656, // float[4] FL,FR,RL,RR — tyre slip angle (rad)
+  brakeTorque: 716, // float[4] FL,FR,RL,RR — brake torque (Nm)
+  tcinAction: 672, // int32 — 1 when TC cutting power
+  absInAction: 676, // int32 — 1 when ABS modulating brakes
 } as const;
 
 // ── SPageFileGraphicEvo offsets (Pack=4) ─────────────────────────────────────
@@ -316,18 +316,18 @@ export const PHY = {
 //3936  use_single_compound      bool    1
 
 export const GFX = {
-  packetId:           0,
-  status:             4,   // int32 — ACEVO_STATUS
-  tcActive:          45,   // bool (uint8)
-  absActive:         46,   // bool (uint8)
-  currentLapTimeMs: 188,   // int32
-  npos:            1244,   // float — normalised lap position [0.0–1.0]
-  totalLapCount:   2384,   // int32 — laps completed this session
-  lastLaptimeMs:   2396,   // int32 — last completed lap [ms]
-  carModel:        3086,   // char[33]
-  isInPitLane:     3120,   // bool (uint8)
-  isValidLap:      3121,   // bool (uint8)
-  carCoordinates:  3124,   // float[60][3] — player at index 0 in singleplayer
+  packetId: 0,
+  status: 4, // int32 — ACEVO_STATUS
+  tcActive: 45, // bool (uint8)
+  absActive: 46, // bool (uint8)
+  currentLapTimeMs: 188, // int32
+  npos: 1244, // float — normalised lap position [0.0-1.0]
+  totalLapCount: 2384, // int32 — laps completed this session
+  lastLaptimeMs: 2396, // int32 — last completed lap [ms]
+  carModel: 3086, // char[33]
+  isInPitLane: 3120, // bool (uint8)
+  isValidLap: 3121, // bool (uint8)
+  carCoordinates: 3124, // float[60][3] — player at index 0 in singleplayer
 } as const;
 
 // ── SPageFileStaticEvo offsets (Pack=4) ──────────────────────────────────────
@@ -358,11 +358,11 @@ export const GFX = {
 //204  track_length_m           float      4  ← track length [metres]
 
 export const STA = {
-  smVersion:          0,   // char[15]
-  acEvoVersion:      15,   // char[15]
-  track:            136,   // char[33]
+  smVersion: 0, // char[15]
+  acEvoVersion: 15, // char[15]
+  track: 136, // char[33]
   trackConfiguration: 169, // char[33]
-  trackLengthM:     204,   // float
+  trackLengthM: 204, // float
 } as const;
 
 // ── Helper readers ───────────────────────────────────────────────────────────
@@ -380,14 +380,22 @@ export const readUint8 = (buf: Buffer, offset: number): number =>
   buf.readUInt8(offset);
 
 /** Read a null-terminated ASCII string from a fixed-size char[n] field. */
-export const readString = (buf: Buffer, offset: number, maxLen: number): string => {
+export const readString = (
+  buf: Buffer,
+  offset: number,
+  maxLen: number,
+): string => {
   const end = buf.indexOf(0, offset);
   const actualEnd = end === -1 || end > offset + maxLen ? offset + maxLen : end;
-  return buf.toString('ascii', offset, actualEnd).replace(/\0/g, '').trim();
+  return buf.toString("ascii", offset, actualEnd).replace(/\0/g, "").trim();
 };
 
 /** Read float[count] array, returns number[]. */
-export const readFloatArray = (buf: Buffer, offset: number, count: number): number[] => {
+export const readFloatArray = (
+  buf: Buffer,
+  offset: number,
+  count: number,
+): number[] => {
   const result: number[] = [];
   for (let i = 0; i < count; i++) {
     result.push(buf.readFloatLE(offset + i * 4));

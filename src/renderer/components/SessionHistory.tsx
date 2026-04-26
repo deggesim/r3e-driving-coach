@@ -5,7 +5,13 @@
  * Row click → shows SessionDetail inline (back button returns to list).
  */
 
-import { faArrowDownWideShort, faArrowUpWideShort, faFlask, faRobot, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowDownWideShort,
+  faArrowUpWideShort,
+  faFlask,
+  faRobot,
+  faTrash,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
@@ -22,10 +28,17 @@ const FETCH_SIZE = 500; // upper bound — load all, paginate/filter client-side
 function buildPageWindow(current: number, total: number): (number | "…")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages: (number | "…")[] = [];
-  const addPage = (n: number) => { if (pages[pages.length - 1] !== n) pages.push(n); };
+  const addPage = (n: number) => {
+    if (pages[pages.length - 1] !== n) pages.push(n);
+  };
   addPage(1);
   if (current > 3) pages.push("…");
-  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) addPage(p);
+  for (
+    let p = Math.max(2, current - 1);
+    p <= Math.min(total - 1, current + 1);
+    p++
+  )
+    addPage(p);
   if (current < total - 2) pages.push("…");
   addPage(total);
   return pages;
@@ -237,7 +250,9 @@ const SessionHistory = () => {
           onClick={() => setSort((s) => (s === "desc" ? "asc" : "desc"))}
           title={sort === "desc" ? "Data decrescente" : "Data crescente"}
         >
-          <FontAwesomeIcon icon={sort === "desc" ? faArrowDownWideShort : faArrowUpWideShort} />
+          <FontAwesomeIcon
+            icon={sort === "desc" ? faArrowDownWideShort : faArrowUpWideShort}
+          />
           Data
         </Button>
 
@@ -358,49 +373,57 @@ const SessionHistory = () => {
           </table>
         )}
         <div className="sh-pagination d-flex align-items-center gap-2 px-3 py-2">
-        <span className="sh-page-count text-secondary" style={{ fontSize: 12, whiteSpace: "nowrap" }}>
-          {filtered.length === 0
-            ? "0 sessioni"
-            : `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, filtered.length)} di ${filtered.length}`}
-        </span>
-        {totalPages > 1 && (
-          <>
-            <Button
-              variant="link"
-              size="sm"
-              className="sh-page-btn ms-auto"
-              disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              ‹ Prec
-            </Button>
-            <div className="sh-page-numbers d-flex gap-1">
-              {buildPageWindow(page, totalPages).map((entry, i, arr) =>
-                entry === "…" ? (
-                  <span key={`ellipsis-${arr[i - 1] ?? 0}-${arr[i + 1] ?? 0}`} className="sh-page-ellipsis">…</span>
-                ) : (
-                  <button
-                    key={entry}
-                    className={`sh-page-num ${entry === page ? "active" : ""}`}
-                    onClick={() => setPage(entry as number)}
-                    type="button"
-                  >
-                    {entry}
-                  </button>
-                ),
-              )}
-            </div>
-            <Button
-              variant="link"
-              size="sm"
-              className="sh-page-btn"
-              disabled={page === totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Succ ›
-            </Button>
-          </>
-        )}
+          <span
+            className="sh-page-count text-secondary"
+            style={{ fontSize: 12, whiteSpace: "nowrap" }}
+          >
+            {filtered.length === 0
+              ? "0 sessioni"
+              : `${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, filtered.length)} di ${filtered.length}`}
+          </span>
+          {totalPages > 1 && (
+            <>
+              <Button
+                variant="link"
+                size="sm"
+                className="sh-page-btn ms-auto"
+                disabled={page === 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                ‹ Prec
+              </Button>
+              <div className="sh-page-numbers d-flex gap-1">
+                {buildPageWindow(page, totalPages).map((entry, i, arr) =>
+                  entry === "…" ? (
+                    <span
+                      key={`ellipsis-${arr[i - 1] ?? 0}-${arr[i + 1] ?? 0}`}
+                      className="sh-page-ellipsis"
+                    >
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={entry}
+                      className={`sh-page-num ${entry === page ? "active" : ""}`}
+                      onClick={() => setPage(entry as number)}
+                      type="button"
+                    >
+                      {entry}
+                    </button>
+                  ),
+                )}
+              </div>
+              <Button
+                variant="link"
+                size="sm"
+                className="sh-page-btn"
+                disabled={page === totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Succ ›
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

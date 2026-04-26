@@ -550,7 +550,7 @@ const SettingsPanel = () => {
               <Col sm={{ span: 9, offset: 3 }}>
                 <Form.Text>
                   Quando attivo, aggiunge nello storico una sessione R3E (BMW M4
-                  GT3 – Nürburgring) e una ACE (Porsche 718 GT4 – Monza), ognuna
+                  GT3 - Nürburgring) e una ACE (Porsche 718 GT4 - Monza), ognuna
                   con 3 giri e un&apos;analisi Template v3 precompilata. Utile
                   per testare la UI senza una sessione reale in corso.
                 </Form.Text>

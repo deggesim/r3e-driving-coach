@@ -11,7 +11,7 @@ const ANALYSIS_R3E: SessionAnalysisRow = {
   version: 1,
   template_v3: `## [1] Dati sessione
 **Simulatore:** RaceRoom Racing Experience · **Auto:** BMW M4 GT3 (GT3)
-**Circuito:** Nürburgring – Grand Prix · **Giri analizzati:** 2 (giro 2–3)
+**Circuito:** Nürburgring - Grand Prix · **Giri analizzati:** 2 (giro 2-3)
 **Miglior giro:** 1:55.234 (giro 2) · **Δ giri:** +0.546s
 
 ---
@@ -25,9 +25,9 @@ const ANALYSIS_R3E: SessionAnalysisRow = {
 
 | Zona | Km | Curva | Problema | Δ |
 |---|---|---|---|---|
-| Z-08 | 0.38 km | Einfahrt Mercedes | LATE_BRAKE | −0.12s |
-| Z-15 | 0.73 km | Rettifilo est | SLOW_THROTTLE | −0.08s |
-| Z-22 | 1.08 km | Ford Kurve | TRAIL_BRAKING | −0.05s |
+| Z-08 | 0.38 km | Einfahrt Mercedes | LATE_BRAKE | -0.12s |
+| Z-15 | 0.73 km | Rettifilo est | SLOW_THROTTLE | -0.08s |
+| Z-22 | 1.08 km | Ford Kurve | TRAIL_BRAKING | -0.05s |
 
 **Dettaglio:**
 - **Z-08 Einfahrt Mercedes** — freno 18m più tardi della baseline, velocità di apice 3 km/h inferiore (82 vs 85 km/h). Prova ad anticipare di 10m il punto di staccata.
@@ -37,7 +37,7 @@ const ANALYSIS_R3E: SessionAnalysisRow = {
 ---
 
 ## [4] Progressione rispetto alla baseline
-Giro 2 (1:55.234): **−1.222s** rispetto al giro di calibrazione. Miglioramento lineare nelle zone 5–18. Zone 20–28 ancora da ottimizzare (perdi 0.3s cumulativi).
+Giro 2 (1:55.234): **-1.222s** rispetto al giro di calibrazione. Miglioramento lineare nelle zone 5-18. Zone 20-28 ancora da ottimizzare (perdi 0.3s cumulativi).
 
 ---
 
@@ -54,7 +54,7 @@ const ANALYSIS_ACE: SessionAnalysisRow = {
   version: 1,
   template_v3: `## [1] Dati sessione
 **Simulatore:** Assetto Corsa EVO · **Auto:** Porsche 718 GT4
-**Circuito:** Monza – Circuit · **Giri analizzati:** 2 (giro 2–3)
+**Circuito:** Monza - Circuit · **Giri analizzati:** 2 (giro 2-3)
 **Miglior giro:** 1:47.456 (giro 2) · **Δ giri:** +0.436s
 
 ---
@@ -68,9 +68,9 @@ const ANALYSIS_ACE: SessionAnalysisRow = {
 
 | Zona | Km | Curva | Problema | Δ |
 |---|---|---|---|---|
-| Z-04 | 0.18 km | Prima variante | BRAKE_THROTTLE_OVERLAP | −0.09s |
-| Z-11 | 0.53 km | Seconda variante | COASTING | −0.11s |
-| Z-27 | 1.33 km | Lesmo 2 | LATE_BRAKE | −0.07s |
+| Z-04 | 0.18 km | Prima variante | BRAKE_THROTTLE_OVERLAP | -0.09s |
+| Z-11 | 0.53 km | Seconda variante | COASTING | -0.11s |
+| Z-27 | 1.33 km | Lesmo 2 | LATE_BRAKE | -0.07s |
 
 **Dettaglio:**
 - **Z-04 Prima variante** — sovrapposizione freno/gas di 0.3s in ingresso curva. Separa le fasi: frena, poi gas. Stai penalizzando l'assetto anteriore.
@@ -80,7 +80,7 @@ const ANALYSIS_ACE: SessionAnalysisRow = {
 ---
 
 ## [4] Progressione rispetto alla baseline
-Giro 2 (1:47.456): **−1.664s** rispetto al giro di calibrazione. Settore 1 in linea con la baseline. Settori 2 e 3 migliorabili di 0.4s ciascuno ottimizzando le varianti e i Lesmo.
+Giro 2 (1:47.456): **-1.664s** rispetto al giro di calibrazione. Settore 1 in linea con la baseline. Settori 2 e 3 migliorabili di 0.4s ciascuno ottimizzando le varianti e i Lesmo.
 
 ---
 

@@ -199,7 +199,7 @@ body {
   line-height: 1.7;
   max-width: 900px;
 }
-.deb-content h1, .deb-content h2, .deb-content h3 {
+.deb-content h1, .deb-content h2, .deb-content h3, .deb-content h4, .deb-content h5, .deb-content h6 {
   color: var(--accent);
   margin: 16px 0 8px;
   font-size: 14px;
