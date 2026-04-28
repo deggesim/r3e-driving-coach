@@ -21,7 +21,14 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
     return [`v${analyses[analyses.length - 1].version}`];
   });
 
-  // Open the accordion only when a new analysis is fully completed (not during streaming).
+  // Open the streaming accordion as soon as a new streaming version starts.
+  useEffect(() => {
+    if (!streamingVersion) return;
+    const key = `streaming-${streamingVersion.version}`;
+    setActiveKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+  }, [streamingVersion?.version]);
+
+  // Open the completed accordion when streaming finishes (new analysis landed).
   // Using a ref to track previous analyses avoids the React 18 batching issue where
   // streaming→null and analyses update land in the same render, never letting us observe
   // the streaming→non-null state in an effect.
@@ -53,9 +60,7 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
               {new Date(a.created_at).toLocaleString("it-IT")}
             </span>
           </Accordion.Header>
-          <Accordion.Body
-            className="overflow-y-auto"
-          >
+          <Accordion.Body className="overflow-y-auto">
             <div
               className="deb-content"
               // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
@@ -70,9 +75,7 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
             <Spinner size="sm" className="me-2" />
             Analisi #{streamingVersion.version} (in corso…)
           </Accordion.Header>
-          <Accordion.Body
-            className="overflow-y-auto"
-          >
+          <Accordion.Body className="overflow-y-auto">
             <div
               className="deb-content"
               // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml

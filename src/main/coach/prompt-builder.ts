@@ -423,12 +423,17 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
     setups.map((s) => [s.id, s.setup.name ?? s.setup.carFound]),
   );
 
-  if (laps.length > 0) {
+  // Laps missing any sector time cannot be valid — exclude them from analysis.
+  const analyzableLaps = laps.filter(
+    (l) => l.sector1 != null && l.sector2 != null && l.sector3 != null,
+  );
+
+  if (analyzableLaps.length > 0) {
     parts.push(`## Giri`);
-    for (const lap of laps) {
-      const s1 = lap.sector1 != null ? formatLapTime(lap.sector1) : "--";
-      const s2 = lap.sector2 != null ? formatLapTime(lap.sector2) : "--";
-      const s3 = lap.sector3 != null ? formatLapTime(lap.sector3) : "--";
+    for (const lap of analyzableLaps) {
+      const s1 = formatLapTime(lap.sector1!);
+      const s2 = formatLapTime(lap.sector2!);
+      const s3 = formatLapTime(lap.sector3!);
       const valid = lap.valid ? "✓" : "✗";
       const setupLabel =
         lap.setup_id != null ? setupNameById.get(lap.setup_id) : undefined;
@@ -446,6 +451,11 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
         }
       }
     }
+    const excluded = laps.length - analyzableLaps.length;
+    if (excluded > 0)
+      parts.push(
+        `*(${excluded} giro/i esclusi perché privi di tempo settore)*`,
+      );
     parts.push("");
   }
 

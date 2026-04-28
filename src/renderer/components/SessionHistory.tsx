@@ -402,14 +402,14 @@ const SessionHistory = () => {
                       …
                     </span>
                   ) : (
-                    <button
+                    <Button
                       key={entry}
                       className={`sh-page-num ${entry === page ? "active" : ""}`}
                       onClick={() => setPage(entry as number)}
-                      type="button"
+                      variant="link"
                     >
                       {entry}
-                    </button>
+                    </Button>
                   ),
                 )}
               </div>

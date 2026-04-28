@@ -164,6 +164,17 @@ const initSchema = (db: Database.Database): void => {
   if (!hasColumn("laps_ace", "frames_blob")) {
     db.exec(`ALTER TABLE laps_ace ADD COLUMN frames_blob BLOB`);
   }
+
+  // Migration: invalidate R3E laps where any sector was stored as 0 (not counted by the sim).
+  // Zero sectors indicate an incomplete lap recorded before R3E populated the SHM sector fields.
+  db.exec(`
+    UPDATE laps_r3e
+    SET valid = 0
+    WHERE valid = 1
+      AND (sector1 = 0 OR sector1 IS NULL
+        OR sector2 = 0 OR sector2 IS NULL
+        OR sector3 = 0 OR sector3 IS NULL)
+  `);
 };
 
 export const getDb = (userDataPath: string): Database.Database => {
