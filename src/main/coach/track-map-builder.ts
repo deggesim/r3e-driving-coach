@@ -12,6 +12,8 @@ import type { CompactFrame, TrackMapGeometry } from "../../shared/types.js";
 const SAMPLE_INTERVAL_MS = 100;
 const BOUNDS_MARGIN_M = 30;
 const MIN_SAMPLES = 20;
+// At 100ms sampling, even 300 km/h = ~8m/step; 30m is a generous threshold.
+const MAX_STEP_M = 30;
 
 const hasWorldPos = (f: CompactFrame): boolean =>
   typeof f.wx === "number" && typeof f.wz === "number";
@@ -74,16 +76,18 @@ export const buildTrackMap = (
 
   const pathParts: string[] = [];
   for (let i = 0; i < samples.length; i++) {
-    const cmd = i === 0 ? "M" : "L";
-    const x = samples[i].wx!.toFixed(1);
-    const z = (-samples[i].wz!).toFixed(1);
-    pathParts.push(`${cmd} ${x} ${z}`);
+    const x = samples[i].wx!;
+    const z = -samples[i].wz!;
+    let cmd: string;
+    if (i === 0) {
+      cmd = "M";
+    } else {
+      const dx = x - samples[i - 1].wx!;
+      const dz = z - -samples[i - 1].wz!;
+      cmd = Math.sqrt(dx * dx + dz * dz) > MAX_STEP_M ? "M" : "L";
+    }
+    pathParts.push(`${cmd} ${x.toFixed(1)} ${z.toFixed(1)}`);
   }
-  // Close visually by returning to the first sample (avoids the arbitrary straight
-  // line that SVG "Z" draws when first and last sample aren't at the same point).
-  const x0 = samples[0].wx!.toFixed(1);
-  const z0 = (-samples[0].wz!).toFixed(1);
-  pathParts.push(`L ${x0} ${z0}`);
 
   return {
     svgPath: pathParts.join(" "),
