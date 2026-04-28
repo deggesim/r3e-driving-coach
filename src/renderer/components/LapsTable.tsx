@@ -1,13 +1,16 @@
-import { Fragment, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
-  faXmark,
   faChevronRight,
   faEye,
   faEyeSlash,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Fragment, useState } from "react";
 import { Badge, Button, Table } from "react-bootstrap";
+import { formatLapTime } from "../../shared/format";
+import { useSessionStore } from "../store/sessionStore";
+import LapTelemetryCharts from "./LapTelemetryCharts";
 
 function buildPageWindow(current: number, total: number): (number | "…")[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -27,9 +30,6 @@ function buildPageWindow(current: number, total: number): (number | "…")[] {
   addPage(total);
   return pages;
 }
-import { formatLapTime } from "../../shared/format";
-import { useSessionStore } from "../store/sessionStore";
-import LapTelemetryCharts from "./LapTelemetryCharts";
 
 const PAGE_SIZE = 5;
 
@@ -46,6 +46,13 @@ const LapsTable = ({ setupById }: LapsTableProps) => {
 
   const visibleLaps = hideInvalid ? laps.filter((l) => l.valid) : laps;
   const pageCount = Math.max(1, Math.ceil(visibleLaps.length / PAGE_SIZE));
+
+  const bestLapId = laps.reduce<number | null>((best, l) => {
+    if (!l.valid || l.lap_time == null) return best;
+    if (best === null) return l.id;
+    const bestLap = laps.find((x) => x.id === best);
+    return bestLap && l.lap_time < bestLap.lap_time ? l.id : best;
+  }, null);
 
   // Auto-advance to last page when new laps arrive (derived-state pattern, no effect needed).
   if (visibleLaps.length > trackedLapCount) {
@@ -73,20 +80,24 @@ const LapsTable = ({ setupById }: LapsTableProps) => {
   };
 
   return (
-    <div>
-      <div className="d-flex justify-content-end mb-1">
-        <Button
-          variant={hideInvalid ? "secondary" : "outline-secondary"}
-          style={{ fontSize: 12 }}
-          onClick={toggleHideInvalid}
-        >
-          <FontAwesomeIcon
-            icon={hideInvalid ? faEye : faEyeSlash}
-            className="me-1"
-          />
-          {hideInvalid ? "Mostra non validi" : "Nascondi non validi"}
-        </Button>
+    <>
+      <div className="d-flex justify-content-between align-items-center mb-1">
+        <h6 className="text-uppercase mb-1">Giri</h6>
+        {laps.length > 0 && (
+          <Button
+            variant={hideInvalid ? "secondary" : "outline-secondary"}
+            style={{ fontSize: 12 }}
+            onClick={toggleHideInvalid}
+          >
+            <FontAwesomeIcon
+              icon={hideInvalid ? faEye : faEyeSlash}
+              className="me-1"
+            />
+            {hideInvalid ? "Mostra non validi" : "Nascondi non validi"}
+          </Button>
+        )}
       </div>
+
       <Table
         striped
         size="sm"
@@ -117,6 +128,11 @@ const LapsTable = ({ setupById }: LapsTableProps) => {
           {pageLaps.map((l) => {
             const expanded = expandedId === l.id;
             const clickable = !!l.valid;
+            const isBest = l.id === bestLapId;
+            const rowColor = isBest
+              ? { color: "#ffc107" }
+              : { color: "var(--text-dim)" };
+            const tdColor = isBest ? { color: "#ffc107" } : undefined;
             return (
               <Fragment key={l.id}>
                 <tr
@@ -127,7 +143,7 @@ const LapsTable = ({ setupById }: LapsTableProps) => {
                   }}
                   title={clickable ? "Mostra telemetria" : "Giro non valido"}
                 >
-                  <td style={{ color: "var(--text-dim)" }}>
+                  <td style={rowColor}>
                     {clickable && (
                       <FontAwesomeIcon
                         icon={faChevronRight}
@@ -141,11 +157,17 @@ const LapsTable = ({ setupById }: LapsTableProps) => {
                       />
                     )}
                   </td>
-                  <td>{l.lap_number}</td>
-                  <td>{formatLapTime(l.lap_time)}</td>
-                  <td>{l.sector1 != null ? formatLapTime(l.sector1) : "--"}</td>
-                  <td>{l.sector2 != null ? formatLapTime(l.sector2) : "--"}</td>
-                  <td>{l.sector3 != null ? formatLapTime(l.sector3) : "--"}</td>
+                  <td style={tdColor}>{l.lap_number}</td>
+                  <td style={tdColor}>{formatLapTime(l.lap_time)}</td>
+                  <td style={tdColor}>
+                    {l.sector1 != null ? formatLapTime(l.sector1) : "--"}
+                  </td>
+                  <td style={tdColor}>
+                    {l.sector2 != null ? formatLapTime(l.sector2) : "--"}
+                  </td>
+                  <td style={tdColor}>
+                    {l.sector3 != null ? formatLapTime(l.sector3) : "--"}
+                  </td>
                   <td>
                     {l.valid ? (
                       <FontAwesomeIcon
@@ -175,7 +197,9 @@ const LapsTable = ({ setupById }: LapsTableProps) => {
                       <span className="text-muted">—</span>
                     )}
                   </td>
-                  <td>{new Date(l.recorded_at).toLocaleString("it-IT")}</td>
+                  <td style={isBest ? { color: "#ffc107" } : undefined}>
+                    {new Date(l.recorded_at).toLocaleString("it-IT")}
+                  </td>
                 </tr>
                 <tr className="lap-telemetry-row">
                   <td
@@ -251,7 +275,7 @@ const LapsTable = ({ setupById }: LapsTableProps) => {
           </>
         )}
       </div>
-    </div>
+    </>
   );
 };
 

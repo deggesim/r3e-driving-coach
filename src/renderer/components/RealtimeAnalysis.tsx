@@ -129,7 +129,6 @@ const RealtimeAnalysis = () => {
       {/* Body - no scroll, accordion scrolls internally */}
       <div className="flex-grow-1 overflow-hidden p-3">
         {/* Laps table */}
-        <h6 className="text-uppercase">Giri</h6>
         <LapsTable setupById={setupById} />
 
         {/* Analyses accordion - scrollable */}
