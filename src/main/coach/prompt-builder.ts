@@ -518,7 +518,10 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
   }
 
   parts.push(
-    `Produci l'analisi nel formato Template v3. Le sezioni [1], [3], [4] e [5] sono SEMPRE obbligatorie. Non terminare senza aver scritto [4] Raccomandazioni Modifiche e [5] Sintesi e Prossimo Step.`,
+    `Produci l'analisi nel formato Template v3. Le sezioni [1], [3], [4] e [5] sono SEMPRE obbligatorie.\n` +
+      `ATTENZIONE: non interrompere la generazione prima di aver completato [4] Raccomandazioni Modifiche e [5] Sintesi e Prossimo Step.\n` +
+      `Se i dati sono pochi, scrivi sezioni più concise — ma NON omettere [4] e [5] in nessun caso.\n` +
+      `[5] deve essere un paragrafo singolo di massimo 3 frasi senza markdown.`,
   );
   return parts.join("\n");
 };

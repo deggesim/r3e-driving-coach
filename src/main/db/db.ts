@@ -171,9 +171,9 @@ const initSchema = (db: Database.Database): void => {
     UPDATE laps_r3e
     SET valid = 0
     WHERE valid = 1
-      AND (sector1 = 0 OR sector1 IS NULL
-        OR sector2 = 0 OR sector2 IS NULL
-        OR sector3 = 0 OR sector3 IS NULL)
+      AND (sector1 <= 0 OR sector1 IS NULL
+        OR sector2 <= 0 OR sector2 IS NULL
+        OR sector3 <= 0 OR sector3 IS NULL)
   `);
 };
 

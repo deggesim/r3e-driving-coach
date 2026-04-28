@@ -126,17 +126,19 @@ const RealtimeAnalysis = () => {
         </Alert>
       )}
 
-      {/* Body - no scroll, accordion scrolls internally */}
-      <div className="flex-grow-1 overflow-hidden p-3">
-        {/* Laps table */}
-        <LapsTable setupById={setupById} />
+      {/* Body: laps table (fixed height) + analyses section (scrollable) */}
+      <div className="flex-grow-1 overflow-hidden p-3 d-flex flex-column" style={{ minHeight: 0 }}>
+        <div className="flex-shrink-0">
+          <LapsTable setupById={setupById} />
+        </div>
 
-        {/* Analyses accordion - scrollable */}
-        <h6 className="text-uppercase mt-3">Analisi</h6>
-        {analyses.length === 0 && !streamingVersion && (
-          <p>Nessuna analisi ancora generata.</p>
-        )}
-        <AnalysisList streamingVersion={streamingVersion} />
+        <div className="flex-grow-1 d-flex flex-column overflow-hidden mt-3" style={{ minHeight: 0 }}>
+          <h6 className="text-uppercase flex-shrink-0">Analisi</h6>
+          {analyses.length === 0 && !streamingVersion && (
+            <p>Nessuna analisi ancora generata.</p>
+          )}
+          <AnalysisList streamingVersion={streamingVersion} />
+        </div>
       </div>
 
       {/* Setup pickers */}

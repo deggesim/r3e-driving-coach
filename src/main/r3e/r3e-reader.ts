@@ -261,7 +261,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         track: currentTrack,
         layout: currentLayout,
         layoutLength: currentLayoutLength,
-        valid: frame.currentLapValid,
+        valid: frame.currentLapValid && frame.sectorTimesCurrentSelf.every((s) => s > 0),
       };
       lapFrames = [];
       emitter.emit("lapComplete", lapData);
