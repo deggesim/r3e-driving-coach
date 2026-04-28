@@ -5,8 +5,8 @@
  * to feed AdaptiveBaseline.checkZoneRealtime().
  */
 
-import { ZONE_SIZE_M } from "../../shared/alert-types.js";
-import type { GameFrame } from "../../shared/types.js";
+import { ZONE_SIZE_M } from "../shared/alert-types.js";
+import type { GameFrame } from "../shared/types.js";
 
 type CurrentZone = {
   zone: number;

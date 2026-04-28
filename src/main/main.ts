@@ -11,8 +11,8 @@
 import type BetterSqlite3 from "better-sqlite3";
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
-import { gzipSync, gunzipSync } from "zlib";
 import { fileURLToPath } from "url";
+import { gunzipSync, gzipSync } from "zlib";
 import type {
   Alert,
   Deviation,
@@ -45,6 +45,7 @@ import {
   createRuleEngine,
 } from "./coach/rule-engine.js";
 import { createSessionCoachEngine } from "./coach/session-coach.js";
+import { buildTrackMap } from "./coach/track-map-builder.js";
 import {
   createVoiceCoachEngine,
   type VoiceCoachEngine,
@@ -57,14 +58,13 @@ import {
   saveTrackMap,
   seedCornersFromLap,
 } from "./db/db.js";
-import { buildTrackMap } from "./coach/track-map-builder.js";
 import { toGameFrame } from "./game-adapter.js";
+import { createLapRecorder } from "./lap-recorder.js";
 import {
   generatePdfBuffer,
   generateSessionPdfBuffer,
   type PdfData,
 } from "./pdf-generator.js";
-import { createLapRecorder } from "./r3e/lap-recorder.js";
 import {
   getCarClassName,
   getCarName,
@@ -73,12 +73,12 @@ import {
   loadR3EData,
 } from "./r3e/r3e-data-loader.js";
 import { createR3EReader, type R3EReader } from "./r3e/r3e-reader.js";
-import { createZoneTracker } from "./r3e/zone-tracker.js";
 import {
   getAzureVoices,
   synthesizeAzure,
   transcribeAzure,
 } from "./tts/azure-tts.js";
+import { createZoneTracker } from "./zone-tracker.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -202,7 +202,8 @@ const enrichSession = (
     track_name: names.trackName,
     layout_name: names.layoutName,
     car_class_name: names.carClassName,
-    analysis_count: typeof row.analysis_count === "number" ? row.analysis_count : undefined,
+    analysis_count:
+      typeof row.analysis_count === "number" ? row.analysis_count : undefined,
   };
 };
 
