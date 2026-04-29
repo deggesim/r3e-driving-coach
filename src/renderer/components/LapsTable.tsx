@@ -35,9 +35,10 @@ const PAGE_SIZE = 5;
 
 type LapsTableProps = {
   setupById: Map<number, string>;
+  live?: boolean;
 };
 
-const LapsTable = ({ setupById }: LapsTableProps) => {
+const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
   const laps = useSessionStore((s) => s.laps);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
@@ -54,8 +55,8 @@ const LapsTable = ({ setupById }: LapsTableProps) => {
     return bestLap && l.lap_time < bestLap.lap_time ? l.id : best;
   }, null);
 
-  // Auto-advance to last page when new laps arrive (derived-state pattern, no effect needed).
-  if (visibleLaps.length > trackedLapCount) {
+  // Auto-advance to last page when new laps arrive (live session only).
+  if (live && visibleLaps.length > trackedLapCount) {
     setTrackedLapCount(visibleLaps.length);
     setPage(pageCount);
   }

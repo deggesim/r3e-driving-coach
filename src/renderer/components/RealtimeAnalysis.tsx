@@ -95,6 +95,16 @@ const RealtimeAnalysis = () => {
     }
   };
 
+  const handleReuseSetup = async (setupId: number): Promise<void> => {
+    setShowSetupSelection(false);
+    try {
+      await window.electronAPI.sessionReuseSetup({ setupId });
+      showFlash("success", "Setup attivo aggiornato.");
+    } catch (err) {
+      showFlash("danger", String(err));
+    }
+  };
+
   const currentCar = session?.car_name ?? session?.car ?? status?.car ?? "";
   const currentTrack =
     session?.track_name ?? session?.track ?? status?.track ?? "";
@@ -141,7 +151,7 @@ const RealtimeAnalysis = () => {
       {/* Body: laps table (fixed height) + analyses section (scrollable) */}
       <div className="flex-grow-1 overflow-hidden p-3 d-flex flex-column" style={{ minHeight: 0 }}>
         <div className="flex-shrink-0">
-          <LapsTable setupById={setupById} />
+          <LapsTable setupById={setupById} live />
         </div>
 
         <div className="flex-grow-1 d-flex flex-column overflow-hidden mt-3" style={{ minHeight: 0 }}>
@@ -178,7 +188,7 @@ const RealtimeAnalysis = () => {
               layout={session.layout}
               game="r3e"
               onClose={() => setShowSetupSelection(false)}
-              onSelectSetup={handleSetupConfirm}
+              onReuseSetup={handleReuseSetup}
               onScreenshotPicker={() => {
                 setShowSetupSelection(false);
                 setShowPicker(true);

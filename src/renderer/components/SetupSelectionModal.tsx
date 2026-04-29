@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Badge, Button, Modal, Spinner } from "react-bootstrap";
+import { Accordion, Badge, Button, Modal, Spinner } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCamera, faCheck } from "@fortawesome/free-solid-svg-icons";
-import type { GameSource, SessionSetupRow, SetupData } from "../../shared/types";
+import type { GameSource, SessionSetupRow } from "../../shared/types";
 
 interface Props {
   show: boolean;
@@ -11,7 +11,7 @@ interface Props {
   layout: string;
   game: GameSource;
   onClose: () => void;
-  onSelectSetup: (setup: SetupData) => void;
+  onReuseSetup: (setupId: number) => void;
   onScreenshotPicker: () => void;
 }
 
@@ -34,7 +34,7 @@ const SetupSelectionModal = ({
   layout,
   game,
   onClose,
-  onSelectSetup,
+  onReuseSetup,
   onScreenshotPicker,
 }: Props) => {
   const [history, setHistory] = useState<SessionSetupRow[]>([]);
@@ -81,37 +81,66 @@ const SetupSelectionModal = ({
             <p className="text-muted mb-2" style={{ fontSize: 13 }}>
               Setup già caricati per questa combinazione auto/circuito:
             </p>
-            <div className="d-flex flex-column gap-2 mb-3">
-              {history.map((row) => (
-                <div
-                  key={row.id}
-                  className="d-flex align-items-center gap-2 p-2 rounded"
-                  style={{ background: "var(--bg2)", border: "1px solid var(--border)" }}
-                >
-                  <div className="flex-grow-1" style={{ minWidth: 0 }}>
-                    <div className="fw-semibold text-truncate" style={{ fontSize: 14 }}>
-                      {row.setup.name ?? row.setup.carFound ?? `Setup #${row.id}`}
-                    </div>
-                    <div className="text-muted" style={{ fontSize: 12 }}>
-                      {formatDate(row.loaded_at)}
-                      {row.setup.carVerified && (
-                        <Badge bg="success" className="ms-2" style={{ fontSize: 10 }}>
-                          <FontAwesomeIcon icon={faCheck} className="me-1" />
-                          verificato
-                        </Badge>
+            <Accordion className="setup-history-accordion mb-3" flush>
+              {history.map((row) => {
+                const displayName =
+                  row.setup.name ?? row.setup.carFound ?? `Setup #${row.id}`;
+                const hasParams = row.setup.params && row.setup.params.length > 0;
+
+                return (
+                  <Accordion.Item eventKey={String(row.id)} key={row.id}>
+                    <Accordion.Header>
+                      <div className="setup-acc-header">
+                        <span className="setup-acc-name">{displayName}</span>
+                        <span className="setup-acc-meta">
+                          {formatDate(row.loaded_at)}
+                          {row.setup.carVerified && (
+                            <Badge bg="success" className="ms-2" style={{ fontSize: 10 }}>
+                              <FontAwesomeIcon icon={faCheck} className="me-1" />
+                              verificato
+                            </Badge>
+                          )}
+                        </span>
+                      </div>
+                    </Accordion.Header>
+                    <Accordion.Body>
+                      {hasParams ? (
+                        <table className="setup-table w-100 mb-3">
+                          <thead>
+                            <tr>
+                              <th>Categoria</th>
+                              <th>Parametro</th>
+                              <th>Valore</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {row.setup.params.map((p) => (
+                              <tr key={`${p.category}__${p.parameter}`}>
+                                <td className="text-dim">{p.category}</td>
+                                <td>{p.parameter}</td>
+                                <td className="setup-value">{p.value}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <p className="text-muted mb-3" style={{ fontSize: 13 }}>
+                          Nessun parametro decodificato per questo setup.
+                        </p>
                       )}
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline-primary"
-                    onClick={() => onSelectSetup(row.setup)}
-                  >
-                    Seleziona
-                  </Button>
-                </div>
-              ))}
-            </div>
+                      <Button
+                        size="sm"
+                        variant="outline-primary"
+                        onClick={() => onReuseSetup(row.id)}
+                      >
+                        <FontAwesomeIcon icon={faCheck} className="me-1" />
+                        Usa questo setup
+                      </Button>
+                    </Accordion.Body>
+                  </Accordion.Item>
+                );
+              })}
+            </Accordion>
             <hr style={{ borderColor: "var(--border)" }} />
           </>
         ) : (

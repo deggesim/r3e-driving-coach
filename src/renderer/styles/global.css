@@ -431,6 +431,13 @@ body {
 }
 .setup-selection-modal .modal-body { background: var(--bg2); }
 .setup-selection-modal .btn-close { filter: invert(1) grayscale(1); }
+.setup-history-accordion .accordion-item { border-color: var(--border); }
+.setup-history-accordion .accordion-button { font-size: 13px; padding: 8px 12px; }
+.setup-history-accordion .accordion-body { padding: 10px 12px; max-height: 400px; overflow-y: auto; }
+.setup-history-accordion .setup-table th { position: static; }
+.setup-acc-header { display: flex; flex-direction: column; gap: 2px; }
+.setup-acc-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.setup-acc-meta { font-size: 11px; color: var(--text-dim); }
 
 /* ── Screenshot Picker Modal ── */
 .screenshot-picker-modal .modal-content {

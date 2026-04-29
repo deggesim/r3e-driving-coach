@@ -453,10 +453,10 @@ const setupPipeline = (): void => {
 
       db.prepare(
         `UPDATE ${sessionsTable} SET
-           best_lap = CASE WHEN best_lap IS NULL OR ? < best_lap THEN ? ELSE best_lap END,
+           best_lap = CASE WHEN ? AND (best_lap IS NULL OR ? < best_lap) THEN ? ELSE best_lap END,
            lap_count = lap_count + 1
          WHERE id = ?`,
-      ).run(lap.lapTime, lap.lapTime, sessionId);
+      ).run(lap.valid ? 1 : 0, lap.lapTime, lap.lapTime, sessionId);
 
       // Push lap added (exclude frames_blob — renderer fetches on demand)
       const lapRow = db
@@ -1105,6 +1105,17 @@ const setupPipeline = (): void => {
           setup_screenshots: r.setup_screenshots,
         } as SessionSetupRow;
       });
+    },
+  );
+
+  // Reuse an existing setup row: just update currentSetupId, no new DB row
+  ipcMain.handle(
+    "session:reuseSetup",
+    (_event, { setupId }: { setupId: number }) => {
+      if (!currentSessionId) {
+        throw new Error("Nessuna sessione attiva.");
+      }
+      currentSetupId = setupId;
     },
   );
 

@@ -75,6 +75,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("session:reopen", params),
   sessionGetSetupHistory: (params: { car: string; track: string; layout: string; game: string }) =>
     ipcRenderer.invoke("session:getSetupHistory", params),
+  sessionReuseSetup: (params: { setupId: number }) =>
+    ipcRenderer.invoke("session:reuseSetup", params),
 
   // Lap telemetry frames (on demand)
   lapGetFrames: (params: { id: number; game: string }) =>

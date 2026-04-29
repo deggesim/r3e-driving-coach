@@ -175,6 +175,17 @@ const initSchema = (db: Database.Database): void => {
         OR sector2 <= 0 OR sector2 IS NULL
         OR sector3 <= 0 OR sector3 IS NULL)
   `);
+
+  // Migration: recompute best_lap from valid laps only (previously invalid laps could overwrite it).
+  for (const game of ["r3e", "ace"] as const) {
+    db.exec(`
+      UPDATE sessions_${game}
+      SET best_lap = (
+        SELECT MIN(lap_time) FROM laps_${game}
+        WHERE session_id = sessions_${game}.id AND valid = 1
+      )
+    `);
+  }
 };
 
 export const getDb = (userDataPath: string): Database.Database => {

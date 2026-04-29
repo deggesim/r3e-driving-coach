@@ -80,6 +80,16 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
     }
   };
 
+  const handleReuseSetup = async (setupId: number): Promise<void> => {
+    setShowSetupSelection(false);
+    try {
+      await window.electronAPI.sessionReuseSetup({ setupId });
+      showFlash("success", "Setup attivo aggiornato.");
+    } catch (err) {
+      showFlash("danger", String(err));
+    }
+  };
+
   const currentCar = session?.car_name ?? session?.car ?? "";
   const currentTrack = session?.track_name ?? session?.track ?? "";
 
@@ -168,7 +178,7 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
               layout={session.layout}
               game={session.game}
               onClose={() => setShowSetupSelection(false)}
-              onSelectSetup={handleSetupConfirm}
+              onReuseSetup={handleReuseSetup}
               onScreenshotPicker={() => {
                 setShowSetupSelection(false);
                 setShowPicker(true);

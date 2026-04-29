@@ -415,6 +415,7 @@ export type ElectronAPI = {
   sessionDeleteAll: (items: Array<{ id: number; game: GameSource }>) => Promise<void>;
   sessionReopen: (params: { id: number; game: GameSource }) => Promise<SessionStartResult>;
   sessionGetSetupHistory: (params: { car: string; track: string; layout: string; game: GameSource }) => Promise<SessionSetupRow[]>;
+  sessionReuseSetup: (params: { setupId: number }) => Promise<void>;
 
   // Lap telemetry frames (on demand)
   lapGetFrames: (params: { id: number; game: GameSource }) => Promise<CompactFrame[]>;
