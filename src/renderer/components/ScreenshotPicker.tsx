@@ -1,15 +1,17 @@
 /**
  * ScreenshotPicker — modal to select Steam screenshots for setup decoding.
  * Shows thumbnails, allows multi-select, then triggers Claude Vision decode.
+ * Warns the user if a selected screenshot was already used in a previous setup.
  */
 
-import { faArrowLeft, faCheck, faCircleNotch, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheck, faCircleNotch, faExclamationTriangle, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
 import type { SetupData } from "../../shared/types";
 
-type ScreenshotEntry = { name: string; thumbnailB64: string };
+type AlreadyUsedInfo = { setupName: string; loadedAt: string; sessionId: number };
+type ScreenshotEntry = { name: string; thumbnailB64: string; alreadyUsed?: AlreadyUsedInfo };
 
 type Props = {
   show: boolean;
@@ -18,7 +20,7 @@ type Props = {
   onConfirm: (setup: SetupData) => void;
 };
 
-type Phase = "pick" | "decoding" | "verify";
+type Phase = "pick" | "confirm-duplicates" | "decoding" | "verify";
 
 const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
   const [screenshots, setScreenshots] = useState<ScreenshotEntry[]>([]);
@@ -52,8 +54,22 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
     });
   };
 
-  const handleDecode = async (): Promise<void> => {
+  const screenshotMap = new Map(screenshots.map((s) => [s.name, s]));
+
+  const selectedDuplicates = Array.from(selected).filter(
+    (name) => screenshotMap.get(name)?.alreadyUsed !== undefined,
+  );
+
+  const handleDecodeRequest = (): void => {
     if (selected.size === 0) return;
+    if (selectedDuplicates.length > 0) {
+      setPhase("confirm-duplicates");
+    } else {
+      void startDecode();
+    }
+  };
+
+  const startDecode = async (): Promise<void> => {
     setPhase("decoding");
     setError(null);
     try {
@@ -84,6 +100,18 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
     onClose();
   };
 
+  const formatDate = (iso: string): string => {
+    try {
+      return new Date(iso).toLocaleDateString("it-IT", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    } catch {
+      return iso;
+    }
+  };
+
   return (
     <Modal show={show} onHide={handleClose} size="xl" className="screenshot-picker-modal">
       <Modal.Header className="picker-header">
@@ -111,8 +139,13 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
                 {screenshots.map((s) => (
                   <div
                     key={s.name}
-                    className={`picker-thumb ${selected.has(s.name) ? "selected" : ""}`}
+                    className={`picker-thumb ${selected.has(s.name) ? "selected" : ""} ${s.alreadyUsed ? "already-used" : ""}`}
                     onClick={() => toggle(s.name)}
+                    title={
+                      s.alreadyUsed
+                        ? `Già usato nel setup "${s.alreadyUsed.setupName || "senza nome"}" (${formatDate(s.alreadyUsed.loadedAt)})`
+                        : undefined
+                    }
                   >
                     <img
                       src={`data:image/jpeg;base64,${s.thumbnailB64}`}
@@ -124,12 +157,47 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
                         <FontAwesomeIcon icon={faCheck} />
                       </div>
                     )}
+                    {s.alreadyUsed && (
+                      <div className="picker-used-badge">
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="me-1" />
+                        Già scansionato
+                      </div>
+                    )}
                     <div className="picker-name">{s.name.replace(/_1\.jpg$/, "")}</div>
                   </div>
                 ))}
               </div>
             )}
           </>
+        )}
+
+        {phase === "confirm-duplicates" && (
+          <div className="picker-confirm">
+            <div className="picker-confirm-icon">
+              <FontAwesomeIcon icon={faExclamationTriangle} />
+            </div>
+            <h6 className="picker-confirm-title">Screenshot già scansionati</h6>
+            <p className="picker-confirm-text">
+              {selectedDuplicates.length === 1
+                ? "1 screenshot selezionato è già presente in un setup precedente:"
+                : `${selectedDuplicates.length} screenshot selezionati sono già presenti in setup precedenti:`}
+            </p>
+            <ul className="picker-confirm-list">
+              {selectedDuplicates.map((name) => {
+                const info = screenshotMap.get(name)!.alreadyUsed!;
+                return (
+                  <li key={name}>
+                    <span className="picker-confirm-filename">{name.replace(/_1\.jpg$/, "")}</span>
+                    {" — "}
+                    <span className="text-dim">
+                      setup "{info.setupName || "senza nome"}" del {formatDate(info.loadedAt)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="picker-confirm-question">Vuoi procedere comunque con il decode?</p>
+          </div>
         )}
 
         {phase === "decoding" && (
@@ -198,7 +266,9 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
         {phase === "pick" && (
           <>
             <span className="text-secondary me-auto">
-              {selected.size > 0 ? `${selected.size} screenshot selezionati` : "Seleziona le schermate del setup"}
+              {selected.size > 0
+                ? `${selected.size} screenshot selezionati${selectedDuplicates.length > 0 ? ` (${selectedDuplicates.length} già scansionati)` : ""}`
+                : "Seleziona le schermate del setup"}
             </span>
             <Button variant="secondary" size="sm" onClick={handleClose}>
               Annulla
@@ -207,9 +277,21 @@ const ScreenshotPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
               variant="danger"
               size="sm"
               disabled={selected.size === 0}
-              onClick={handleDecode}
+              onClick={handleDecodeRequest}
             >
               Decodifica setup
+            </Button>
+          </>
+        )}
+
+        {phase === "confirm-duplicates" && (
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setPhase("pick")}>
+              <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
+              Torna alla selezione
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => void startDecode()}>
+              Procedi comunque
             </Button>
           </>
         )}

@@ -1347,6 +1347,26 @@ const setupPipeline = (): void => {
     const screenshotsDir =
       "C:/Program Files (x86)/Steam/userdata/11234306/760/remote/211500/screenshots";
     const thumbnailsDir = pathMod.join(screenshotsDir, "thumbnails");
+
+    // Build a map of filename → first setup that used it (R3E only)
+    const usedMap = new Map<string, { setupName: string; loadedAt: string; sessionId: number }>();
+    try {
+      const rows = db
+        .prepare("SELECT id, session_id, loaded_at, setup_json, setup_screenshots FROM session_setups_r3e WHERE setup_screenshots IS NOT NULL")
+        .all() as Array<{ id: number; session_id: number; loaded_at: string; setup_json: string; setup_screenshots: string }>;
+      for (const row of rows) {
+        let filenames: string[] = [];
+        try { filenames = JSON.parse(row.setup_screenshots); } catch { continue; }
+        let setupName = "";
+        try { setupName = (JSON.parse(row.setup_json) as { name?: string }).name ?? ""; } catch {}
+        for (const fname of filenames) {
+          if (!usedMap.has(fname)) {
+            usedMap.set(fname, { setupName, loadedAt: row.loaded_at, sessionId: row.session_id });
+          }
+        }
+      }
+    } catch { /* DB not ready or table missing — proceed without annotations */ }
+
     try {
       const files = fs
         .readdirSync(screenshotsDir)
@@ -1358,7 +1378,8 @@ const setupPipeline = (): void => {
         const fullPath = pathMod.join(screenshotsDir, name);
         const src = fs.existsSync(thumbPath) ? thumbPath : fullPath;
         const thumbnailB64 = fs.readFileSync(src).toString("base64");
-        return { name, thumbnailB64 };
+        const alreadyUsed = usedMap.get(name);
+        return { name, thumbnailB64, ...(alreadyUsed ? { alreadyUsed } : {}) };
       });
     } catch {
       return [];
