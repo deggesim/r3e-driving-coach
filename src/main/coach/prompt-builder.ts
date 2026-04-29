@@ -50,7 +50,8 @@ Regole:
 - Temperatura freni ideale: 550°C ±137.5°C (finestra 413-688°C)
 - Pressioni gomme espresse in PSI per Assetto Corsa EVO, in kPa per R3E (converti 1 bar = 14.5038 PSI)
 - Se le temperature freni sono -1, non sono disponibili per questa auto — ignora
-- In R3E, in modalità Leaderboard, le temperature gomme sono fisse a 85°C — non diagnosticare come problema`;
+- In R3E, in modalità Leaderboard, le temperature gomme sono fisse a 85°C — non diagnosticare come problema
+- Unità di misura OBBLIGATORIE per il TTS: scrivi SEMPRE l'unità accanto al numero. Distanze: "XXXm" (mai solo "XXX"). Delta tempi: "X secondi" oppure "X s" (mai solo "X" o "~X"). Esempio corretto: "frenata ritardata di 24m", "puoi guadagnare ~0.2 secondi". Il TTS legge "m" come "metri" e "s" come "secondi".`;
 
 /**
  * Build the user message for Claude API from lap data.
@@ -364,6 +365,7 @@ Questa sezione viene letta ad alta voce — NO elenchi, NO tabelle, NO intestazi
 - Pressioni gomme: PSI per ACE, kPa per R3E (1 bar = 14.5038 PSI).
 - R3E Leaderboard: gomme fisse 85°C → non è un problema da segnalare.
 - Ogni affermazione deve essere supportata da almeno un dato numerico proveniente dalla telemetria.
+- Unità di misura OBBLIGATORIE per il TTS: scrivi SEMPRE l'unità accanto al numero. Distanze: "XXXm" (mai solo "XXX"). Delta tempi: "X secondi" oppure "X s" (mai solo "X" o "~X"). Esempio corretto: "frenata ritardata di 24m", "puoi guadagnare ~0.2 secondi". Il TTS legge "m" come "metri" e "s" come "secondi".
 
 ## Sezioni obbligatorie
 Le sezioni [1], [3], [4] e [5] devono essere SEMPRE presenti, qualunque sia la quantità di dati disponibili.

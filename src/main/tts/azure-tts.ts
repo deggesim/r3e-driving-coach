@@ -77,19 +77,6 @@ function numberToItalian(n: number): string {
   return thousandsWord + (rest > 0 ? numberToItalian(rest) : "");
 }
 
-/** Tenth-of-a-second words (0-9). */
-const TENTH_WORDS = [
-  "zero",
-  "uno",
-  "due",
-  "tre",
-  "quattro",
-  "cinque",
-  "sei",
-  "sette",
-  "otto",
-  "nove",
-];
 
 /**
  * Parse a decimal string (e.g. "20", "34", "567") into its Italian unit info.
@@ -116,6 +103,38 @@ function decPartInfo(
     unitPlural = "millesimi";
   }
   return { numStr: numberToItalian(val), unit, unitPlural, digits: trimmed.length };
+}
+
+/** Format a generic duration in seconds to Italian (no "al giro" suffix). */
+function singleSecondsPhrase(secStr: string, decStr: string | undefined): string {
+  const sec = parseInt(secStr, 10);
+  const dec = decPartInfo(decStr);
+  if (!dec) {
+    return sec === 1 ? "un secondo" : `${numberToItalian(sec)} secondi`;
+  }
+  if (sec === 0) return `${dec.numStr} ${dec.unit}`;
+  const secPhrase = sec === 1 ? "un secondo" : `${numberToItalian(sec)} secondi`;
+  return `${secPhrase} e ${dec.numStr} ${dec.unit}`;
+}
+
+/** Format a range "X.Y–X.Z s" to Italian using "o" as conjunction. */
+function rangeSecondsPhrase(
+  sec1Str: string,
+  dec1Str: string | undefined,
+  sec2Str: string,
+  dec2Str: string | undefined,
+): string {
+  const sec1 = parseInt(sec1Str, 10);
+  const sec2 = parseInt(sec2Str, 10);
+  const dec1 = decPartInfo(dec1Str);
+  const dec2 = decPartInfo(dec2Str);
+
+  // Both sub-second, same decimal precision → "due o tre decimi"
+  if (sec1 === 0 && sec2 === 0 && dec1 && dec2 && dec1.digits === dec2.digits) {
+    return `${dec1.numStr} o ${dec2.numStr} ${dec2.unit}`;
+  }
+
+  return `${singleSecondsPhrase(sec1Str, dec1Str)} o ${singleSecondsPhrase(sec2Str, dec2Str)}`;
 }
 
 /** Convert a single "Xs/giro" or "X.Ys/giro" to Italian with "al giro". */
@@ -217,6 +236,11 @@ function preprocessTTSText(text: string): string {
     return numberToItalian(parseInt(digits, 10)) + " metri";
   });
 
+  // Bare meters: 450m (without @ prefix, e.g. from voice coach responses)
+  text = text.replace(/\b(\d+)\s*m\b/g, (_m, digits) => {
+    return numberToItalian(parseInt(digits, 10)) + " metri";
+  });
+
   // Lap time with minutes: M:SS.mmm (e.g., 1:16.322)
   text = text.replace(
     /\b(\d+):(\d{2})\.(\d{3})\b/g,
@@ -228,11 +252,6 @@ function preprocessTTSText(text: string): string {
       );
     },
   );
-
-  // Lap time sub-minute with 's' suffix: SS.mmms (e.g., 58.322s)
-  text = text.replace(/\b(\d{1,2})\.(\d{3})s\b/g, (_m, sStr, msStr) => {
-    return lapTimeToItalian(0, parseInt(sStr, 10), parseInt(msStr, 10));
-  });
 
   // Lap delta range with /giro: ~?X.Ys–X.Zs/giro (en-dash or hyphen)
   text = text.replace(
@@ -246,23 +265,17 @@ function preprocessTTSText(text: string): string {
     (_m, s, d) => singleLapDeltaPhrase(s, d),
   );
 
-  // Lap-time delta: <sec>.<tenth>s  (single decimal digit — must come after 3-digit handler)
-  text = text.replace(/\b(\d+)\.(\d)s\b/g, (_m, secStr, tenthStr) => {
-    const sec = parseInt(secStr, 10);
-    const tenth = parseInt(tenthStr, 10);
+  // Generic range with s suffix: X.Y–X.Z s (e.g., "0.2-0.3 s" → "due o tre decimi")
+  text = text.replace(
+    /~?(\d+)(?:\.(\d+))?\s*[-–]\s*(\d+)(?:\.(\d+))?\s*s\b/g,
+    (_m, s1, d1, s2, d2) => rangeSecondsPhrase(s1, d1, s2, d2),
+  );
 
-    const tenthPhrase =
-      tenth === 1 ? "un decimo" : `${TENTH_WORDS[tenth]} decimi`;
-
-    if (sec === 0) {
-      return tenthPhrase;
-    }
-
-    const secPhrase =
-      sec === 1 ? "un secondo" : `${numberToItalian(sec)} secondi`;
-    if (tenth === 0) return secPhrase;
-    return `${secPhrase} e ${tenthPhrase}`;
-  });
+  // Generic seconds: X.Y s or X.YYY s (1–3 decimal digits, optional space before s)
+  text = text.replace(
+    /\b(\d+)\.(\d{1,3})\s*s\b/g,
+    (_m, secStr, decStr) => singleSecondsPhrase(secStr, decStr),
+  );
 
   return text;
 }
