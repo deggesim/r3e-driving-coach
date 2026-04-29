@@ -57,7 +57,11 @@ const formatDate = (iso: string | null | undefined): string => {
   });
 };
 
-const SessionHistory = () => {
+type Props = {
+  onSwitchToLive?: () => void;
+};
+
+const SessionHistory = ({ onSwitchToLive }: Props) => {
   const loadById = useSessionStore((s) => s.loadById);
   const setDetail = useSessionStore((s) => s.setDetail);
   const mockHistoryMode = useSettingsStore((s) => s.mockHistoryMode);
@@ -190,7 +194,15 @@ const SessionHistory = () => {
   };
 
   if (view === "detail") {
-    return <SessionDetail onBack={() => setView("list")} />;
+    return (
+      <SessionDetail
+        onBack={() => setView("list")}
+        onReopened={() => {
+          setView("list");
+          onSwitchToLive?.();
+        }}
+      />
+    );
   }
 
   return (

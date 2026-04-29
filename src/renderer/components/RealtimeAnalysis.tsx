@@ -20,6 +20,7 @@ import AnalysisHeader from "./AnalysisHeader";
 import AnalysisList from "./AnalysisList";
 import LapsTable from "./LapsTable";
 import ScreenshotPicker from "./ScreenshotPicker";
+import SetupSelectionModal from "./SetupSelectionModal";
 
 const RealtimeAnalysis = () => {
   const status = useIPCStore((s) => s.status);
@@ -31,6 +32,7 @@ const RealtimeAnalysis = () => {
   const loadCurrent = useSessionStore((s) => s.loadCurrent);
 
   const [showPicker, setShowPicker] = useState(false);
+  const [showSetupSelection, setShowSetupSelection] = useState(false);
   const [flash, setFlash] = useState<{ variant: string; text: string } | null>(
     null,
   );
@@ -49,8 +51,14 @@ const RealtimeAnalysis = () => {
 
   const handleStart = async (): Promise<void> => {
     const res = await window.electronAPI.sessionStart();
-    if (!res.ok) showFlash("danger", res.reason);
-    else showFlash("success", "Sessione aperta.");
+    if (!res.ok) {
+      showFlash("danger", res.reason);
+    } else {
+      showFlash("success", "Sessione aperta.");
+      if (status.game === "r3e") {
+        setShowSetupSelection(true);
+      }
+    }
   };
 
   const handleEnd = async (): Promise<void> => {
@@ -112,7 +120,11 @@ const RealtimeAnalysis = () => {
         onEnd={handleEnd}
         onAnalyze={handleAnalyze}
         onExportPdf={handleExportPdf}
-        onOpenPicker={() => setShowPicker(true)}
+        onOpenPicker={
+          status.game === "r3e"
+            ? () => setShowSetupSelection(true)
+            : () => setShowPicker(true)
+        }
       />
 
       {flash && (
@@ -151,12 +163,29 @@ const RealtimeAnalysis = () => {
           onConfirm={handleSetupConfirm}
         />
       ) : (
-        <ScreenshotPicker
-          show={showPicker}
-          expectedCar={currentCar}
-          onClose={() => setShowPicker(false)}
-          onConfirm={handleSetupConfirm}
-        />
+        <>
+          <ScreenshotPicker
+            show={showPicker}
+            expectedCar={currentCar}
+            onClose={() => setShowPicker(false)}
+            onConfirm={handleSetupConfirm}
+          />
+          {session && (
+            <SetupSelectionModal
+              show={showSetupSelection}
+              car={session.car}
+              track={session.track}
+              layout={session.layout}
+              game="r3e"
+              onClose={() => setShowSetupSelection(false)}
+              onSelectSetup={handleSetupConfirm}
+              onScreenshotPicker={() => {
+                setShowSetupSelection(false);
+                setShowPicker(true);
+              }}
+            />
+          )}
+        </>
       )}
     </div>
   );

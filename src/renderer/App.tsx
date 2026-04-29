@@ -124,7 +124,7 @@ const App = () => {
       {/* Main content */}
       <div className="main-content">
         {tab === "current-session" && <RealtimeAnalysis />}
-        {tab === "session-list" && <SessionHistory />}
+        {tab === "session-list" && <SessionHistory onSwitchToLive={() => setTab("current-session")} />}
         {tab === "settings" && <SettingsPanel />}
       </div>
 

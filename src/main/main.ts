@@ -229,6 +229,7 @@ const setupPipeline = (): void => {
 
   // Session lifecycle state
   let currentSessionId: number | null = null;
+  let currentSessionGame: GameSource = "r3e";
   let currentSetupId: number | null = null;
   let currentLapNumber = 0;
   let lastDeviations: Deviation[] | null = null;
@@ -409,10 +410,10 @@ const setupPipeline = (): void => {
   const closeSession = (reason: string): void => {
     if (!currentSessionId) return;
     const id = currentSessionId;
-    const game = activeGame;
+    const game = currentSessionGame;
     try {
       db.prepare(
-        `UPDATE ${t("sessions")} SET ended_at = datetime('now') WHERE id = ? AND ended_at IS NULL`,
+        `UPDATE ${t("sessions", currentSessionGame)} SET ended_at = datetime('now') WHERE id = ? AND ended_at IS NULL`,
       ).run(id);
     } catch (err) {
       console.error("[Main] closeSession error:", err);
@@ -424,8 +425,8 @@ const setupPipeline = (): void => {
   };
 
   const saveLap = (sessionId: number, lap: LapRecord): void => {
-    const lapsTable = t("laps");
-    const sessionsTable = t("sessions");
+    const lapsTable = t("laps", currentSessionGame);
+    const sessionsTable = t("sessions", currentSessionGame);
     try {
       const framesBlob = gzipSync(
         Buffer.from(JSON.stringify(lap.frames), "utf8"),
@@ -545,6 +546,7 @@ const setupPipeline = (): void => {
 
   const handleLapComplete = (lapData: LapRecord, game: GameSource): void => {
     if (activeGame !== game) return;
+    if (currentSessionId !== null && currentSessionGame !== game) return;
     console.log(
       `[Main] ${game}:lapComplete — lap=${lapData.lapNumber} time=${lapData.lapTime.toFixed(3)}s ` +
         `valid=${lapData.valid} car="${lapData.car}" track="${lapData.track}" layout="${lapData.layout}"`,
@@ -573,7 +575,7 @@ const setupPipeline = (): void => {
     // Auto-close session if car/track/layout differ from the current session's
     if (currentSessionId) {
       const sessionRow = db
-        .prepare(`SELECT car, track, layout FROM ${t("sessions")} WHERE id = ?`)
+        .prepare(`SELECT car, track, layout FROM ${t("sessions", currentSessionGame)} WHERE id = ?`)
         .get(currentSessionId) as
         | { car: string; track: string; layout: string }
         | undefined;
@@ -732,6 +734,7 @@ const setupPipeline = (): void => {
         )
         .run(currentCar, currentTrack, currentLayout);
       currentSessionId = Number(result.lastInsertRowid);
+      currentSessionGame = activeGame;
       currentSetupId = null;
       sessionAlerts.length = 0;
 
@@ -764,13 +767,13 @@ const setupPipeline = (): void => {
       }
       const result = db
         .prepare(
-          `INSERT INTO ${t("session_setups")} (session_id, loaded_at, setup_json, setup_screenshots)
+          `INSERT INTO ${t("session_setups", currentSessionGame)} (session_id, loaded_at, setup_json, setup_screenshots)
            VALUES (?, datetime('now'), ?, ?)`,
         )
         .run(
           currentSessionId,
           JSON.stringify(setup),
-          activeGame === "ace" ? null : JSON.stringify(setup.screenshots ?? []),
+          currentSessionGame === "ace" ? null : JSON.stringify(setup.screenshots ?? []),
         );
       const setupId = Number(result.lastInsertRowid);
       currentSetupId = setupId;
@@ -781,7 +784,7 @@ const setupPipeline = (): void => {
         loaded_at: new Date().toISOString(),
         setup,
         setup_screenshots:
-          activeGame === "ace" ? null : JSON.stringify(setup.screenshots ?? []),
+          currentSessionGame === "ace" ? null : JSON.stringify(setup.screenshots ?? []),
       };
       pushToRenderer("session:setupLoaded", {
         sessionId: currentSessionId,
@@ -796,7 +799,7 @@ const setupPipeline = (): void => {
     "session:analyze",
     async (_event, params: { sessionId?: number; game?: GameSource } = {}) => {
       const sessionId = params.sessionId ?? currentSessionId;
-      const game = params.game ?? activeGame;
+      const game = params.game ?? currentSessionGame;
       if (!sessionId) {
         return { ok: false, reason: "Nessuna sessione selezionata." };
       }
@@ -831,7 +834,7 @@ const setupPipeline = (): void => {
 
   ipcMain.handle("session:getCurrent", () => {
     if (!currentSessionId) return null;
-    return loadSessionDetail(currentSessionId, activeGame);
+    return loadSessionDetail(currentSessionId, currentSessionGame);
   });
 
   ipcMain.handle(
@@ -983,6 +986,125 @@ const setupPipeline = (): void => {
       if (canceled || !filePath) return null;
       fs.writeFileSync(filePath, pdfBuffer);
       return filePath;
+    },
+  );
+
+  ipcMain.handle(
+    "session:reopen",
+    (_event, { id, game }: { id: number; game: GameSource }) => {
+      // Validation 1: the session's game must be connected
+      const gameConnected = game === "ace" ? aceConnected : r3eConnected;
+      if (!gameConnected) {
+        const label = game === "ace" ? "Assetto Corsa EVO" : "RaceRoom";
+        return {
+          ok: false,
+          reason: `${label} non è connesso. Avvia il simulatore prima di riaprire la sessione.`,
+        };
+      }
+
+      // Validation 2: car/track/layout must match the current in-game values
+      const sessionRow = db
+        .prepare(`SELECT car, track, layout FROM ${t("sessions", game)} WHERE id = ?`)
+        .get(id) as { car: string; track: string; layout: string } | undefined;
+      if (!sessionRow) {
+        return { ok: false, reason: "Sessione non trovata." };
+      }
+
+      if (
+        sessionRow.car !== currentCar ||
+        sessionRow.track !== currentTrack ||
+        (game === "r3e" && sessionRow.layout !== currentLayout)
+      ) {
+        const names = resolveNames(game, sessionRow.car, sessionRow.track, sessionRow.layout);
+        return {
+          ok: false,
+          reason: `Auto o circuito non corrispondono alla sessione. La sessione richiede ${names.carName} a ${names.trackName}${names.layoutName && names.layoutName !== names.trackName ? ` — ${names.layoutName}` : ""}, ma il simulatore ha rilevato ${resolveNames(game, currentCar, currentTrack, currentLayout).carName}.`,
+        };
+      }
+
+      if (currentSessionId && currentSessionId !== id) {
+        closeSession("reopen: different session requested");
+      }
+      try {
+        db.prepare(
+          `UPDATE ${t("sessions", game)} SET ended_at = NULL WHERE id = ?`,
+        ).run(id);
+      } catch (err) {
+        console.error("[Main] session:reopen error:", err);
+        return { ok: false, reason: String(err) };
+      }
+
+      currentSessionId = id;
+      currentSessionGame = game;
+      sessionAlerts.length = 0;
+
+      // Restore last loaded setup
+      const lastSetupRow = db
+        .prepare(
+          `SELECT id FROM ${t("session_setups", game)} WHERE session_id = ? ORDER BY loaded_at DESC, id DESC LIMIT 1`,
+        )
+        .get(id) as { id: number } | undefined;
+      currentSetupId = lastSetupRow?.id ?? null;
+
+      const raw = db
+        .prepare(`SELECT * FROM ${t("sessions", game)} WHERE id = ?`)
+        .get(id) as Record<string, unknown>;
+      const session = enrichSession(raw, game);
+      pushToRenderer("session:started", session);
+
+      console.log(`[Main] session reopened id=${id} game=${game} setupId=${currentSetupId ?? "none"}`);
+      return { ok: true, sessionId: id, game };
+    },
+  );
+
+  ipcMain.handle(
+    "session:getSetupHistory",
+    (
+      _event,
+      {
+        car,
+        track,
+        layout,
+        game,
+      }: { car: string; track: string; layout: string; game: GameSource },
+    ) => {
+      const setupsRaw = db
+        .prepare(
+          `SELECT ss.* FROM ${t("session_setups", game)} ss
+           JOIN ${t("sessions", game)} s ON ss.session_id = s.id
+           WHERE s.car = ? AND s.track = ? AND s.layout = ?
+           ORDER BY ss.loaded_at DESC
+           LIMIT 20`,
+        )
+        .all(car, track, layout) as Array<{
+        id: number;
+        session_id: number;
+        loaded_at: string;
+        setup_json: string;
+        setup_screenshots: string | null;
+      }>;
+
+      return setupsRaw.map((r) => {
+        let setup: SetupData;
+        try {
+          setup = JSON.parse(r.setup_json) as SetupData;
+        } catch {
+          setup = {
+            carVerified: false,
+            carFound: "",
+            setupText: "",
+            params: [],
+            screenshots: [],
+          };
+        }
+        return {
+          id: r.id,
+          session_id: r.session_id,
+          loaded_at: r.loaded_at,
+          setup,
+          setup_screenshots: r.setup_screenshots,
+        } as SessionSetupRow;
+      });
     },
   );
 
@@ -1164,12 +1286,12 @@ const setupPipeline = (): void => {
       sessionCoach.updateApiKey(apiKey);
       sessionCoach.updateCornerNames(buildCornerMap());
       const sRow = db
-        .prepare(`SELECT car, track, layout FROM ${t("sessions")} WHERE id = ?`)
+        .prepare(`SELECT car, track, layout FROM ${t("sessions", currentSessionGame)} WHERE id = ?`)
         .get(currentSessionId) as
         | { car: string; track: string; layout: string }
         | undefined;
       const resolved = sRow
-        ? resolveNames(activeGame, sRow.car, sRow.track, sRow.layout)
+        ? resolveNames(currentSessionGame, sRow.car, sRow.track, sRow.layout)
         : undefined;
       const analysis = await sessionCoach.analyzeSession(
         currentSessionId,
@@ -1194,7 +1316,7 @@ const setupPipeline = (): void => {
     coach.updateContext({ cornerMap: buildCornerMap() });
     // Extend context with full session view (setups + analyses)
     if (currentSessionId) {
-      const detail = loadSessionDetail(currentSessionId, activeGame);
+      const detail = loadSessionDetail(currentSessionId, currentSessionGame);
       if (detail) {
         coach.updateContext({
           laps: detail.laps,

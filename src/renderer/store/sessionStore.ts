@@ -150,12 +150,16 @@ export const useSessionStore = create<State>((set, get) => ({
   },
 
   _applySessionStarted: (session) => {
+    const current = get();
+    // If same session is being reopened, preserve existing laps/setups/analyses.
+    // For a truly new session (different ID), reset everything.
+    const isSameSession = current.session?.id === session.id;
     set({
       mode: "live",
       session,
-      laps: [],
-      setups: [],
-      analyses: [],
+      laps: isSameSession ? current.laps : [],
+      setups: isSameSession ? current.setups : [],
+      analyses: isSameSession ? current.analyses : [],
       streaming: null,
       error: null,
     });

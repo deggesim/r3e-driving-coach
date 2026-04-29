@@ -7,6 +7,7 @@ import {
   faChartLine,
   faFilePdf,
   faArrowLeft,
+  faRotateRight,
 } from "@fortawesome/free-solid-svg-icons";
 import { formatLapTime } from "../../shared/format";
 import { useSessionStore } from "../store/sessionStore";
@@ -22,6 +23,7 @@ interface Props {
   onExportPdf: () => void;
   onOpenPicker: () => void;
   onBack?: () => void;
+  onReopen?: () => void;
 }
 
 const AnalysisHeader = ({
@@ -35,6 +37,7 @@ const AnalysisHeader = ({
   onExportPdf,
   onOpenPicker,
   onBack,
+  onReopen,
 }: Props) => {
   const session = useSessionStore((s) => s.session);
   const laps = useSessionStore((s) => s.laps);
@@ -105,6 +108,12 @@ const AnalysisHeader = ({
         >
           <FontAwesomeIcon icon={faFilePdf} className="me-1" /> Esporta PDF
         </Button>
+        {!isLive && session && !sessionActive && onReopen && (
+          <Button size="sm" variant="outline-success" onClick={onReopen}>
+            <FontAwesomeIcon icon={faRotateRight} className="me-1" />
+            Riapri sessione
+          </Button>
+        )}
         {!isLive && onBack && (
           <Button size="sm" variant="outline-primary" onClick={onBack}>
             <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
