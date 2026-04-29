@@ -1407,10 +1407,11 @@ Analizza le schermate del setup dell'auto e restituisci un JSON con questa strut
 }
 Devi verificare se l'auto nelle schermate corrisponde a: "${expectedCar}".
 Estrai TUTTI i parametri di setup visibili: sospensioni, freni, aerodinamica, trasmissione, gomme, elettronica, ecc.
+IMPORTANTE — precisione numerica: leggi ogni cifra di ogni valore con la massima attenzione. Gli slider e altri elementi grafici dell'UI possono apparire adiacenti ai numeri: ignorali e trascrivi solo le cifre del testo numerico visualizzato sullo schermo.
 Restituisci solo il JSON, senza testo aggiuntivo.`;
 
       const response = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
+        model: "claude-sonnet-4-6",
         max_tokens: 4000,
         system: systemPrompt,
         messages: [
