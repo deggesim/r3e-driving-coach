@@ -19,7 +19,7 @@ import AceSetupPicker from "./AceSetupPicker";
 import AnalysisHeader from "./AnalysisHeader";
 import AnalysisList from "./AnalysisList";
 import LapsTable from "./LapsTable";
-import ScreenshotPicker from "./ScreenshotPicker";
+import R3eSetupPicker from "./R3eSetupPicker";
 import SetupSelectionModal from "./SetupSelectionModal";
 
 const RealtimeAnalysis = () => {
@@ -174,7 +174,7 @@ const RealtimeAnalysis = () => {
         />
       ) : (
         <>
-          <ScreenshotPicker
+          <R3eSetupPicker
             show={showPicker}
             expectedCar={currentCar}
             onClose={() => setShowPicker(false)}
@@ -189,7 +189,7 @@ const RealtimeAnalysis = () => {
               game="r3e"
               onClose={() => setShowSetupSelection(false)}
               onReuseSetup={handleReuseSetup}
-              onScreenshotPicker={() => {
+              onJsonPicker={() => {
                 setShowSetupSelection(false);
                 setShowPicker(true);
               }}

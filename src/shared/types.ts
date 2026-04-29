@@ -448,19 +448,6 @@ export type ElectronAPI = {
   windowMaximize: () => void;
   removeAllListeners: (channel: string) => void;
 
-  // R3E Setup analysis (screenshot-based) — still used to produce SetupData
-  listScreenshots: () => Promise<
-    Array<{
-      name: string;
-      thumbnailB64: string;
-      alreadyUsed?: { setupName: string; loadedAt: string; sessionId: number };
-    }>
-  >;
-  decodeSetup: (params: {
-    filenames: string[];
-    expectedCar: string;
-  }) => Promise<SetupData>;
-
   // ACE Setup analysis (file-based)
   aceListSetupCars: () => Promise<string[]>;
   aceListSetupTracks: (params: { car: string }) => Promise<string[]>;

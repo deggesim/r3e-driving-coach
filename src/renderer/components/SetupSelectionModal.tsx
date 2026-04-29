@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Accordion, Badge, Button, Modal, Spinner } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCamera, faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faFileCode } from "@fortawesome/free-solid-svg-icons";
 import type { GameSource, SessionSetupRow } from "../../shared/types";
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
   game: GameSource;
   onClose: () => void;
   onReuseSetup: (setupId: number) => void;
-  onScreenshotPicker: () => void;
+  onJsonPicker: () => void;
 }
 
 const formatDate = (iso: string): string => {
@@ -35,7 +35,7 @@ const SetupSelectionModal = ({
   game,
   onClose,
   onReuseSetup,
-  onScreenshotPicker,
+  onJsonPicker,
 }: Props) => {
   const [history, setHistory] = useState<SessionSetupRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -149,9 +149,9 @@ const SetupSelectionModal = ({
           </p>
         )}
 
-        <Button variant="outline-secondary" onClick={onScreenshotPicker} className="w-100">
-          <FontAwesomeIcon icon={faCamera} className="me-2" />
-          Carica dagli screenshot
+        <Button variant="outline-secondary" onClick={onJsonPicker} className="w-100">
+          <FontAwesomeIcon icon={faFileCode} className="me-2" />
+          Carica da JSON
         </Button>
       </Modal.Body>
 

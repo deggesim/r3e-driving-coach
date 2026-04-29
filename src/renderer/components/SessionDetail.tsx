@@ -6,7 +6,7 @@ import AceSetupPicker from "./AceSetupPicker";
 import AnalysisHeader from "./AnalysisHeader";
 import AnalysisList from "./AnalysisList";
 import LapsTable from "./LapsTable";
-import ScreenshotPicker from "./ScreenshotPicker";
+import R3eSetupPicker from "./R3eSetupPicker";
 import SetupSelectionModal from "./SetupSelectionModal";
 
 type Props = {
@@ -163,7 +163,7 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
               onConfirm={handleSetupConfirm}
             />
           ) : (
-            <ScreenshotPicker
+            <R3eSetupPicker
               show={showPicker}
               expectedCar={currentCar}
               onClose={() => setShowPicker(false)}
@@ -179,7 +179,7 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
               game={session.game}
               onClose={() => setShowSetupSelection(false)}
               onReuseSetup={handleReuseSetup}
-              onScreenshotPicker={() => {
+              onJsonPicker={() => {
                 setShowSetupSelection(false);
                 setShowPicker(true);
               }}

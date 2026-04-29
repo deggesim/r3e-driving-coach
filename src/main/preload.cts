@@ -116,11 +116,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.removeAllListeners(channel);
   },
 
-  // Setup analysis (used to produce SetupData, then passed to sessionLoadSetup)
-  listScreenshots: () => ipcRenderer.invoke("setup:listScreenshots"),
-  decodeSetup: (params: { filenames: string[]; expectedCar: string }) =>
-    ipcRenderer.invoke("setup:decodeSetup", params),
-
   // ACE setup (file-based)
   aceListSetupCars: () => ipcRenderer.invoke("ace:listSetupCars"),
   aceListSetupTracks: (params: { car: string }) =>
