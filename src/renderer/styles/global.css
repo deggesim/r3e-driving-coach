@@ -418,6 +418,20 @@ body {
   color: var(--text);
 }
 
+/* ── Setup Selection Modal ── */
+.setup-selection-modal .modal-content {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.setup-selection-modal .modal-header,
+.setup-selection-modal .modal-footer {
+  background: var(--bg3);
+  border-color: var(--border);
+}
+.setup-selection-modal .modal-body { background: var(--bg2); }
+.setup-selection-modal .btn-close { filter: invert(1) grayscale(1); }
+
 /* ── Screenshot Picker Modal ── */
 .screenshot-picker-modal .modal-content {
   background: var(--bg2);
