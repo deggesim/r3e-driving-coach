@@ -91,6 +91,88 @@ const TENTH_WORDS = [
   "nove",
 ];
 
+/**
+ * Parse a decimal string (e.g. "20", "34", "567") into its Italian unit info.
+ * Trailing zeros are stripped first to determine the natural unit:
+ *   "20" → "2" → decimi, "34" → "34" → centesimi, "567" → "567" → millesimi
+ */
+function decPartInfo(
+  decStr: string | undefined,
+): { numStr: string; unit: string; unitPlural: string; digits: number } | null {
+  if (!decStr) return null;
+  const trimmed = decStr.replace(/0+$/, "");
+  if (!trimmed) return null;
+  const val = parseInt(trimmed, 10);
+  let unit: string;
+  let unitPlural: string;
+  if (trimmed.length === 1) {
+    unit = val === 1 ? "decimo" : "decimi";
+    unitPlural = "decimi";
+  } else if (trimmed.length === 2) {
+    unit = val === 1 ? "centesimo" : "centesimi";
+    unitPlural = "centesimi";
+  } else {
+    unit = val === 1 ? "millesimo" : "millesimi";
+    unitPlural = "millesimi";
+  }
+  return { numStr: numberToItalian(val), unit, unitPlural, digits: trimmed.length };
+}
+
+/** Convert a single "Xs/giro" or "X.Ys/giro" to Italian with "al giro". */
+function singleLapDeltaPhrase(
+  secStr: string,
+  decStr: string | undefined,
+): string {
+  const sec = parseInt(secStr, 10);
+  const dec = decPartInfo(decStr);
+  if (!dec) {
+    return sec === 1
+      ? "un secondo al giro"
+      : `${numberToItalian(sec)} secondi al giro`;
+  }
+  if (sec === 0) {
+    return `${dec.numStr} ${dec.unit} al giro`;
+  }
+  const secPhrase =
+    sec === 1 ? "un secondo" : `${numberToItalian(sec)} secondi`;
+  return `${secPhrase} e ${dec.numStr} ${dec.unit} al giro`;
+}
+
+/** Convert a range "X.Ys–X.Zs/giro" (en-dash or hyphen) to Italian. */
+function rangeLapDeltaPhrase(
+  sec1Str: string,
+  dec1Str: string | undefined,
+  sec2Str: string,
+  dec2Str: string | undefined,
+): string {
+  const sec1 = parseInt(sec1Str, 10);
+  const sec2 = parseInt(sec2Str, 10);
+  const dec1 = decPartInfo(dec1Str);
+  const dec2 = decPartInfo(dec2Str);
+
+  // Both sub-second, same decimal precision → "tra N1 e N2 unit al giro"
+  if (
+    sec1 === 0 &&
+    sec2 === 0 &&
+    dec1 &&
+    dec2 &&
+    dec1.digits === dec2.digits
+  ) {
+    return `tra ${dec1.numStr} e ${dec2.numStr} ${dec2.unitPlural} al giro`;
+  }
+
+  // General: format each independently and join
+  const phrase1 = singleLapDeltaPhrase(sec1Str, dec1Str).replace(
+    / al giro$/,
+    "",
+  );
+  const phrase2 = singleLapDeltaPhrase(sec2Str, dec2Str).replace(
+    / al giro$/,
+    "",
+  );
+  return `tra ${phrase1} e ${phrase2} al giro`;
+}
+
 /** Convert a parsed lap time to spoken Italian. Minutes omitted when zero. */
 function lapTimeToItalian(
   minutes: number,
@@ -151,6 +233,18 @@ function preprocessTTSText(text: string): string {
   text = text.replace(/\b(\d{1,2})\.(\d{3})s\b/g, (_m, sStr, msStr) => {
     return lapTimeToItalian(0, parseInt(sStr, 10), parseInt(msStr, 10));
   });
+
+  // Lap delta range with /giro: ~?X.Ys–X.Zs/giro (en-dash or hyphen)
+  text = text.replace(
+    /~?(\d+)(?:\.(\d+))?(?:–|-)(\d+)(?:\.(\d+))?s\/giro/g,
+    (_m, s1, d1, s2, d2) => rangeLapDeltaPhrase(s1, d1, s2, d2),
+  );
+
+  // Lap delta single with /giro: ~?Xs/giro or ~?X.Ys/giro
+  text = text.replace(
+    /~?(\d+)(?:\.(\d+))?s\/giro/g,
+    (_m, s, d) => singleLapDeltaPhrase(s, d),
+  );
 
   // Lap-time delta: <sec>.<tenth>s  (single decimal digit — must come after 3-digit handler)
   text = text.replace(/\b(\d+)\.(\d)s\b/g, (_m, secStr, tenthStr) => {
