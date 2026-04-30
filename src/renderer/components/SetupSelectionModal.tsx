@@ -3,6 +3,7 @@ import { Accordion, Badge, Button, Modal, Spinner } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faFileCode } from "@fortawesome/free-solid-svg-icons";
 import type { GameSource, SessionSetupRow } from "../../shared/types";
+import R3eSetupTabs from "./R3eSetupTabs";
 
 interface Props {
   show: boolean;
@@ -105,24 +106,30 @@ const SetupSelectionModal = ({
                     </Accordion.Header>
                     <Accordion.Body>
                       {hasParams ? (
-                        <table className="setup-table w-100 mb-3">
-                          <thead>
-                            <tr>
-                              <th>Categoria</th>
-                              <th>Parametro</th>
-                              <th>Valore</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {row.setup.params.map((p) => (
-                              <tr key={`${p.category}__${p.parameter}`}>
-                                <td className="text-dim">{p.category}</td>
-                                <td>{p.parameter}</td>
-                                <td className="setup-value">{p.value}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                        <div className="mb-3">
+                          {game === "r3e" ? (
+                            <R3eSetupTabs params={row.setup.params} />
+                          ) : (
+                            <table className="setup-table w-100">
+                              <thead>
+                                <tr>
+                                  <th>Categoria</th>
+                                  <th>Parametro</th>
+                                  <th>Valore</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {row.setup.params.map((p) => (
+                                  <tr key={`${p.category}__${p.parameter}`}>
+                                    <td className="text-dim">{p.category}</td>
+                                    <td>{p.parameter}</td>
+                                    <td className="setup-value">{p.value}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </div>
                       ) : (
                         <p className="text-muted mb-3" style={{ fontSize: 13 }}>
                           Nessun parametro decodificato per questo setup.

@@ -3,6 +3,7 @@ import { Button, Form, Modal } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import type { SetupData, SetupParam } from "../../shared/types";
+import R3eSetupTabs from "./R3eSetupTabs";
 
 type Props = {
   show: boolean;
@@ -183,24 +184,7 @@ const R3eSetupPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
             </Form.Group>
 
             <div className="picker-params">
-              <table className="setup-table w-100">
-                <thead>
-                  <tr>
-                    <th>Categoria</th>
-                    <th>Parametro</th>
-                    <th>Valore</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {params.map((p) => (
-                    <tr key={`${p.category}-${p.parameter}`}>
-                      <td className="text-dim">{p.category}</td>
-                      <td>{p.parameter}</td>
-                      <td className="setup-value">{p.value}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <R3eSetupTabs params={params} />
             </div>
           </>
         )}

@@ -9,10 +9,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Fragment, useState } from "react";
 import { Badge, Button, Table } from "react-bootstrap";
 import { formatLapTime } from "../../shared/format";
+import type { SessionSetupRow } from "../../shared/types";
 import { useSessionStore } from "../store/sessionStore";
 import LapTelemetryCharts from "./LapTelemetryCharts";
+import { SetupDetailModal } from "./SetupDetailModal";
 
-function buildPageWindow(current: number, total: number): (number | "…")[] {
+const buildPageWindow = (current: number, total: number): (number | "…")[] => {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages: (number | "…")[] = [];
   const addPage = (n: number) => {
@@ -29,18 +31,19 @@ function buildPageWindow(current: number, total: number): (number | "…")[] {
   if (current < total - 2) pages.push("…");
   addPage(total);
   return pages;
-}
+};
 
 const PAGE_SIZE = 5;
 
 type LapsTableProps = {
-  setupById: Map<number, string>;
+  setupById: Map<number, SessionSetupRow>;
   live?: boolean;
 };
 
 const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
   const laps = useSessionStore((s) => s.laps);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [setupModalId, setSetupModalId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [hideInvalid, setHideInvalid] = useState(true);
   const [trackedLapCount, setTrackedLapCount] = useState(0);
@@ -180,19 +183,27 @@ const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
                     )}
                   </td>
                   <td>
-                    {l.setup_id != null ? (
+                    {l.setup_id != null && setupById.has(l.setup_id) ? (
                       <Badge
                         bg="info"
+                        as="button"
                         style={{
                           maxWidth: 160,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                           display: "inline-block",
+                          cursor: "pointer",
+                          border: "none",
                         }}
-                        title={setupById.get(l.setup_id)}
+                        title="Vedi dettagli setup"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          setSetupModalId(l.setup_id);
+                        }}
                       >
-                        {setupById.get(l.setup_id) ?? `#${l.setup_id}`}
+                        {setupById.get(l.setup_id)!.setup.name ??
+                          `#${l.setup_id}`}
                       </Badge>
                     ) : (
                       <span className="text-muted">—</span>
@@ -222,6 +233,12 @@ const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
           })}
         </tbody>
       </Table>
+
+      <SetupDetailModal
+        setupId={setupModalId}
+        setupById={setupById}
+        onClose={() => setSetupModalId(null)}
+      />
 
       <div className="sh-pagination d-flex align-items-center gap-2 px-0 py-1">
         <span

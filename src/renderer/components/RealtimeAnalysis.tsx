@@ -110,8 +110,8 @@ const RealtimeAnalysis = () => {
     session?.track_name ?? session?.track ?? status?.track ?? "";
 
   const setupById = useMemo(() => {
-    const m = new Map<number, string>(); // setup.id → display name
-    setups.forEach((s, i) => m.set(s.id, s.setup.name ?? `#${i + 1}`));
+    const m = new Map<number, (typeof setups)[0]>();
+    setups.forEach((s) => m.set(s.id, s));
     return m;
   }, [setups]);
 
