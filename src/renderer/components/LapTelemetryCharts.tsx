@@ -60,7 +60,9 @@ const PedalsTooltip = ({ active, payload, label }: CustomTooltipProps) => {
         color: "#e8e8e8",
       }}
     >
-      <div style={{ color: "#888", marginBottom: 4 }}>{formatDist(label ?? 0)}</div>
+      <div style={{ color: "#888", marginBottom: 4 }}>
+        {formatDist(label ?? 0)}
+      </div>
       {payload.map((p) => (
         <div key={p.dataKey} style={{ color: p.color }}>
           {p.name}: {Math.round(p.value)}%
@@ -84,7 +86,9 @@ const SpeedTooltip = ({ active, payload, label }: CustomTooltipProps) => {
         color: "#e8e8e8",
       }}
     >
-      <div style={{ color: "#888", marginBottom: 4 }}>{formatDist(label ?? 0)}</div>
+      <div style={{ color: "#888", marginBottom: 4 }}>
+        {formatDist(label ?? 0)}
+      </div>
       <div style={{ color: p.color }}>
         {p.name}: {Math.round(p.value)} km/h
       </div>
@@ -118,7 +122,9 @@ const fromFrames = (
   for (let i = 0; i < frames.length; i += stride) {
     const end = Math.min(i + stride, frames.length);
     const n = end - i;
-    let brk = 0, thr = 0, spd = 0;
+    let brk = 0,
+      thr = 0,
+      spd = 0;
     for (let j = i; j < end; j++) {
       brk += frames[j].brk;
       thr += blipSet.has(frames[j]) ? 0 : frames[j].thr;
@@ -296,7 +302,7 @@ const LapTelemetryCharts = ({ lap }: Props) => {
 
   if (loading) {
     return (
-      <div className="text-muted" style={{ padding: 12, fontSize: 13 }}>
+      <div className="text-muted" style={{ padding: 12, fontSize: 14 }}>
         Caricamento telemetria…
       </div>
     );
@@ -304,7 +310,7 @@ const LapTelemetryCharts = ({ lap }: Props) => {
 
   if (data.length === 0) {
     return (
-      <div className="text-muted" style={{ padding: 12, fontSize: 13 }}>
+      <div className="text-muted" style={{ padding: 12, fontSize: 14 }}>
         Nessun dato di telemetria disponibile per questo giro.
       </div>
     );
@@ -333,7 +339,14 @@ const LapTelemetryCharts = ({ lap }: Props) => {
       }}
     >
       <div>
-        <div style={{ fontSize: 12, color: "#888", marginBottom: 4, paddingLeft: 8 }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: "#888",
+            marginBottom: 4,
+            paddingLeft: 8,
+          }}
+        >
           Freno / Acceleratore (%)
         </div>
         <ResponsiveContainer width="100%" height={180}>
@@ -385,7 +398,14 @@ const LapTelemetryCharts = ({ lap }: Props) => {
       </div>
 
       <div>
-        <div style={{ fontSize: 12, color: "#888", marginBottom: 4, paddingLeft: 8 }}>
+        <div
+          style={{
+            fontSize: 12,
+            color: "#888",
+            marginBottom: 4,
+            paddingLeft: 8,
+          }}
+        >
           Velocità (km/h)
         </div>
         <ResponsiveContainer width="100%" height={180}>
@@ -452,7 +472,11 @@ const LapTelemetryCharts = ({ lap }: Props) => {
             Tracciato
           </div>
           <div style={{ flex: 1, minHeight: 260 }}>
-            <TrackMapSvg geometry={trackMap} marker={marker} flipX={game === "ace"} />
+            <TrackMapSvg
+              geometry={trackMap}
+              marker={marker}
+              flipX={game === "ace"}
+            />
           </div>
         </div>
       )}

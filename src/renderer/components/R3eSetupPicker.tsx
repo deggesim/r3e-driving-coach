@@ -48,7 +48,11 @@ function idToLabel(id: string): string {
     .trim();
 }
 
-const TYRE_COMPOUNDS: Record<number, string> = { 0: "Hard", 1: "Medium", 2: "Soft" };
+const TYRE_COMPOUNDS: Record<number, string> = {
+  0: "Hard",
+  1: "Medium",
+  2: "Soft",
+};
 
 function formatValue(item: R3ESetupItem): string {
   const val = item.minValue + item.currentStep * item.stepSize;
@@ -64,9 +68,12 @@ function formatValue(item: R3ESetupItem): string {
     return TYRE_COMPOUNDS[Math.round(val)] ?? String(Math.round(val));
   }
 
-  if (/^Springs(Front|Rear)(Left|Right)$/.test(item.id)) return `${rounded} N/mm`;
-  if (/^TyrePressure(Front|Rear)(Left|Right)$/.test(item.id)) return `${rounded} kPa`;
-  if (/^RideHeight(Front|Rear)(Left|Right)$/.test(item.id)) return `${rounded} cm`;
+  if (/^Springs(Front|Rear)(Left|Right)$/.test(item.id))
+    return `${rounded} N/mm`;
+  if (/^TyrePressure(Front|Rear)(Left|Right)$/.test(item.id))
+    return `${rounded} kPa`;
+  if (/^RideHeight(Front|Rear)(Left|Right)$/.test(item.id))
+    return `${rounded} cm`;
   if (/^Fuel/.test(item.id)) return `${rounded} L`;
 
   const suffix = Array.isArray(item.suffix) ? item.suffix[0] : item.suffix;
@@ -146,7 +153,7 @@ const R3eSetupPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
 
         {!params ? (
           <Form.Group>
-            <Form.Label className="text-dim" style={{ fontSize: 13 }}>
+            <Form.Label className="text-dim" style={{ fontSize: 14 }}>
               Incolla il JSON esportato da RaceRoom (CTRL+C nella schermata del
               setup)
             </Form.Label>
@@ -170,7 +177,7 @@ const R3eSetupPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
         ) : (
           <>
             <Form.Group className="mb-3" style={{ maxWidth: 360 }}>
-              <Form.Label className="text-dim" style={{ fontSize: 13 }}>
+              <Form.Label className="text-dim" style={{ fontSize: 14 }}>
                 Nome setup <span className="text-danger">*</span>
               </Form.Label>
               <Form.Control

@@ -2,10 +2,11 @@ import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
 import { useEffect, useRef, useState } from "react";
-import { Accordion, Button, Spinner } from "react-bootstrap";
+import { Accordion, Button, Modal, Spinner } from "react-bootstrap";
 import { useSessionStore } from "../store/sessionStore";
 
 type StreamingVersion = { sessionId: number; version: number; text: string };
+type PendingDelete = { id: number; version: number };
 
 type Props = {
   streamingVersion: StreamingVersion | null;
@@ -23,6 +24,7 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
     if (startClosed || analyses.length === 0) return [];
     return [`v${analyses[analyses.length - 1].version}`];
   });
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
 
   // Open the streaming accordion as soon as a new streaming version starts.
   useEffect(() => {
@@ -49,19 +51,21 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
     }
   }, [analyses, streamingVersion]);
 
-  const handleDelete = async (
-    e: React.MouseEvent,
-    id: number,
-    version: number,
-  ) => {
+  const handleDeleteClick = (e: React.MouseEvent, id: number, version: number) => {
     e.stopPropagation();
-    if (!window.confirm(`Eliminare l'analisi #${version}? L'operazione è irreversibile.`))
-      return;
+    setPendingDelete({ id, version });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDelete) return;
+    const { id, version } = pendingDelete;
+    setPendingDelete(null);
     await deleteAnalysis(id);
     setActiveKeys((prev) => prev.filter((k) => k !== `v${version}`));
   };
 
   return (
+    <>
     <Accordion
       alwaysOpen
       activeKey={activeKeys}
@@ -82,7 +86,7 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
               size="sm"
               className="text-danger p-0 me-2"
               title="Elimina analisi"
-              onClick={(e) => handleDelete(e, a.id, a.version)}
+              onClick={(e) => handleDeleteClick(e, a.id, a.version)}
               style={{ lineHeight: 1 }}
             >
               <FontAwesomeIcon icon={faTrash} />
@@ -115,6 +119,29 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
         </Accordion.Item>
       )}
     </Accordion>
+
+    <Modal
+      show={pendingDelete !== null}
+      onHide={() => setPendingDelete(null)}
+      centered
+      className="delete-confirm-modal"
+    >
+      <Modal.Header closeButton>
+        <Modal.Title>Elimina analisi</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        Eliminare l&apos;analisi #{pendingDelete?.version}? L&apos;operazione è irreversibile.
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={() => setPendingDelete(null)}>
+          Annulla
+        </Button>
+        <Button variant="danger" onClick={handleDeleteConfirm}>
+          Elimina
+        </Button>
+      </Modal.Footer>
+    </Modal>
+    </>
   );
 };
 

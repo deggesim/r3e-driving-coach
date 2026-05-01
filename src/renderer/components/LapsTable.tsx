@@ -51,7 +51,9 @@ const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
   const sortedLaps = live
     ? laps
     : [...laps].sort((a, b) => a.lap_number - b.lap_number);
-  const visibleLaps = hideInvalid ? sortedLaps.filter((l) => l.valid) : sortedLaps;
+  const visibleLaps = hideInvalid
+    ? sortedLaps.filter((l) => l.valid)
+    : sortedLaps;
   const pageCount = Math.max(1, Math.ceil(visibleLaps.length / PAGE_SIZE));
 
   const bestLapId = laps.reduce<number | null>((best, l) => {
@@ -159,7 +161,7 @@ const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
                           transform: expanded
                             ? "rotate(90deg)"
                             : "rotate(0deg)",
-                          fontSize: 11,
+                          fontSize: 12,
                         }}
                       />
                     )}
@@ -198,6 +200,7 @@ const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
                           display: "inline-block",
                           cursor: "pointer",
                           border: "none",
+                          fontSize: 12,
                         }}
                         title="Vedi dettagli setup"
                         onClick={(e: React.MouseEvent) => {

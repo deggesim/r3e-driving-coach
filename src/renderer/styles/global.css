@@ -411,14 +411,14 @@ body {
 
 /* ── R3E Setup Tabs ── */
 .setup-tabs-container {
-  font-size: 13px;
+  font-size: 14px;
 }
 .setup-nav-tabs {
   border-bottom-color: var(--border);
   gap: 2px;
 }
 .setup-nav-tabs .nav-link {
-  font-size: 12px;
+  font-size: 14px;
   padding: 4px 10px;
   color: var(--text-dim);
   border-color: transparent;
@@ -454,7 +454,7 @@ body {
 .setup-tab-table td {
   padding: 3px 8px;
   border-bottom: 1px solid var(--border);
-  font-size: 13px;
+  font-size: 14px;
 }
 .setup-tab-table td:last-child {
   text-align: right;
@@ -582,7 +582,7 @@ body {
   border-color: var(--border);
 }
 .setup-history-accordion .accordion-button {
-  font-size: 13px;
+  font-size: 14px;
   padding: 8px 12px;
 }
 .setup-history-accordion .accordion-body {

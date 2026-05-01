@@ -79,14 +79,15 @@ const SetupSelectionModal = ({
           </div>
         ) : history.length > 0 ? (
           <>
-            <p className="text-muted mb-2" style={{ fontSize: 13 }}>
+            <p className="text-muted mb-2" style={{ fontSize: 14 }}>
               Setup già caricati per questa combinazione auto/circuito:
             </p>
             <Accordion className="setup-history-accordion mb-3" flush>
               {history.map((row) => {
                 const displayName =
                   row.setup.name ?? row.setup.carFound ?? `Setup #${row.id}`;
-                const hasParams = row.setup.params && row.setup.params.length > 0;
+                const hasParams =
+                  row.setup.params && row.setup.params.length > 0;
 
                 return (
                   <Accordion.Item eventKey={String(row.id)} key={row.id}>
@@ -96,8 +97,15 @@ const SetupSelectionModal = ({
                         <span className="setup-acc-meta">
                           {formatDate(row.loaded_at)}
                           {row.setup.carVerified && (
-                            <Badge bg="success" className="ms-2" style={{ fontSize: 10 }}>
-                              <FontAwesomeIcon icon={faCheck} className="me-1" />
+                            <Badge
+                              bg="success"
+                              className="ms-2"
+                              style={{ fontSize: 10 }}
+                            >
+                              <FontAwesomeIcon
+                                icon={faCheck}
+                                className="me-1"
+                              />
                               verificato
                             </Badge>
                           )}
@@ -131,7 +139,7 @@ const SetupSelectionModal = ({
                           )}
                         </div>
                       ) : (
-                        <p className="text-muted mb-3" style={{ fontSize: 13 }}>
+                        <p className="text-muted mb-3" style={{ fontSize: 14 }}>
                           Nessun parametro decodificato per questo setup.
                         </p>
                       )}
@@ -151,12 +159,17 @@ const SetupSelectionModal = ({
             <hr style={{ borderColor: "var(--border)" }} />
           </>
         ) : (
-          <p className="text-muted mb-3" style={{ fontSize: 13 }}>
-            Nessun setup precedente trovato per questa combinazione auto/circuito.
+          <p className="text-muted mb-3" style={{ fontSize: 14 }}>
+            Nessun setup precedente trovato per questa combinazione
+            auto/circuito.
           </p>
         )}
 
-        <Button variant="outline-secondary" onClick={onJsonPicker} className="w-100">
+        <Button
+          variant="outline-secondary"
+          onClick={onJsonPicker}
+          className="w-100"
+        >
           <FontAwesomeIcon icon={faFileCode} className="me-2" />
           Carica da JSON
         </Button>
