@@ -964,6 +964,13 @@ const setupPipeline = (): void => {
   );
 
   ipcMain.handle(
+    "session:deleteAnalysis",
+    (_event, { id, game }: { id: number; game: GameSource }) => {
+      db.prepare(`DELETE FROM ${t("session_analyses", game)} WHERE id = ?`).run(id);
+    },
+  );
+
+  ipcMain.handle(
     "session:exportPdf",
     async (_event, { id, game }: { id: number; game: GameSource }) => {
       const { dialog } = await import("electron");

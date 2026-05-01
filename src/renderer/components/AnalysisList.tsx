@@ -1,6 +1,8 @@
+import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
 import { useEffect, useRef, useState } from "react";
-import { Accordion, Spinner } from "react-bootstrap";
+import { Accordion, Button, Spinner } from "react-bootstrap";
 import { useSessionStore } from "../store/sessionStore";
 
 type StreamingVersion = { sessionId: number; version: number; text: string };
@@ -15,6 +17,7 @@ const renderMd = (md: string): string =>
 
 const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
   const analyses = useSessionStore((s) => s.analyses);
+  const deleteAnalysis = useSessionStore((s) => s.deleteAnalysis);
 
   const [activeKeys, setActiveKeys] = useState<string[]>(() => {
     if (startClosed || analyses.length === 0) return [];
@@ -46,6 +49,18 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
     }
   }, [analyses, streamingVersion]);
 
+  const handleDelete = async (
+    e: React.MouseEvent,
+    id: number,
+    version: number,
+  ) => {
+    e.stopPropagation();
+    if (!window.confirm(`Eliminare l'analisi #${version}? L'operazione è irreversibile.`))
+      return;
+    await deleteAnalysis(id);
+    setActiveKeys((prev) => prev.filter((k) => k !== `v${version}`));
+  };
+
   return (
     <Accordion
       alwaysOpen
@@ -56,10 +71,22 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
       {analyses.map((a) => (
         <Accordion.Item key={a.id} eventKey={`v${a.version}`}>
           <Accordion.Header>
-            Analisi #{a.version}
-            <span className="ms-2">
-              {new Date(a.created_at).toLocaleString("it-IT")}
+            <span className="flex-grow-1">
+              Analisi #{a.version}
+              <span className="ms-2">
+                {new Date(a.created_at).toLocaleString("it-IT")}
+              </span>
             </span>
+            <Button
+              variant="link"
+              size="sm"
+              className="text-danger p-0 me-2"
+              title="Elimina analisi"
+              onClick={(e) => handleDelete(e, a.id, a.version)}
+              style={{ lineHeight: 1 }}
+            >
+              <FontAwesomeIcon icon={faTrash} />
+            </Button>
           </Accordion.Header>
           <Accordion.Body className="overflow-y-auto">
             <div

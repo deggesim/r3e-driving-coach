@@ -35,6 +35,7 @@ type State = {
   loadById: (id: number, game: GameSource) => Promise<void>;
   reset: () => void;
   setDetail: (detail: SessionDetail | null, mode: ViewMode) => void;
+  deleteAnalysis: (id: number) => Promise<void>;
   _applyLapAdded: (payload: { sessionId: number; game: GameSource; lap: LapRow }) => void;
   _applySetupLoaded: (payload: {
     sessionId: number;
@@ -112,6 +113,13 @@ export const useSessionStore = create<State>((set, get) => ({
     streaming: null,
     error: null,
   }),
+
+  deleteAnalysis: async (id) => {
+    const s = get();
+    if (!s.session) return;
+    await window.electronAPI.sessionDeleteAnalysis({ id, game: s.session.game });
+    set({ analyses: s.analyses.filter((a) => a.id !== id) });
+  },
 
   _applyLapAdded: ({ sessionId, lap }) => {
     const s = get();

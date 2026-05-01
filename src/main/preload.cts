@@ -77,6 +77,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("session:getSetupHistory", params),
   sessionReuseSetup: (params: { setupId: number }) =>
     ipcRenderer.invoke("session:reuseSetup", params),
+  sessionDeleteAnalysis: (params: { id: number; game: string }) =>
+    ipcRenderer.invoke("session:deleteAnalysis", params),
 
   // Lap telemetry frames (on demand)
   lapGetFrames: (params: { id: number; game: string }) =>

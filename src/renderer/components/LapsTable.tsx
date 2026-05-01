@@ -48,7 +48,10 @@ const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
   const [hideInvalid, setHideInvalid] = useState(true);
   const [trackedLapCount, setTrackedLapCount] = useState(0);
 
-  const visibleLaps = hideInvalid ? laps.filter((l) => l.valid) : laps;
+  const sortedLaps = live
+    ? laps
+    : [...laps].sort((a, b) => a.lap_number - b.lap_number);
+  const visibleLaps = hideInvalid ? sortedLaps.filter((l) => l.valid) : sortedLaps;
   const pageCount = Math.max(1, Math.ceil(visibleLaps.length / PAGE_SIZE));
 
   const bestLapId = laps.reduce<number | null>((best, l) => {

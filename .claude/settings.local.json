@@ -10,7 +10,8 @@
       "Bash(*)",
       "WebFetch(domain:www.electronjs.org)",
       "mcp__context7__resolve-library-id",
-      "mcp__context7__query-docs"
+      "mcp__context7__query-docs",
+      "Read(//d/Projeto/sim-driving-coach/src/renderer/components/**)"
     ]
   },
   "hooks": {
