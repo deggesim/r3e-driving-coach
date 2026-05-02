@@ -254,6 +254,8 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       const slipRatio = readFloatArray(physBuf, PHY.slipRatio, 4);
       const tcinAction = readInt32(physBuf, PHY.tcinAction);
       const absInAction = readInt32(physBuf, PHY.absInAction);
+      const tcPreset = readUint8(gfxBuf, GFX.tcPreset);
+      const absPreset = readUint8(gfxBuf, GFX.absPreset);
 
       // --- Graphic fields ---
       const tcActive = readUint8(gfxBuf, GFX.tcActive);
@@ -311,6 +313,8 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
           gear,
           abs: gameFrame.absActive,
           tc: gameFrame.tcActive,
+          tcs: tcPreset,
+          abss: absPreset,
           bt: [...brakeTempArr],
           ts: Date.now(),
           rpm,

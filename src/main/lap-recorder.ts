@@ -138,6 +138,12 @@ const aggregateZones = (
       return avgArr(vals);
     };
 
+    // Aid presets: constant per lap, stored once on zone 0 for use in prompt builder
+    const aidPreset =
+      z === 0 && zoneFrames[0].tcs !== undefined
+        ? { tcSetting: zoneFrames[0].tcs, absSetting: zoneFrames[0].abss }
+        : {};
+
     zones.push({
       zone: z,
       dist: z * ZONE_SIZE_M,
@@ -156,6 +162,7 @@ const aggregateZones = (
       brakeStartDist,
       brakeEndDist,
       throttlePickupDist,
+      ...aidPreset,
       ...(hasExtended && {
         avgRpm: avgArr(rpmValues),
         maxGLat:

@@ -134,6 +134,10 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     const absActive = readInt32(buf, "AidSettings_Abs") === 5 ? 1 : 0;
     const tcActive = readInt32(buf, "AidSettings_Tc") === 5 ? 1 : 0;
 
+    // Aid presets set in garage: scale 1 (max invasive) → 6 (min/off); 0 = not yet populated by sim
+    const tcSetting = readInt32(buf, "TractionControlSetting");
+    const absSetting = readInt32(buf, "AbsSetting");
+
     return {
       versionMajor: readInt32(buf, "VersionMajor"),
       versionMinor: readInt32(buf, "VersionMinor"),
@@ -173,6 +177,8 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
 
       absActive,
       tcActive,
+      tcSetting,
+      absSetting,
 
       brakeTempFL,
       brakeTempFR,
@@ -213,6 +219,8 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         gear: frame.gear,
         abs: frame.absActive,
         tc: frame.tcActive,
+        tcs: frame.tcSetting,
+        abss: frame.absSetting,
         bt: [
           frame.brakeTempFL,
           frame.brakeTempFR,
@@ -423,6 +431,8 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
       steerInput: (Math.random() - 0.5) * 0.3,
       absActive: isBraking ? (Math.random() > 0.7 ? 1 : 0) : 0,
       tcActive: !isBraking ? (Math.random() > 0.9 ? 1 : 0) : 0,
+      tcSetting: 5,
+      absSetting: 5,
       brakeTempFL: 520 + Math.random() * 80,
       brakeTempFR: 525 + Math.random() * 80,
       brakeTempRL: 420 + Math.random() * 60,
@@ -458,6 +468,8 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         gear: isBraking ? 3 : 5,
         abs: isBraking ? (Math.random() > 0.7 ? 1 : 0) : 0,
         tc: !isBraking ? (Math.random() > 0.9 ? 1 : 0) : 0,
+        tcs: 5,
+        abss: 5,
         bt: [
           520 + Math.random() * 80,
           525 + Math.random() * 80,

@@ -318,8 +318,10 @@ export const PHY = {
 export const GFX = {
   packetId: 0,
   status: 4, // int32 — ACEVO_STATUS
-  tcActive: 45, // bool (uint8)
-  absActive: 46, // bool (uint8)
+  tcActive: 45,   // bool (uint8) — TC intervening this frame
+  absActive: 46,  // bool (uint8) — ABS intervening this frame
+  tcPreset: 1872, // uint8 — TC level (byte 0 of SMEvoElectronics, car-dependent range)
+  absPreset: 1874, // uint8 — ABS level (byte 2 of SMEvoElectronics, car-dependent range)
   currentLapTimeMs: 188, // int32
   npos: 1244, // float — normalised lap position [0.0-1.0]
   totalLapCount: 2384, // int32 — laps completed this session

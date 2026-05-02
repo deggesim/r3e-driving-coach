@@ -76,6 +76,14 @@ export const buildPrompt = (
     `- **Settori**: ${lap.sectorTimes.map(formatLapTime).join(" | ")}`,
   );
   parts.push(`- **Giro valido**: ${lap.valid ? "Sì" : "No"}`);
+
+  const zone0 = lap.zones[0];
+  if (zone0?.tcSetting !== undefined && zone0.tcSetting > 0) {
+    parts.push(`- **Preset TC**: ${zone0.tcSetting}/6 (1=massimo intervento, 6=minimo/spento)`);
+  }
+  if (zone0?.absSetting !== undefined && zone0.absSetting > 0) {
+    parts.push(`- **Preset ABS**: ${zone0.absSetting}/6 (1=massimo intervento, 6=minimo/spento)`);
+  }
   parts.push("");
 
   // Brake temp summary
@@ -446,6 +454,10 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
       if (lap.zones_json) {
         try {
           const zones = JSON.parse(lap.zones_json) as ZoneData[];
+          const z0 = zones[0];
+          if (z0?.tcSetting !== undefined && z0.tcSetting > 0) {
+            parts.push(`  TC preset: ${z0.tcSetting}/6 | ABS preset: ${z0.absSetting ?? "?"}/6 (1=max, 6=min/off)`);
+          }
           const summary = summarizeLapZones(zones, cornerNames);
           if (summary.length > 0) parts.push(...summary);
         } catch {

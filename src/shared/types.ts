@@ -74,6 +74,9 @@ export type CompactFrame = {
   abs: number; // ABS active 0-1
   tc: number; // TC active 0-1
   bt: number[]; // brake temps [FL, FR, RL, RR]
+  // Aid presets (per-frame; R3E: 1=max invasive, 6=min/off; ACE: uint8, car-dependent range)
+  tcs?: number;
+  abss?: number;
   ts: number; // timestamp ms
   // Extended fields (ACE only; undefined for R3E frames)
   rpm?: number; // engine RPM
@@ -133,6 +136,9 @@ export type ZoneData = {
   brakeStartDist: number | null;
   brakeEndDist: number | null;
   throttlePickupDist: number | null;
+  // Aid presets (stored once on zone 0 per lap; R3E: 1=max invasive, 6=min/off; ACE: uint8 car-dependent)
+  tcSetting?: number;
+  absSetting?: number;
   // Extended (ACE only; present when source frames have the fields)
   avgRpm?: number;
   maxGLat?: number; // peak lateral G-force magnitude
@@ -299,6 +305,9 @@ export type R3EFrame = {
   // Aids
   absActive: number; // 0-1
   tcActive: number; // 0-1
+  // Aid presets from garage (R3E: 1=max invasive, 6=min/off; 0=not yet read from SHM)
+  tcSetting: number;
+  absSetting: number;
 
   // Temps
   brakeTempFL: number;
