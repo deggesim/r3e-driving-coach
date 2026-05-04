@@ -18,6 +18,9 @@
 
 import { EventEmitter } from "events";
 import { createRequire } from "module";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 import {
   ACE_SHM_PHYSICS,
   ACE_SHM_GRAPHIC,
@@ -108,6 +111,34 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
   let stopped = false;
   let firstPoll = true;
 
+  // Telemetry logger state
+  let telemetryLogPath: string | null = null;
+  let telemetryLogStream: fs.WriteStream | null = null;
+  let telemetryPollCounter = 0;
+  const TELEMETRY_LOG_INTERVAL = 16; // write every ~250ms (16 polls × 16ms)
+  let prevTcActive = -1;
+  let prevAbsActive = -1;
+
+  const openTelemetryLog = (): void => {
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    telemetryLogPath = path.join(os.tmpdir(), `ace-telemetry-${ts}.jsonl`);
+    telemetryLogStream = fs.createWriteStream(telemetryLogPath, { flags: "a" });
+    console.log(`[AceReader] Telemetry log: ${telemetryLogPath}`);
+  };
+
+  const closeTelemetryLog = (): void => {
+    if (telemetryLogStream) {
+      telemetryLogStream.end();
+      telemetryLogStream = null;
+    }
+  };
+
+  const writeTelemetryEntry = (entry: Record<string, unknown>): void => {
+    if (telemetryLogStream) {
+      telemetryLogStream.write(JSON.stringify(entry) + "\n");
+    }
+  };
+
   // Per-lap state
   let lapFrames: CompactFrame[] = [];
   let ownLapCount = 0;
@@ -147,6 +178,7 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
     physView = physHandle = null;
     gfxView = gfxHandle = null;
     staView = staHandle = null;
+    closeTelemetryLog();
     if (connected) {
       connected = false;
       lapFrames = [];
@@ -154,6 +186,9 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       prevNpos = -1;
       prevCurrentLapTimeMs = 0;
       prevIsValidLap = true;
+      prevTcActive = -1;
+      prevAbsActive = -1;
+      telemetryPollCounter = 0;
       emitter.emit("disconnected");
     }
   };
@@ -252,6 +287,8 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       const wheelsPressure = readFloatArray(physBuf, PHY.wheelsPressure, 4);
       const suspensionTravel = readFloatArray(physBuf, PHY.suspensionTravel, 4);
       const slipRatio = readFloatArray(physBuf, PHY.slipRatio, 4);
+      const tcIntensity = readFloat(physBuf, PHY.tc);
+      const absIntensity = readFloat(physBuf, PHY.abs);
       const tcinAction = readInt32(physBuf, PHY.tcinAction);
       const absInAction = readInt32(physBuf, PHY.absInAction);
       const tcPreset = readUint8(gfxBuf, GFX.tcPreset);
@@ -281,8 +318,12 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       // Build GameFrame
       const gameFrame: GameFrame = {
         lapDistance,
-        tcActive: tcActive > 0 || tcinAction > 0 ? 1 : 0,
-        absActive: absActive > 0 || absInAction > 0 ? 1 : 0,
+        // TC: phy_tc_intensity (PHY offset 204) is the only reliable field in ACE.
+        // gfx_tcActive (GFX offset 45) and phy_tcinAction (PHY offset 672) are always 0.
+        tcActive: tcIntensity > 0 || tcActive > 0 || tcinAction > 0 ? 1 : 0,
+        // ABS: phy_abs_intensity (PHY offset 252) pulsates during ABS modulation.
+        // gfx_absActive (GFX offset 46) and phy_absInAction (PHY offset 676) are always 0.
+        absActive: absIntensity > 0 || absActive > 0 || absInAction > 0 ? 1 : 0,
         brakeTempFL: brakeTempArr[0] ?? -1,
         brakeTempFR: brakeTempArr[1] ?? -1,
         brakeTempRL: brakeTempArr[2] ?? -1,
@@ -290,6 +331,83 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       };
 
       emitter.emit("ace:frame", gameFrame);
+
+      // Full telemetry frame for external logger (main.ts)
+      emitter.emit("ace:fullFrame", {
+        ts: Date.now(),
+        // Session context
+        car: cachedCarModel,
+        track: cachedTrack,
+        layout: cachedLayout,
+        // Physics
+        speedKmh,
+        gas,
+        brake,
+        gear,
+        rpm,
+        steerAngle,
+        accGLat: accG[0],
+        accGVert: accG[1],
+        accGLon: accG[2],
+        brakeTemp: brakeTempArr,
+        wheelsPressure,
+        suspensionTravel,
+        slipRatio,
+        tcIntensity,
+        absIntensity,
+        tcinAction,
+        absInAction,
+        // Graphics
+        tcActive,
+        absActive,
+        tcPreset,
+        absPreset,
+        npos,
+        lapDistance,
+        isValidLap,
+        isInPitLane,
+        currentLapTimeMs,
+        // World position
+        wx: playerWx,
+        wy: playerWy,
+        wz: playerWz,
+        cumulativeDist,
+        // Derived (used by coach)
+        coachTcActive: gameFrame.tcActive,
+        coachAbsActive: gameFrame.absActive,
+      });
+
+      // Telemetry logging: write every TELEMETRY_LOG_INTERVAL polls OR on TC/ABS state change
+      const tcStateChanged = gameFrame.tcActive !== prevTcActive;
+      const absStateChanged = gameFrame.absActive !== prevAbsActive;
+      if (++telemetryPollCounter >= TELEMETRY_LOG_INTERVAL || tcStateChanged || absStateChanged) {
+        telemetryPollCounter = 0;
+        writeTelemetryEntry({
+          ts: Date.now(),
+          npos: +npos.toFixed(5),
+          lapDist: +lapDistance.toFixed(1),
+          spd: +speedKmh.toFixed(1),
+          brk: +brake.toFixed(3),
+          thr: +gas.toFixed(3),
+          // Physics TC/ABS (raw values)
+          phy_tc_intensity: +tcIntensity.toFixed(4),
+          phy_abs_intensity: +absIntensity.toFixed(4),
+          phy_tcinAction: tcinAction,
+          phy_absInAction: absInAction,
+          // Graphic TC/ABS (bool flags)
+          gfx_tcActive: tcActive,
+          gfx_absActive: absActive,
+          // Preset levels
+          tcPreset,
+          absPreset,
+          // Derived (what the coach uses)
+          coach_tcActive: gameFrame.tcActive,
+          coach_absActive: gameFrame.absActive,
+          stateChange: tcStateChanged || absStateChanged ? 1 : 0,
+        });
+        prevTcActive = gameFrame.tcActive;
+        prevAbsActive = gameFrame.absActive;
+      }
 
       // Advance cumulative world-space distance on every poll (including pit lane),
       // so the d value in CompactFrame is always derived from the same wx/wz that
@@ -451,6 +569,7 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       readStatic(staBuf);
 
       connected = true;
+      openTelemetryLog();
       emitter.emit("connected");
       poll();
     } catch (err) {

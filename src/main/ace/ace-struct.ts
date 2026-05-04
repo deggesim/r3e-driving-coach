@@ -160,6 +160,8 @@ export const PHY = {
   slipRatio: 640, // float[4] FL,FR,RL,RR — longitudinal tyre slip ratio
   slipAngle: 656, // float[4] FL,FR,RL,RR — tyre slip angle (rad)
   brakeTorque: 716, // float[4] FL,FR,RL,RR — brake torque (Nm)
+  tc: 204,         // float — TC intervention intensity (0.0 = no TC, >0 = TC active)
+  abs: 252,        // float — ABS intervention intensity (0.0 = no ABS, >0 = ABS active)
   tcinAction: 672, // int32 — 1 when TC cutting power
   absInAction: 676, // int32 — 1 when ABS modulating brakes
 } as const;

@@ -46,6 +46,7 @@ const App = () => {
     setAzureSpeechKey,
     setAzureRegion,
     setAzureVoiceName,
+    setTelemetryLogEnabled,
   } = useSettingsStore();
 
   const { get: configGet } = useConfig();
@@ -66,7 +67,7 @@ const App = () => {
   // Load all settings from config on mount
   useEffect(() => {
     const load = async () => {
-      const [ak, az, key, region, voice, name, button, model] =
+      const [ak, az, key, region, voice, name, button, model, telLog] =
         await Promise.all([
           configGet("anthropicApiKey"),
           configGet("azureTtsEnabled"),
@@ -76,6 +77,7 @@ const App = () => {
           configGet("assistantName"),
           configGet("gamepadTriggerButton"),
           configGet("anthropicModel"),
+          configGet("telemetryLogEnabled"),
         ]);
       if (ak) setApiKey(ak);
       if (az) setAzureTtsEnabled(az === "true");
@@ -85,6 +87,7 @@ const App = () => {
       if (name) setAssistantName(name);
       if (button) setGamepadButton(Number(button));
       if (model) setAnthropicModel(model);
+      if (telLog) setTelemetryLogEnabled(telLog === "true");
       setSettingsLoaded(true);
     };
     load().catch(console.error);
@@ -98,6 +101,7 @@ const App = () => {
     setAssistantName,
     setGamepadButton,
     setAnthropicModel,
+    setTelemetryLogEnabled,
   ]);
 
   return (

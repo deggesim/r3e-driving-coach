@@ -24,6 +24,7 @@ type SettingsStore = {
 
   // Dev / test
   mockHistoryMode: boolean;
+  telemetryLogEnabled: boolean;
 
   // Setters
   setApiKey: (v: string) => void;
@@ -36,6 +37,7 @@ type SettingsStore = {
   setAzureRegion: (v: string) => void;
   setAzureVoiceName: (v: string) => void;
   setMockHistoryMode: (v: boolean) => void;
+  setTelemetryLogEnabled: (v: boolean) => void;
   showSaved: (key: string) => void;
   clearSaved: () => void;
 };
@@ -52,6 +54,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   azureVoiceName: "",
   settingSaved: null,
   mockHistoryMode: false,
+  telemetryLogEnabled: false,
 
   setApiKey: (apiKey) => set({ apiKey }),
   setAssistantName: (assistantName) => set({ assistantName }),
@@ -63,6 +66,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   setAzureRegion: (azureRegion) => set({ azureRegion }),
   setAzureVoiceName: (azureVoiceName) => set({ azureVoiceName }),
   setMockHistoryMode: (mockHistoryMode) => set({ mockHistoryMode }),
+  setTelemetryLogEnabled: (telemetryLogEnabled) => set({ telemetryLogEnabled }),
   showSaved: (key) => {
     set({ settingSaved: key });
     setTimeout(() => set({ settingSaved: null }), 2000);

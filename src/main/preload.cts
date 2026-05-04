@@ -118,6 +118,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.removeAllListeners(channel);
   },
 
+  // Telemetry log
+  telemetryLogGetDir: () => ipcRenderer.invoke("telemetry:getLogDir"),
+
   // ACE setup (file-based)
   aceListSetupCars: () => ipcRenderer.invoke("ace:listSetupCars"),
   aceListSetupTracks: (params: { car: string }) =>

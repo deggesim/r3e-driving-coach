@@ -458,6 +458,9 @@ export type ElectronAPI = {
   windowMaximize: () => void;
   removeAllListeners: (channel: string) => void;
 
+  // Telemetry log
+  telemetryLogGetDir: () => Promise<string>;
+
   // ACE Setup analysis (file-based)
   aceListSetupCars: () => Promise<string[]>;
   aceListSetupTracks: (params: { car: string }) => Promise<string[]>;

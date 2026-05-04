@@ -10,6 +10,7 @@
 
 import type BetterSqlite3 from "better-sqlite3";
 import { app, BrowserWindow, ipcMain } from "electron";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { gunzipSync, gzipSync } from "zlib";
@@ -216,6 +217,46 @@ const setupPipeline = (): void => {
   const db = getDb(userDataPath);
 
   loadR3EData();
+
+  // ── Telemetry logger ─────────────────────────────────────────────────────────
+  const telemetryLogDir = path.join(userDataPath, "telemetry");
+
+  let telemetryEnabled =
+    (db.prepare("SELECT value FROM app_config WHERE key = ?").get("telemetryLogEnabled") as { value: string } | undefined)
+      ?.value === "true";
+
+  let telemetryStream: ReturnType<typeof fs.createWriteStream> | null = null;
+  let telemetryCurrentPath: string | null = null;
+
+  const openTelemetryFile = (game: GameSource, car: string, track: string, layout: string): void => {
+    if (!telemetryEnabled || telemetryStream) return;
+    if (!fs.existsSync(telemetryLogDir)) fs.mkdirSync(telemetryLogDir, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_");
+    const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
+    let carLabel = car, trackLabel = track, layoutLabel = layout;
+    if (game === "r3e") {
+      carLabel = getCarName(Number(car)) || car;
+      trackLabel = getTrackName(Number(track)) || track;
+      layoutLabel = getLayoutName(Number(layout)) || layout;
+    }
+    const filename = `${ts}-${game}-${sanitize(carLabel)}-${sanitize(trackLabel)}-${sanitize(layoutLabel)}.jsonl`;
+    telemetryCurrentPath = path.join(telemetryLogDir, filename);
+    telemetryStream = fs.createWriteStream(telemetryCurrentPath, { flags: "w" });
+    console.log(`[Main] Telemetry log opened: ${telemetryCurrentPath}`);
+  };
+
+  const closeTelemetryFile = (): void => {
+    if (telemetryStream) {
+      telemetryStream.end();
+      telemetryStream = null;
+      console.log(`[Main] Telemetry log closed: ${telemetryCurrentPath}`);
+    }
+  };
+
+  const writeFrame = (frame: object): void => {
+    telemetryStream?.write(JSON.stringify(frame) + "\n");
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
 
   console.log(`[Main] setupPipeline — dual-reader mode`);
 
@@ -495,6 +536,7 @@ const setupPipeline = (): void => {
   r3eReader.on("disconnected", () => {
     r3eConnected = false;
     if (aceConnected) activeGame = "ace";
+    closeTelemetryFile();
     pushStatus();
   });
 
@@ -512,6 +554,7 @@ const setupPipeline = (): void => {
   aceReader.on("disconnected", () => {
     aceConnected = false;
     if (r3eConnected) activeGame = "r3e";
+    closeTelemetryFile();
     pushStatus();
   });
 
@@ -519,6 +562,13 @@ const setupPipeline = (): void => {
     if (frame.carModelId > 0) currentCar = String(frame.carModelId);
     if (frame.trackId > 0) currentTrack = String(frame.trackId);
     if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
+
+    if (telemetryEnabled && activeGame === "r3e") {
+      if (!telemetryStream && frame.carModelId > 0 && frame.trackId > 0) {
+        openTelemetryFile("r3e", String(frame.carModelId), String(frame.trackId), String(frame.layoutId));
+      }
+      writeFrame(frame);
+    }
 
     const gameFrame = toGameFrame(frame);
     if (currentSessionId) {
@@ -542,6 +592,15 @@ const setupPipeline = (): void => {
       ruleEngine.processFrame(frame, currentLapNumber);
     }
     pushToRenderer("session:frame", frame);
+  });
+
+  aceReader.on("ace:fullFrame", (frame: Record<string, unknown>) => {
+    if (telemetryEnabled && activeGame === "ace") {
+      if (!telemetryStream && frame.car) {
+        openTelemetryFile("ace", frame.car as string, frame.track as string, frame.layout as string);
+      }
+      writeFrame(frame);
+    }
   });
 
   const handleLapComplete = (lapData: LapRecord, game: GameSource): void => {
@@ -697,7 +756,13 @@ const setupPipeline = (): void => {
     ).run(key, String(value));
     if (key === "anthropicApiKey" || key === "anthropicModel")
       voiceCoach = null;
+    if (key === "telemetryLogEnabled") {
+      telemetryEnabled = String(value) === "true";
+      if (!telemetryEnabled) closeTelemetryFile();
+    }
   });
+
+  ipcMain.handle("telemetry:getLogDir", () => telemetryLogDir);
 
   // ──────────────────────────────────────────────
   // Session lifecycle IPC

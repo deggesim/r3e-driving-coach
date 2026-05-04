@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import {
   Button,
   Form,
@@ -120,6 +120,8 @@ const SettingsPanel = () => {
     setAzureVoiceName,
     mockHistoryMode,
     setMockHistoryMode,
+    telemetryLogEnabled,
+    setTelemetryLogEnabled,
     settingSaved,
     showSaved,
   } = useSettingsStore();
@@ -130,6 +132,8 @@ const SettingsPanel = () => {
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [voicesError, setVoicesError] = useState("");
   const [isCapturingButton, setIsCapturingButton] = useState(false);
+  const [telemetryLogDir, setTelemetryLogDir] = useState<string | null>(null);
+  const telemetryDirFetchedRef = useRef(false);
 
   const handleSaveApiKey = async () => {
     await configSet("anthropicApiKey", apiKey);
@@ -141,6 +145,17 @@ const SettingsPanel = () => {
     await configSet("assistantName", assistantName);
     await configSet("gamepadTriggerButton", String(gamepadButton));
     showSaved("assistant");
+  };
+
+  const handleToggleTelemetry = async () => {
+    const next = !telemetryLogEnabled;
+    setTelemetryLogEnabled(next);
+    await configSet("telemetryLogEnabled", String(next));
+    if (next && !telemetryDirFetchedRef.current) {
+      const dir = await window.electronAPI.telemetryLogGetDir();
+      setTelemetryLogDir(dir);
+      telemetryDirFetchedRef.current = true;
+    }
   };
 
   const handleToggleAzure = async () => {
@@ -198,6 +213,18 @@ const SettingsPanel = () => {
     },
     [configSet, setAzureVoiceName],
   );
+
+  useEffect(() => {
+    if (telemetryLogEnabled && !telemetryDirFetchedRef.current) {
+      window.electronAPI
+        .telemetryLogGetDir()
+        .then((dir) => {
+          setTelemetryLogDir(dir);
+          telemetryDirFetchedRef.current = true;
+        })
+        .catch(console.error);
+    }
+  }, [telemetryLogEnabled]);
 
   useEffect(() => {
     if (!isCapturingButton) return;
@@ -546,13 +573,47 @@ const SettingsPanel = () => {
                 </span>
               </Col>
             </Form.Group>
-            <Row>
+            <Row className="mb-3">
               <Col sm={{ span: 9, offset: 3 }}>
                 <Form.Text>
                   Quando attivo, aggiunge nello storico una sessione R3E (BMW M4
                   GT3 - Nürburgring) e una ACE (Porsche 718 GT4 - Monza), ognuna
                   con 3 giri e un&apos;analisi Template v3 precompilata. Utile
                   per testare la UI senza una sessione reale in corso.
+                </Form.Text>
+              </Col>
+            </Row>
+
+            <Form.Group as={Row} className="mb-2">
+              <Form.Label column sm={3}>
+                Log telemetria
+              </Form.Label>
+              <Col sm={9} className="d-flex align-items-center">
+                <Form.Check
+                  type="switch"
+                  id="telemetry-log-toggle"
+                  label={telemetryLogEnabled ? "Attivo" : "Disattivo"}
+                  checked={telemetryLogEnabled}
+                  onChange={handleToggleTelemetry}
+                />
+              </Col>
+            </Form.Group>
+            <Row>
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Form.Text>
+                  Scrive tutta la telemetria disponibile (R3E e ACE) su file
+                  JSONL in formato riga-per-riga. Ogni connessione crea un nuovo
+                  file:{" "}
+                  <code>
+                    &lt;timestamp&gt;-&lt;gioco&gt;-&lt;auto&gt;-&lt;circuito&gt;-&lt;layout&gt;.jsonl
+                  </code>
+                  .
+                  {telemetryLogEnabled && telemetryLogDir && (
+                    <>
+                      {" "}
+                      Directory: <code>{telemetryLogDir}</code>
+                    </>
+                  )}
                 </Form.Text>
               </Col>
             </Row>
