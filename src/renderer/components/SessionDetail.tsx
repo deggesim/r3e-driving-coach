@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Alert } from "react-bootstrap";
-import type { SetupData } from "../../shared/types";
+import type { LapRow, SetupData } from "../../shared/types";
 import { useSessionStore } from "../store/sessionStore";
 import AceSetupPicker from "./AceSetupPicker";
 import AnalysisHeader from "./AnalysisHeader";
@@ -21,11 +21,15 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
   const streaming = useSessionStore((s) => s.streaming);
   const loadCurrent = useSessionStore((s) => s.loadCurrent);
 
+  const assignLapSetup = useSessionStore((s) => s.assignLapSetup);
+
   const [flash, setFlash] = useState<{ variant: string; text: string } | null>(
     null,
   );
   const [showPicker, setShowPicker] = useState(false);
   const [showSetupSelection, setShowSetupSelection] = useState(false);
+  const [pickerLap, setPickerLap] = useState<LapRow | null>(null);
+  const [pendingLapId, setPendingLapId] = useState<number | null>(null);
 
   const showFlash = (variant: string, text: string): void => {
     setFlash({ variant, text });
@@ -69,12 +73,23 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
   const handleSetupConfirm = async (setup: SetupData): Promise<void> => {
     setShowPicker(false);
     setShowSetupSelection(false);
+    if (!session) return;
     try {
       const named: SetupData = setup.name
         ? setup
         : { ...setup, name: setup.carFound || "Setup" };
-      await window.electronAPI.sessionLoadSetup({ setup: named });
-      showFlash("success", `Setup caricato: ${named.name}`);
+      const { setupId } = await window.electronAPI.sessionLoadSetup({
+        setup: named,
+        sessionId: session.id,
+        game: session.game,
+      });
+      if (pendingLapId != null) {
+        await assignLapSetup(pendingLapId, setupId);
+        setPendingLapId(null);
+        showFlash("success", `Setup ${named.name} caricato e assegnato al giro.`);
+      } else {
+        showFlash("success", `Setup caricato: ${named.name}`);
+      }
     } catch (err) {
       showFlash("danger", String(err));
     }
@@ -85,6 +100,17 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
     try {
       await window.electronAPI.sessionReuseSetup({ setupId });
       showFlash("success", "Setup attivo aggiornato.");
+    } catch (err) {
+      showFlash("danger", String(err));
+    }
+  };
+
+  const handleLapReuseSetup = async (setupId: number): Promise<void> => {
+    const lapId = pickerLap?.id;
+    if (lapId == null) return;
+    try {
+      await assignLapSetup(lapId, setupId);
+      showFlash("success", "Setup assegnato al giro.");
     } catch (err) {
       showFlash("danger", String(err));
     }
@@ -115,7 +141,10 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
         onEnd={() => {}}
         onAnalyze={handleAnalyze}
         onExportPdf={handleExportPdf}
-        onOpenPicker={sessionActive ? () => setShowSetupSelection(true) : () => {}}
+        onOpenPicker={() => {
+          if (session?.game === "ace") setShowPicker(true);
+          else setShowSetupSelection(true);
+        }}
         onBack={onBack}
         onReopen={!sessionActive ? handleReopen : undefined}
       />
@@ -136,7 +165,7 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
         style={{ minHeight: 0 }}
       >
         <div className="flex-shrink-0">
-          <LapsTable setupById={setupById} />
+          <LapsTable setupById={setupById} onPickSetup={setPickerLap} />
         </div>
 
         <div
@@ -151,8 +180,8 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
         </div>
       </div>
 
-      {/* Setup pickers (active after reopen) */}
-      {session && sessionActive && (
+      {/* Setup pickers */}
+      {session && (
         <>
           {session.game === "ace" ? (
             <AceSetupPicker
@@ -185,6 +214,20 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
               }}
             />
           )}
+          <SetupSelectionModal
+            show={pickerLap != null}
+            car={session.car}
+            track={session.track}
+            layout={session.layout}
+            game={session.game}
+            onClose={() => setPickerLap(null)}
+            onReuseSetup={handleLapReuseSetup}
+            onJsonPicker={() => {
+              setPendingLapId(pickerLap!.id);
+              setPickerLap(null);
+              setShowPicker(true);
+            }}
+          />
         </>
       )}
     </div>

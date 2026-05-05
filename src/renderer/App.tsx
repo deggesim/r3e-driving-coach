@@ -38,6 +38,9 @@ const App = () => {
     setAssistantName,
     gamepadButton,
     setGamepadButton,
+    keyboardVoiceKey,
+    setKeyboardVoiceKey,
+    capturingVoiceInput,
     ttsEnabled,
     azureTtsEnabled,
     setAzureTtsEnabled,
@@ -60,14 +63,15 @@ const App = () => {
     answer,
   } = useVoiceCoach({
     triggerButtonIndex: gamepadButton,
-    enabled: ttsEnabled,
+    keyboardTriggerKey: keyboardVoiceKey,
+    enabled: ttsEnabled && !capturingVoiceInput,
     azureTtsEnabled,
   });
 
   // Load all settings from config on mount
   useEffect(() => {
     const load = async () => {
-      const [ak, az, key, region, voice, name, button, model, telLog] =
+      const [ak, az, key, region, voice, name, button, model, telLog, kbKey] =
         await Promise.all([
           configGet("anthropicApiKey"),
           configGet("azureTtsEnabled"),
@@ -78,6 +82,7 @@ const App = () => {
           configGet("gamepadTriggerButton"),
           configGet("anthropicModel"),
           configGet("telemetryLogEnabled"),
+          configGet("keyboardVoiceKey"),
         ]);
       if (ak) setApiKey(ak);
       if (az) setAzureTtsEnabled(az === "true");
@@ -85,9 +90,10 @@ const App = () => {
       if (region) setAzureRegion(region);
       if (voice) setAzureVoiceName(voice);
       if (name) setAssistantName(name);
-      if (button) setGamepadButton(Number(button));
+      setGamepadButton(button ? Number(button) : null);
       if (model) setAnthropicModel(model);
       if (telLog) setTelemetryLogEnabled(telLog === "true");
+      setKeyboardVoiceKey(kbKey || null);
       setSettingsLoaded(true);
     };
     load().catch(console.error);
@@ -102,6 +108,7 @@ const App = () => {
     setGamepadButton,
     setAnthropicModel,
     setTelemetryLogEnabled,
+    setKeyboardVoiceKey,
   ]);
 
   return (

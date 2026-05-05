@@ -74,6 +74,54 @@ const AZURE_REGIONS = [
   { value: "westus3", label: "Stati Uniti occidentali 3" },
 ];
 
+const KEY_LABELS: Record<string, string> = {
+  " ": "Space",
+  ArrowUp: "↑",
+  ArrowDown: "↓",
+  ArrowLeft: "←",
+  ArrowRight: "→",
+  Enter: "Enter",
+  Escape: "Esc",
+  Backspace: "⌫",
+  Delete: "Canc",
+  Tab: "Tab",
+  CapsLock: "Caps",
+  Home: "Home",
+  End: "Fine",
+  PageUp: "PgSu",
+  PageDown: "PgGiù",
+  Insert: "Ins",
+  PrintScreen: "PrtSc",
+  ScrollLock: "ScrollLk",
+  Pause: "Pausa",
+  NumLock: "NumLk",
+};
+
+const formatKeyPart = (part: string): string =>
+  KEY_LABELS[part] ?? (part.length === 1 ? part.toUpperCase() : part);
+
+const KeyComboDisplay = ({ combo }: { combo: string }) => {
+  const parts = combo.split("+");
+  return (
+    <span className="d-inline-flex align-items-center gap-1">
+      {parts.map((part, i) => (
+        <span key={i} className="d-inline-flex align-items-center gap-1">
+          <kbd
+            style={{ fontSize: "0.8em", padding: "1px 5px", borderRadius: 3 }}
+          >
+            {formatKeyPart(part)}
+          </kbd>
+          {i < parts.length - 1 && (
+            <span className="text-secondary" style={{ fontSize: "0.75em" }}>
+              +
+            </span>
+          )}
+        </span>
+      ))}
+    </span>
+  );
+};
+
 const getButtonLabel = (index: number): string => {
   const labels: Record<number, string> = {
     0: "A",
@@ -106,6 +154,9 @@ const SettingsPanel = () => {
     setAssistantName,
     gamepadButton,
     setGamepadButton,
+    keyboardVoiceKey,
+    setKeyboardVoiceKey,
+    setCapturingVoiceInput,
     anthropicModel,
     setAnthropicModel,
     ttsEnabled,
@@ -132,18 +183,26 @@ const SettingsPanel = () => {
   const [voicesLoading, setVoicesLoading] = useState(false);
   const [voicesError, setVoicesError] = useState("");
   const [isCapturingButton, setIsCapturingButton] = useState(false);
+  const [isCapturingKey, setIsCapturingKey] = useState(false);
   const [telemetryLogDir, setTelemetryLogDir] = useState<string | null>(null);
   const telemetryDirFetchedRef = useRef(false);
 
   const handleSaveApiKey = async () => {
     await configSet("anthropicApiKey", apiKey);
-    await configSet("anthropicModel", anthropicModel);
     showSaved("apiKey");
+  };
+
+  const handleSaveModel = async () => {
+    await configSet("anthropicModel", anthropicModel);
+    showSaved("model");
   };
 
   const handleSaveAssistant = async () => {
     await configSet("assistantName", assistantName);
-    await configSet("gamepadTriggerButton", String(gamepadButton));
+    await configSet(
+      "gamepadTriggerButton",
+      gamepadButton !== null ? String(gamepadButton) : "",
+    );
     showSaved("assistant");
   };
 
@@ -236,15 +295,41 @@ const SettingsPanel = () => {
           if (gp.buttons[i]?.pressed) {
             setGamepadButton(i);
             configSet("gamepadTriggerButton", String(i)).catch(console.error);
+            setKeyboardVoiceKey(null);
+            configSet("keyboardVoiceKey", "").catch(console.error);
             showSaved("gamepadButton");
             setIsCapturingButton(false);
+            setCapturingVoiceInput(false);
             return;
           }
         }
       }
     }, 50);
     return () => clearInterval(id);
-  }, [isCapturingButton, setGamepadButton, configSet, showSaved]);
+  }, [isCapturingButton, setGamepadButton, setKeyboardVoiceKey, setCapturingVoiceInput, configSet, showSaved]);
+
+  useEffect(() => {
+    if (!isCapturingKey) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (["Control", "Alt", "Shift", "Meta"].includes(e.key)) return;
+      e.preventDefault();
+      const parts: string[] = [];
+      if (e.ctrlKey) parts.push("Ctrl");
+      if (e.altKey) parts.push("Alt");
+      if (e.shiftKey) parts.push("Shift");
+      parts.push(e.key);
+      const combo = parts.join("+");
+      setKeyboardVoiceKey(combo);
+      configSet("keyboardVoiceKey", combo).catch(console.error);
+      setGamepadButton(null);
+      configSet("gamepadTriggerButton", "").catch(console.error);
+      showSaved("keyboardKey");
+      setIsCapturingKey(false);
+      setCapturingVoiceInput(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isCapturingKey, setKeyboardVoiceKey, setGamepadButton, setCapturingVoiceInput, configSet, showSaved]);
 
   return (
     <Container fluid className="settings-panel p-4">
@@ -295,7 +380,7 @@ const SettingsPanel = () => {
               <Form.Label column sm={3}>
                 Modello
               </Form.Label>
-              <Col sm={9}>
+              <Col sm={7}>
                 <Form.Select
                   value={anthropicModel}
                   onChange={(e) => setAnthropicModel(e.target.value)}
@@ -308,6 +393,17 @@ const SettingsPanel = () => {
                   </option>
                   <option value="claude-opus-4-7">Opus 4.7 (potente)</option>
                 </Form.Select>
+              </Col>
+              <Col sm={2}>
+                <Button variant="danger" onClick={handleSaveModel}>
+                  {settingSaved === "model" ? (
+                    <>
+                      <FontAwesomeIcon icon={faCheck} /> Salvato
+                    </>
+                  ) : (
+                    "Salva"
+                  )}
+                </Button>
               </Col>
             </Form.Group>
             <Row>
@@ -487,7 +583,7 @@ const SettingsPanel = () => {
                     </span>
                     <Button
                       variant="secondary"
-                      onClick={() => setIsCapturingButton(false)}
+                      onClick={() => { setIsCapturingButton(false); setCapturingVoiceInput(false); }}
                     >
                       Annulla
                     </Button>
@@ -501,10 +597,23 @@ const SettingsPanel = () => {
                     </Badge>
                     <Button
                       variant="outline-light"
-                      onClick={() => setIsCapturingButton(true)}
+                      onClick={() => { setIsCapturingButton(true); setCapturingVoiceInput(true); }}
                     >
                       Assegna
                     </Button>
+                    {gamepadButton !== null && (
+                      <Button
+                        variant="outline-danger"
+                        onClick={() => {
+                          setGamepadButton(null);
+                          configSet("gamepadTriggerButton", "").catch(
+                            console.error,
+                          );
+                        }}
+                      >
+                        Rimuovi
+                      </Button>
+                    )}
                     {settingSaved === "gamepadButton" && (
                       <span className="text-success">
                         <FontAwesomeIcon icon={faCheck} /> Salvato
@@ -520,6 +629,68 @@ const SettingsPanel = () => {
                   Premi il tasto configurato sul controller per attivare il
                   microfono e fare domande al coach. Il tasto 0 corrisponde al
                   tasto A su controller Xbox.
+                </Form.Text>
+              </Col>
+            </Row>
+
+            <Form.Group as={Row} className="mb-2">
+              <Form.Label column sm={3}>
+                Tastiera
+              </Form.Label>
+              <Col sm={9} className="d-flex align-items-center gap-2 flex-wrap">
+                {isCapturingKey ? (
+                  <>
+                    <Spinner animation="border" />
+                    <span className="text-warning">
+                      Premi un tasto sulla tastiera…
+                    </span>
+                    <Button
+                      variant="secondary"
+                      onClick={() => { setIsCapturingKey(false); setCapturingVoiceInput(false); }}
+                    >
+                      Annulla
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {keyboardVoiceKey ? (
+                      <KeyComboDisplay combo={keyboardVoiceKey} />
+                    ) : (
+                      <Badge bg="secondary">Nessun tasto assegnato</Badge>
+                    )}
+                    <Button
+                      variant="outline-light"
+                      onClick={() => { setIsCapturingKey(true); setCapturingVoiceInput(true); }}
+                    >
+                      Assegna
+                    </Button>
+                    {keyboardVoiceKey && (
+                      <Button
+                        variant="outline-danger"
+                        onClick={() => {
+                          setKeyboardVoiceKey(null);
+                          configSet("keyboardVoiceKey", "").catch(
+                            console.error,
+                          );
+                        }}
+                      >
+                        Rimuovi
+                      </Button>
+                    )}
+                    {settingSaved === "keyboardKey" && (
+                      <span className="text-success">
+                        <FontAwesomeIcon icon={faCheck} /> Salvato
+                      </span>
+                    )}
+                  </>
+                )}
+              </Col>
+            </Form.Group>
+            <Row className="mb-3">
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Form.Text>
+                  Tasto da tastiera alternativo al controller per attivare il
+                  microfono. Utile quando si usa la tastiera anziché un gamepad.
                 </Form.Text>
               </Col>
             </Row>

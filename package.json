@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "start": "electron .",
     "typecheck": "tsc --noEmit",
-    "rebuild:native": "npx @electron/rebuild -f -w better-sqlite3"
+    "rebuild:native": "npx @electron/rebuild -f -w better-sqlite3",
+    "migrate:dates": "node scripts/migrate-dates.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",

@@ -205,6 +205,9 @@ body {
   box-shadow: none;
   border-color: var(--border);
 }
+.accordion-button-delete {
+  background: var(--bg3);
+}
 .accordion-body {
   background: var(--bg2);
   color: var(--text);
@@ -578,35 +581,6 @@ body {
 .setup-selection-modal .btn-close {
   filter: invert(1) grayscale(1);
 }
-.setup-history-accordion .accordion-item {
-  border-color: var(--border);
-}
-.setup-history-accordion .accordion-button {
-  font-size: 14px;
-  padding: 8px 12px;
-}
-.setup-history-accordion .accordion-body {
-  padding: 10px 12px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-.setup-history-accordion .setup-table th {
-  position: static;
-}
-.setup-acc-header {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.setup-acc-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-.setup-acc-meta {
-  font-size: 12px;
-  color: var(--text-dim);
-}
 
 /* ── Setup Detail Modal (lap badge click) ── */
 .setup-detail-modal .modal-content {
@@ -628,6 +602,36 @@ body {
 
 .setup-detail-content {
   height: 85vh;
+}
+
+/* ── Lap Setup Picker Modal ── */
+.lap-setup-picker-modal .modal-content {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.lap-setup-picker-modal .modal-header {
+  background: var(--bg3);
+  border-color: var(--border);
+}
+.lap-setup-picker-modal .modal-body {
+  background: var(--bg2);
+  padding: 0;
+}
+.lap-setup-picker-modal .modal-footer {
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+}
+.lap-setup-picker-modal .btn-close {
+  filter: invert(1) grayscale(1);
+}
+.lap-setup-picker-modal .list-group-item {
+  background: var(--bg2);
+  border-color: var(--border) !important;
+  color: var(--text);
+}
+.lap-setup-picker-modal .list-group-item:last-child {
+  border-bottom: none !important;
 }
 
 .setup-detail-body {

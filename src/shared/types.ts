@@ -415,7 +415,7 @@ export type ElectronAPI = {
   sessionStart: () => Promise<SessionStartResult>;
   sessionEnd: () => Promise<void>;
   sessionAnalyze: (params?: { sessionId?: number; game?: GameSource }) => Promise<{ ok: boolean; reason?: string }>;
-  sessionLoadSetup: (params: { setup: SetupData }) => Promise<{ setupId: number }>;
+  sessionLoadSetup: (params: { setup: SetupData; sessionId?: number; game?: GameSource }) => Promise<{ setupId: number }>;
   sessionList: (params: SessionListParams) => Promise<SessionListResult>;
   sessionGetCurrent: () => Promise<SessionDetail | null>;
   sessionGetDetail: (params: { id: number; game: GameSource }) => Promise<SessionDetail | null>;
@@ -429,6 +429,7 @@ export type ElectronAPI = {
 
   // Lap telemetry frames (on demand)
   lapGetFrames: (params: { id: number; game: GameSource }) => Promise<CompactFrame[]>;
+  lapAssignSetup: (params: { lapId: number; setupId: number | null; game: GameSource }) => Promise<void>;
 
   // Track map geometry (cached per game/car/track/layout)
   trackMapGet: (params: {

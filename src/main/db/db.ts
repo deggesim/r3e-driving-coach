@@ -320,8 +320,8 @@ export const saveTrackMap = (
 ): void => {
   db.prepare(
     `INSERT OR REPLACE INTO track_maps (game, car, track, layout, geometry, created_at)
-     VALUES (?, ?, ?, ?, ?, datetime('now'))`,
-  ).run(game, car, track, layout, JSON.stringify(geometry));
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(game, car, track, layout, JSON.stringify(geometry), new Date().toISOString());
 };
 
 export const closeDb = (): void => {

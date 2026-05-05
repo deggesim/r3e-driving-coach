@@ -8,7 +8,7 @@
 import { useEffect, useRef } from "react";
 
 type UseGamepadOptions = {
-  buttonIndex: number;       // which button to watch (0 = A on Xbox)
+  buttonIndex: number | null;
   onButtonPress: () => void;
   enabled?: boolean;
 };
@@ -24,7 +24,7 @@ export const useGamepad = ({
   onButtonPressRef.current = onButtonPress;
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || buttonIndex === null) return;
 
     const poll = () => {
       const gamepads = navigator.getGamepads();

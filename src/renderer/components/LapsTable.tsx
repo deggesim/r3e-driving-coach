@@ -3,16 +3,16 @@ import {
   faChevronRight,
   faEye,
   faEyeSlash,
+  faPen,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Fragment, useState } from "react";
 import { Badge, Button, Table } from "react-bootstrap";
 import { formatLapTime } from "../../shared/format";
-import type { SessionSetupRow } from "../../shared/types";
+import type { LapRow, SessionSetupRow } from "../../shared/types";
 import { useSessionStore } from "../store/sessionStore";
 import LapTelemetryCharts from "./LapTelemetryCharts";
-import { SetupDetailModal } from "./SetupDetailModal";
 
 const buildPageWindow = (current: number, total: number): (number | "…")[] => {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -38,19 +38,26 @@ const PAGE_SIZE = 5;
 type LapsTableProps = {
   setupById: Map<number, SessionSetupRow>;
   live?: boolean;
+  onPickSetup?: (lap: LapRow) => void;
 };
 
-const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
+const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => {
   const laps = useSessionStore((s) => s.laps);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [setupModalId, setSetupModalId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [hideInvalid, setHideInvalid] = useState(true);
   const [trackedLapCount, setTrackedLapCount] = useState(0);
 
+  const parseLocalDate = (s: string) =>
+    new Date(s.includes("T") ? s : s.replace(" ", "T"));
+
   const sortedLaps = live
     ? laps
-    : [...laps].sort((a, b) => a.lap_number - b.lap_number);
+    : [...laps].sort(
+        (a, b) =>
+          parseLocalDate(a.recorded_at).getTime() -
+          parseLocalDate(b.recorded_at).getTime(),
+      );
   const visibleLaps = hideInvalid
     ? sortedLaps.filter((l) => l.valid)
     : sortedLaps;
@@ -202,21 +209,28 @@ const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
                           border: "none",
                           fontSize: 12,
                         }}
-                        title="Vedi dettagli setup"
+                        title="Cambia setup"
                         onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
-                          setSetupModalId(l.setup_id);
+                          onPickSetup?.(l);
                         }}
                       >
                         {setupById.get(l.setup_id)!.setup.name ??
                           `#${l.setup_id}`}
                       </Badge>
                     ) : (
-                      <span className="text-muted">—</span>
+                      <button
+                        className="text-muted"
+                        title="Assegna setup"
+                        onClick={(e) => { e.stopPropagation(); onPickSetup?.(l); }}
+                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12 }}
+                      >
+                        <FontAwesomeIcon icon={faPen} style={{ opacity: 0.4 }} />
+                      </button>
                     )}
                   </td>
                   <td style={isBest ? { color: "#ffc107" } : undefined}>
-                    {new Date(l.recorded_at).toLocaleString("it-IT")}
+                    {parseLocalDate(l.recorded_at).toLocaleString("it-IT")}
                   </td>
                 </tr>
                 <tr className="lap-telemetry-row">
@@ -239,12 +253,6 @@ const LapsTable = ({ setupById, live = false }: LapsTableProps) => {
           })}
         </tbody>
       </Table>
-
-      <SetupDetailModal
-        setupId={setupModalId}
-        setupById={setupById}
-        onClose={() => setSetupModalId(null)}
-      />
 
       <div className="sh-pagination d-flex align-items-center gap-2 px-0 py-1">
         <span

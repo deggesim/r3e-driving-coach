@@ -59,7 +59,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   sessionEnd: () => ipcRenderer.invoke("session:end"),
   sessionAnalyze: (params?: { sessionId?: number; game?: string }) =>
     ipcRenderer.invoke("session:analyze", params ?? {}),
-  sessionLoadSetup: (params: { setup: unknown }) =>
+  sessionLoadSetup: (params: { setup: unknown; sessionId?: number; game?: string }) =>
     ipcRenderer.invoke("session:loadSetup", params),
   sessionList: (params: unknown) => ipcRenderer.invoke("session:list", params),
   sessionGetCurrent: () => ipcRenderer.invoke("session:getCurrent"),
@@ -83,6 +83,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Lap telemetry frames (on demand)
   lapGetFrames: (params: { id: number; game: string }) =>
     ipcRenderer.invoke("lap:getFrames", params),
+  lapAssignSetup: (params: { lapId: number; setupId: number | null; game: string }) =>
+    ipcRenderer.invoke("lap:assignSetup", params),
 
   // Track map geometry (cached per game/car/track/layout)
   trackMapGet: (params: {

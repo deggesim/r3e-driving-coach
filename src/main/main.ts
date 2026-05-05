@@ -216,6 +216,26 @@ const setupPipeline = (): void => {
   const userDataPath = app.getPath("userData");
   const db = getDb(userDataPath);
 
+  // Register config handlers immediately — renderer may call configGet before
+  // the rest of setupPipeline (readers, baseline, etc.) finishes initializing.
+  ipcMain.handle("config:get", (_event, key: string) => {
+    return db.prepare("SELECT value FROM app_config WHERE key = ?").get(key) as
+      | { value: string }
+      | undefined;
+  });
+
+  ipcMain.handle("config:set", (_event, key: string, value: unknown) => {
+    db.prepare(
+      "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
+    ).run(key, String(value));
+    if (key === "anthropicApiKey" || key === "anthropicModel")
+      voiceCoach = null;
+    if (key === "telemetryLogEnabled") {
+      telemetryEnabled = String(value) === "true";
+      if (!telemetryEnabled) closeTelemetryFile();
+    }
+  });
+
   loadR3EData();
 
   // ── Telemetry logger ─────────────────────────────────────────────────────────
@@ -454,8 +474,8 @@ const setupPipeline = (): void => {
     const game = currentSessionGame;
     try {
       db.prepare(
-        `UPDATE ${t("sessions", currentSessionGame)} SET ended_at = datetime('now') WHERE id = ? AND ended_at IS NULL`,
-      ).run(id);
+        `UPDATE ${t("sessions", currentSessionGame)} SET ended_at = ? WHERE id = ? AND ended_at IS NULL`,
+      ).run(new Date().toISOString(), id);
     } catch (err) {
       console.error("[Main] closeSession error:", err);
     }
@@ -477,7 +497,7 @@ const setupPipeline = (): void => {
         .prepare(
           `INSERT INTO ${lapsTable}
            (session_id, setup_id, lap_number, lap_time, sector1, sector2, sector3, valid, zones_json, frames_blob, recorded_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
         .run(
           sessionId,
@@ -490,6 +510,7 @@ const setupPipeline = (): void => {
           lap.valid ? 1 : 0,
           JSON.stringify(lap.zones),
           framesBlob,
+          new Date().toISOString(),
         );
 
       db.prepare(
@@ -740,28 +761,6 @@ const setupPipeline = (): void => {
     pushStatus();
   });
 
-  // ──────────────────────────────────────────────
-  // Config IPC
-  // ──────────────────────────────────────────────
-
-  ipcMain.handle("config:get", (_event, key: string) => {
-    return db.prepare("SELECT value FROM app_config WHERE key = ?").get(key) as
-      | { value: string }
-      | undefined;
-  });
-
-  ipcMain.handle("config:set", (_event, key: string, value: unknown) => {
-    db.prepare(
-      "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
-    ).run(key, String(value));
-    if (key === "anthropicApiKey" || key === "anthropicModel")
-      voiceCoach = null;
-    if (key === "telemetryLogEnabled") {
-      telemetryEnabled = String(value) === "true";
-      if (!telemetryEnabled) closeTelemetryFile();
-    }
-  });
-
   ipcMain.handle("telemetry:getLogDir", () => telemetryLogDir);
 
   // ──────────────────────────────────────────────
@@ -795,9 +794,9 @@ const setupPipeline = (): void => {
       const result = db
         .prepare(
           `INSERT INTO ${t("sessions")} (car, track, layout, session_type, started_at)
-           VALUES (?, ?, ?, 'practice', datetime('now'))`,
+           VALUES (?, ?, ?, 'practice', ?)`,
         )
-        .run(currentCar, currentTrack, currentLayout);
+        .run(currentCar, currentTrack, currentLayout, new Date().toISOString());
       currentSessionId = Number(result.lastInsertRowid);
       currentSessionGame = activeGame;
       currentSetupId = null;
@@ -824,36 +823,40 @@ const setupPipeline = (): void => {
 
   ipcMain.handle(
     "session:loadSetup",
-    (_event, { setup }: { setup: SetupData }) => {
-      if (!currentSessionId) {
+    (_event, { setup, sessionId: sid, game: g }: { setup: SetupData; sessionId?: number; game?: GameSource }) => {
+      const targetId = sid ?? currentSessionId;
+      const targetGame = g ?? currentSessionGame;
+      if (!targetId) {
         throw new Error(
           "Nessuna sessione attiva. Apri una sessione prima di caricare un setup.",
         );
       }
       const result = db
         .prepare(
-          `INSERT INTO ${t("session_setups", currentSessionGame)} (session_id, loaded_at, setup_json, setup_screenshots)
-           VALUES (?, datetime('now'), ?, ?)`,
+          `INSERT INTO ${t("session_setups", targetGame)} (session_id, loaded_at, setup_json, setup_screenshots)
+           VALUES (?, ?, ?, ?)`,
         )
         .run(
-          currentSessionId,
+          targetId,
+          new Date().toISOString(),
           JSON.stringify(setup),
-          currentSessionGame === "ace" ? null : JSON.stringify(setup.screenshots ?? []),
+          targetGame === "ace" ? null : JSON.stringify(setup.screenshots ?? []),
         );
       const setupId = Number(result.lastInsertRowid);
-      currentSetupId = setupId;
+      // Only advance currentSetupId when loading into the current live session
+      if (targetId === currentSessionId) currentSetupId = setupId;
 
       const row: SessionSetupRow = {
         id: setupId,
-        session_id: currentSessionId,
+        session_id: targetId,
         loaded_at: new Date().toISOString(),
         setup,
         setup_screenshots:
-          currentSessionGame === "ace" ? null : JSON.stringify(setup.screenshots ?? []),
+          targetGame === "ace" ? null : JSON.stringify(setup.screenshots ?? []),
       };
       pushToRenderer("session:setupLoaded", {
-        sessionId: currentSessionId,
-        game: activeGame,
+        sessionId: targetId,
+        game: targetGame,
         setup: row,
       });
       return { setupId };
@@ -921,6 +924,14 @@ const setupPipeline = (): void => {
       }: { game: GameSource; car: string; track: string; layout: string },
     ) => {
       return getTrackMap(db, game, car, track, layout);
+    },
+  );
+
+  ipcMain.handle(
+    "lap:assignSetup",
+    (_event, { lapId, setupId, game }: { lapId: number; setupId: number | null; game: GameSource }) => {
+      const lapsTable = `laps_${game === "ace" ? "ace" : "r3e"}`;
+      db.prepare(`UPDATE ${lapsTable} SET setup_id = ? WHERE id = ?`).run(setupId ?? null, lapId);
     },
   );
 
@@ -1498,12 +1509,13 @@ const setupPipeline = (): void => {
   );
 
   // Close any sessions left open by a previous crash or forced quit
+  const crashCloseTs = new Date().toISOString();
   db.prepare(
-    "UPDATE sessions_r3e SET ended_at = datetime('now') WHERE ended_at IS NULL",
-  ).run();
+    "UPDATE sessions_r3e SET ended_at = ? WHERE ended_at IS NULL",
+  ).run(crashCloseTs);
   db.prepare(
-    "UPDATE sessions_ace SET ended_at = datetime('now') WHERE ended_at IS NULL",
-  ).run();
+    "UPDATE sessions_ace SET ended_at = ? WHERE ended_at IS NULL",
+  ).run(crashCloseTs);
 
   // Ensure the active session is closed when the app exits normally
   app.on("before-quit", () => {

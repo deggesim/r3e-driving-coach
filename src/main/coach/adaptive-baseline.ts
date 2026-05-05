@@ -178,7 +178,7 @@ export const createAdaptiveBaseline = (car: string, track: string, db?: Database
 
     const upsert = dbRef.prepare(`
       INSERT OR REPLACE INTO baseline (car, track, zone_id, game, data, updated_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
+      VALUES (?, ?, ?, ?, ?, ?)
     `);
     const upsertTc = dbRef.prepare(`
       INSERT OR IGNORE INTO baseline_tc_zones (car, track, zone_id, game)
@@ -189,9 +189,10 @@ export const createAdaptiveBaseline = (car: string, track: string, db?: Database
       VALUES (?, ?, ?, ?)
     `);
 
+    const nowIso = new Date().toISOString();
     const tx = dbRef.transaction(() => {
       for (const [zoneId, data] of zones) {
-        upsert.run(car, track, zoneId, game, JSON.stringify(data));
+        upsert.run(car, track, zoneId, game, JSON.stringify(data), nowIso);
       }
       for (const zoneId of tcZones) {
         upsertTc.run(car, track, zoneId, game);

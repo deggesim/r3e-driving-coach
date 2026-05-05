@@ -36,6 +36,7 @@ type State = {
   reset: () => void;
   setDetail: (detail: SessionDetail | null, mode: ViewMode) => void;
   deleteAnalysis: (id: number) => Promise<void>;
+  assignLapSetup: (lapId: number, setupId: number | null) => Promise<void>;
   _applyLapAdded: (payload: { sessionId: number; game: GameSource; lap: LapRow }) => void;
   _applySetupLoaded: (payload: {
     sessionId: number;
@@ -119,6 +120,13 @@ export const useSessionStore = create<State>((set, get) => ({
     if (!s.session) return;
     await window.electronAPI.sessionDeleteAnalysis({ id, game: s.session.game });
     set({ analyses: s.analyses.filter((a) => a.id !== id) });
+  },
+
+  assignLapSetup: async (lapId, setupId) => {
+    const s = get();
+    if (!s.session) return;
+    await window.electronAPI.lapAssignSetup({ lapId, setupId, game: s.session.game });
+    set({ laps: s.laps.map((l) => l.id === lapId ? { ...l, setup_id: setupId } : l) });
   },
 
   _applyLapAdded: ({ sessionId, lap }) => {

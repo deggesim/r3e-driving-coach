@@ -12,7 +12,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Alert } from "react-bootstrap";
-import type { SetupData } from "../../shared/types";
+import type { LapRow, SetupData } from "../../shared/types";
 import { useIPCStore } from "../store/ipcStore";
 import { useSessionStore } from "../store/sessionStore";
 import AceSetupPicker from "./AceSetupPicker";
@@ -31,8 +31,12 @@ const RealtimeAnalysis = () => {
   const streaming = useSessionStore((s) => s.streaming);
   const loadCurrent = useSessionStore((s) => s.loadCurrent);
 
+  const assignLapSetup = useSessionStore((s) => s.assignLapSetup);
+
   const [showPicker, setShowPicker] = useState(false);
   const [showSetupSelection, setShowSetupSelection] = useState(false);
+  const [pickerLap, setPickerLap] = useState<LapRow | null>(null);
+  const [pendingLapId, setPendingLapId] = useState<number | null>(null);
   const [flash, setFlash] = useState<{ variant: string; text: string } | null>(
     null,
   );
@@ -88,8 +92,14 @@ const RealtimeAnalysis = () => {
       const named: SetupData = setup.name
         ? setup
         : { ...setup, name: setup.carFound || "Setup" };
-      await window.electronAPI.sessionLoadSetup({ setup: named });
-      showFlash("success", `Setup caricato: ${named.name}`);
+      const { setupId } = await window.electronAPI.sessionLoadSetup({ setup: named });
+      if (pendingLapId != null) {
+        await assignLapSetup(pendingLapId, setupId);
+        setPendingLapId(null);
+        showFlash("success", `Setup ${named.name} caricato e assegnato al giro.`);
+      } else {
+        showFlash("success", `Setup caricato: ${named.name}`);
+      }
     } catch (err) {
       showFlash("danger", String(err));
     }
@@ -100,6 +110,17 @@ const RealtimeAnalysis = () => {
     try {
       await window.electronAPI.sessionReuseSetup({ setupId });
       showFlash("success", "Setup attivo aggiornato.");
+    } catch (err) {
+      showFlash("danger", String(err));
+    }
+  };
+
+  const handleLapReuseSetup = async (setupId: number): Promise<void> => {
+    const lapId = pickerLap?.id;
+    if (lapId == null) return;
+    try {
+      await assignLapSetup(lapId, setupId);
+      showFlash("success", "Setup assegnato al giro.");
     } catch (err) {
       showFlash("danger", String(err));
     }
@@ -151,7 +172,7 @@ const RealtimeAnalysis = () => {
       {/* Body: laps table (fixed height) + analyses section (scrollable) */}
       <div className="flex-grow-1 overflow-hidden p-3 d-flex flex-column" style={{ minHeight: 0 }}>
         <div className="flex-shrink-0">
-          <LapsTable setupById={setupById} live />
+          <LapsTable setupById={setupById} live onPickSetup={setPickerLap} />
         </div>
 
         <div className="flex-grow-1 d-flex flex-column overflow-hidden mt-3" style={{ minHeight: 0 }}>
@@ -196,6 +217,22 @@ const RealtimeAnalysis = () => {
             />
           )}
         </>
+      )}
+      {session && (
+        <SetupSelectionModal
+          show={pickerLap != null}
+          car={session.car}
+          track={session.track}
+          layout={session.layout}
+          game={session.game}
+          onClose={() => setPickerLap(null)}
+          onReuseSetup={handleLapReuseSetup}
+          onJsonPicker={() => {
+            setPendingLapId(pickerLap!.id);
+            setPickerLap(null);
+            setShowPicker(true);
+          }}
+        />
       )}
     </div>
   );

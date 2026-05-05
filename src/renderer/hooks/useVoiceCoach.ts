@@ -21,7 +21,8 @@ import { useGamepad } from "./useGamepad";
 export type VoiceCoachState = "idle" | "listening" | "processing" | "speaking";
 
 type UseVoiceCoachOptions = {
-  triggerButtonIndex: number;
+  triggerButtonIndex: number | null;
+  keyboardTriggerKey: string | null;
   enabled: boolean;
   azureTtsEnabled: boolean;
 };
@@ -190,6 +191,7 @@ const convertToWav = async (blob: Blob): Promise<ArrayBuffer> => {
 
 export const useVoiceCoach = ({
   triggerButtonIndex,
+  keyboardTriggerKey,
   enabled,
   azureTtsEnabled,
 }: UseVoiceCoachOptions): UseVoiceCoachResult => {
@@ -391,6 +393,29 @@ export const useVoiceCoach = ({
     onButtonPress: triggerListening,
     enabled,
   });
+
+  // Keyboard trigger
+  useEffect(() => {
+    if (!enabled || !keyboardTriggerKey) return;
+    const parts = keyboardTriggerKey.split("+");
+    const mainKey = parts[parts.length - 1];
+    const needsCtrl = parts.includes("Ctrl");
+    const needsAlt = parts.includes("Alt");
+    const needsShift = parts.includes("Shift");
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === mainKey &&
+        e.ctrlKey === needsCtrl &&
+        e.altKey === needsAlt &&
+        e.shiftKey === needsShift
+      ) {
+        e.preventDefault();
+        triggerListening();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [enabled, keyboardTriggerKey, triggerListening]);
 
   // Cleanup on unmount
   useEffect(() => {

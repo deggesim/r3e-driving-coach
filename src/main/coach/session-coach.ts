@@ -173,7 +173,7 @@ export const createSessionCoachEngine = (
       try {
         const stream = client.messages.stream({
           model,
-          max_tokens: 8000,
+          max_tokens: 16000,
           system: SESSION_SYSTEM_PROMPT,
           messages: [{ role: "user", content: prompt }],
         });

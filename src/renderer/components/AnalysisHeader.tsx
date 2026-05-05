@@ -86,7 +86,7 @@ const AnalysisHeader = ({
             <FontAwesomeIcon icon={faStop} className="me-1" /> Chiudi sessione
           </Button>
         )}
-        {isLive && sessionActive && (
+        {session && (isLive ? sessionActive : true) && (
           <Button size="sm" variant="outline-primary" onClick={onOpenPicker}>
             <FontAwesomeIcon icon={faGear} className="me-1" /> Carica setup
             {setups.length > 0 && ` (${setups.length})`}

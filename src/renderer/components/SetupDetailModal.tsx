@@ -1,17 +1,23 @@
-import { Modal } from "react-bootstrap";
-import type { SessionSetupRow } from "../../shared/types";
+import { Button, Modal } from "react-bootstrap";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import type { GameSource, SessionSetupRow } from "../../shared/types";
 import R3eSetupTabs from "./R3eSetupTabs";
 
 export type SetupDetailModalProps = {
   setupId: number | null;
   setupById: Map<number, SessionSetupRow>;
+  game?: GameSource;
   onClose: () => void;
+  onUse?: () => void;
 };
 
 export const SetupDetailModal = ({
   setupId,
   setupById,
+  game,
   onClose,
+  onUse,
 }: SetupDetailModalProps) => {
   if (setupId == null) return null;
 
@@ -34,11 +40,40 @@ export const SetupDetailModal = ({
       </Modal.Header>
       <Modal.Body className="setup-detail-body">
         {row.setup.params.length > 0 ? (
-          <R3eSetupTabs params={row.setup.params} />
+          game === "ace" ? (
+            <table className="setup-table w-100">
+              <thead>
+                <tr>
+                  <th>Categoria</th>
+                  <th>Parametro</th>
+                  <th>Valore</th>
+                </tr>
+              </thead>
+              <tbody>
+                {row.setup.params.map((p) => (
+                  <tr key={`${p.category}__${p.parameter}`}>
+                    <td className="text-dim">{p.category}</td>
+                    <td>{p.parameter}</td>
+                    <td className="setup-value">{p.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <R3eSetupTabs params={row.setup.params} />
+          )
         ) : (
           <p className="text-muted mb-0">Nessun parametro disponibile.</p>
         )}
       </Modal.Body>
+      {onUse && (
+        <Modal.Footer>
+          <Button size="sm" variant="outline-primary" onClick={onUse}>
+            <FontAwesomeIcon icon={faCheck} className="me-1" />
+            Usa questo setup
+          </Button>
+        </Modal.Footer>
+      )}
     </Modal>
   );
 };
