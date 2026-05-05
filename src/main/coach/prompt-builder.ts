@@ -133,10 +133,12 @@ export const buildPrompt = (
         parts.push(`- Frame overlap freno-gas: ${zone.overlapFrames}`);
       }
       if (zone.tcActivations > 0) {
-        parts.push(`- Attivazioni TC: ${zone.tcActivations}`);
+        const durMs = ((zone.tcActiveFrames ?? zone.tcActivations) * 16).toFixed(0);
+        parts.push(`- Attivazioni TC: ${zone.tcActivations} eventi (~${durMs}ms totale)`);
       }
       if (zone.absActivations > 0) {
-        parts.push(`- Attivazioni ABS: ${zone.absActivations}`);
+        const durMs = ((zone.absActiveFrames ?? zone.absActivations) * 16).toFixed(0);
+        parts.push(`- Attivazioni ABS: ${zone.absActivations} eventi (~${durMs}ms totale)`);
       }
       if (zone.avgTyrePressure) {
         const [fl, fr, rl, rr] = zone.avgTyrePressure;
@@ -392,8 +394,14 @@ const summarizeLapZones = (
     bits.push(`min ${z.minSpeedKmh.toFixed(0)}km/h`);
     bits.push(`freno ${(z.maxBrakePct * 100).toFixed(0)}%`);
     bits.push(`gas ${(z.avgThrottlePct * 100).toFixed(0)}%`);
-    if (z.tcActivations > 0) bits.push(`TC:${z.tcActivations}`);
-    if (z.absActivations > 0) bits.push(`ABS:${z.absActivations}`);
+    if (z.tcActivations > 0) {
+      const durMs = ((z.tcActiveFrames ?? z.tcActivations) * 16).toFixed(0);
+      bits.push(`TC:${z.tcActivations}ev/${durMs}ms`);
+    }
+    if (z.absActivations > 0) {
+      const durMs = ((z.absActiveFrames ?? z.absActivations) * 16).toFixed(0);
+      bits.push(`ABS:${z.absActivations}ev/${durMs}ms`);
+    }
     if (z.overlapFrames > 3) bits.push(`overlap:${z.overlapFrames}`);
     lines.push(`  - ${label} → ${bits.join(", ")}`);
   }

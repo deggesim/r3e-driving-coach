@@ -3,6 +3,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -47,8 +48,12 @@ type CustomTooltipProps = {
 
 const formatDist = (v: number) => `${Math.round(v)} m`;
 
+const ZONE_SIZE_M = 50;
+
 const PedalsTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (!active || !payload || payload.length === 0) return null;
+  const dist = label ?? 0;
+  const zone = Math.floor(dist / ZONE_SIZE_M);
   return (
     <div
       style={{
@@ -61,7 +66,7 @@ const PedalsTooltip = ({ active, payload, label }: CustomTooltipProps) => {
       }}
     >
       <div style={{ color: "#888", marginBottom: 4 }}>
-        {formatDist(label ?? 0)}
+        {formatDist(dist)} &nbsp;<span style={{ color: "#aaa" }}>zona {zone}</span>
       </div>
       {payload.map((p) => (
         <div key={p.dataKey} style={{ color: p.color }}>
@@ -75,6 +80,8 @@ const PedalsTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 const SpeedTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (!active || !payload || payload.length === 0) return null;
   const p = payload[0];
+  const dist = label ?? 0;
+  const zone = Math.floor(dist / ZONE_SIZE_M);
   return (
     <div
       style={{
@@ -87,7 +94,7 @@ const SpeedTooltip = ({ active, payload, label }: CustomTooltipProps) => {
       }}
     >
       <div style={{ color: "#888", marginBottom: 4 }}>
-        {formatDist(label ?? 0)}
+        {formatDist(dist)} &nbsp;<span style={{ color: "#aaa" }}>zona {zone}</span>
       </div>
       <div style={{ color: p.color }}>
         {p.name}: {Math.round(p.value)} km/h
@@ -328,6 +335,14 @@ const LapTelemetryCharts = ({ lap }: Props) => {
   };
   const onChartLeave = () => setHoverDist(null);
 
+  // Zone reference lines every 10 zones (500m) — labelled "Z0", "Z10", etc.
+  const ZONE_REF_STEP = 10;
+  const maxDist = data.length > 0 ? data[data.length - 1].dist : 0;
+  const zoneRefLines: number[] = [];
+  for (let z = ZONE_REF_STEP; z * ZONE_SIZE_M <= maxDist + ZONE_SIZE_M; z += ZONE_REF_STEP) {
+    zoneRefLines.push(z * ZONE_SIZE_M);
+  }
+
   const charts = (
     <div
       style={{
@@ -375,6 +390,15 @@ const LapTelemetryCharts = ({ lap }: Props) => {
               wrapperStyle={{ fontSize: 12, color: "#e8e8e8" }}
               iconType="plainline"
             />
+            {zoneRefLines.map((d) => (
+              <ReferenceLine
+                key={d}
+                x={d}
+                stroke="#3a3a3a"
+                strokeDasharray="2 4"
+                label={{ value: `Z${d / ZONE_SIZE_M}`, position: "top", fontSize: 9, fill: "#555" }}
+              />
+            ))}
             <Line
               type="monotone"
               dataKey="brake"
@@ -430,6 +454,14 @@ const LapTelemetryCharts = ({ lap }: Props) => {
               content={<SpeedTooltip />}
               cursor={{ stroke: "#555", strokeDasharray: "3 3" }}
             />
+            {zoneRefLines.map((d) => (
+              <ReferenceLine
+                key={d}
+                x={d}
+                stroke="#3a3a3a"
+                strokeDasharray="2 4"
+              />
+            ))}
             <Line
               type="monotone"
               dataKey="speed"

@@ -47,21 +47,48 @@ export function useSetupPicker({ session, setups, assignLapSetup, showFlash, exp
     }
   };
 
-  const handleReuseSetup = async (setupId: number): Promise<void> => {
+  const handleReuseSetup = async (row: SessionSetupRow): Promise<void> => {
     setShowSetupSelection(false);
     try {
-      await window.electronAPI.sessionReuseSetup({ setupId });
-      showFlash("success", "Setup attivo aggiornato.");
+      if (explicit && session) {
+        // Closed session: create a new setup row linked to this session
+        const named: SetupData = row.setup.name
+          ? row.setup
+          : { ...row.setup, name: row.setup.carFound || "Setup" };
+        await window.electronAPI.sessionLoadSetup({
+          setup: named,
+          sessionId: session.id,
+          game: session.game,
+        });
+        showFlash("success", `Setup caricato: ${named.name}`);
+      } else if (!explicit) {
+        await window.electronAPI.sessionReuseSetup({ setupId: row.id });
+        showFlash("success", "Setup attivo aggiornato.");
+      }
     } catch (err) {
       showFlash("danger", String(err));
     }
   };
 
-  const handleLapReuseSetup = async (setupId: number): Promise<void> => {
+  const handleLapReuseSetup = async (row: SessionSetupRow): Promise<void> => {
     const lapId = pickerLap?.id;
     if (lapId == null) return;
     try {
-      await assignLapSetup(lapId, setupId);
+      let targetSetupId = row.id;
+      // If the setup is not in the current session, copy it first so setup_id
+      // resolves correctly in setupById and persists on reload.
+      if (!setupById.has(row.id)) {
+        const named: SetupData = row.setup.name
+          ? row.setup
+          : { ...row.setup, name: row.setup.carFound || "Setup" };
+        const params =
+          explicit && session
+            ? { setup: named, sessionId: session.id, game: session.game }
+            : { setup: named };
+        const result = await window.electronAPI.sessionLoadSetup(params);
+        targetSetupId = result.setupId;
+      }
+      await assignLapSetup(lapId, targetSetupId);
       showFlash("success", "Setup assegnato al giro.");
     } catch (err) {
       showFlash("danger", String(err));

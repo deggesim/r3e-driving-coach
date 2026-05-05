@@ -12,7 +12,7 @@ interface Props {
   layout: string;
   game: GameSource;
   onClose: () => void;
-  onReuseSetup: (setupId: number) => void;
+  onReuseSetup: (row: SessionSetupRow) => void;
   onJsonPicker: () => void;
 }
 
@@ -153,7 +153,8 @@ const SetupSelectionModal = ({
         game={game}
         onClose={() => setSelectedId(null)}
         onUse={() => {
-          if (selectedId != null) onReuseSetup(selectedId);
+          const row = selectedId != null ? setupById.get(selectedId) : undefined;
+          if (row) onReuseSetup(row);
           setSelectedId(null);
           onClose();
         }}

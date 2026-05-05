@@ -131,8 +131,10 @@ export type ZoneData = {
   throttleFrames: number;
   coastFrames: number;
   overlapFrames: number;
-  tcActivations: number;
-  absActivations: number;
+  tcActivations: number;   // number of TC engagement events (rising edges)
+  absActivations: number;  // number of ABS engagement events (rising edges)
+  tcActiveFrames?: number; // total frames TC was cutting (duration = frames × 16ms)
+  absActiveFrames?: number;// total frames ABS was active (duration = frames × 16ms)
   brakeStartDist: number | null;
   brakeEndDist: number | null;
   throttlePickupDist: number | null;

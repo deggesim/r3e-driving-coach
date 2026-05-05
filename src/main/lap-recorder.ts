@@ -54,6 +54,14 @@ const buildBlipSet = (frames: CompactFrame[]): Set<CompactFrame> => {
   return blipSet;
 };
 
+const countTransitions = (frames: CompactFrame[], key: "tc" | "abs"): number => {
+  let count = 0;
+  for (let i = 1; i < frames.length; i++) {
+    if (frames[i - 1][key] === 0 && frames[i][key] > 0) count++;
+  }
+  return count;
+};
+
 const aggregateZones = (
   frames: CompactFrame[],
   layoutLength: number,
@@ -157,8 +165,10 @@ const aggregateZones = (
       throttleFrames: throttleFrames.length,
       coastFrames: coastFrames.length,
       overlapFrames: overlapFrames.length,
-      tcActivations: zoneFrames.filter((f) => f.tc > 0).length,
-      absActivations: zoneFrames.filter((f) => f.abs > 0).length,
+      tcActivations: countTransitions(zoneFrames, "tc"),
+      absActivations: countTransitions(zoneFrames, "abs"),
+      tcActiveFrames: zoneFrames.filter((f) => f.tc > 0).length,
+      absActiveFrames: zoneFrames.filter((f) => f.abs > 0).length,
       brakeStartDist,
       brakeEndDist,
       throttlePickupDist,
