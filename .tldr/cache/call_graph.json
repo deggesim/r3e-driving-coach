@@ -1,0 +1,1760 @@
+{
+  "edges": [
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "pollMock",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "generateMockFrame"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readInt32"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "pushStatus",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getTrackName"
+    },
+    {
+      "from_file": "src\\main\\coach\\voice-coach.ts",
+      "from_func": "createVoiceCoachEngine",
+      "to_file": "src\\main\\coach\\voice-coach.ts",
+      "to_func": "t"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "singleLapDeltaPhrase",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "decPartInfo"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "pushStatus",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "pushToRenderer"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "persistToDb",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "tx"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "createAdaptiveBaseline",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "updateZone"
+    },
+    {
+      "from_file": "src\\renderer\\components\\TTSManager.tsx",
+      "from_func": "TTSManager",
+      "to_file": "src\\renderer\\components\\TTSManager.tsx",
+      "to_func": "speakWelcomeWebSpeech"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\db\\db.ts",
+      "to_func": "getDb"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "t"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "closeSession"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readFloat"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "getAzureVoices",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "createAzureClient"
+    },
+    {
+      "from_file": "src\\renderer\\components\\TTSManager.tsx",
+      "from_func": "TTSManager",
+      "to_file": "src\\renderer\\components\\TTSManager.tsx",
+      "to_func": "stopCurrent"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "readStatic",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readFloat"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "parseFields",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "readProtoFloat"
+    },
+    {
+      "from_file": "src\\main\\coach\\voice-coach.ts",
+      "from_func": "createVoiceCoachEngine",
+      "to_file": "src\\main\\coach\\voice-coach.ts",
+      "to_func": "buildVoiceContext"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "cleanup"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "lookupCorner",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getTrackName"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "speakText"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "resolveNames",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getTrackName"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "generatePdfBuffer",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "buildPdfHtml"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "handleLapComplete",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "closeSession"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "closeTelemetryLog"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "isNullPtr"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "readStatic"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getTrackName"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "pollMock",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "generateMockLapFrames"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "generateMockFrame"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "cleanup"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "startMock",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "pollMock"
+    },
+    {
+      "from_file": "src\\renderer\\components\\SessionDetail.tsx",
+      "from_func": "handleReopen",
+      "to_file": "src\\renderer\\components\\SessionDetail.tsx",
+      "to_func": "loadCurrent"
+    },
+    {
+      "from_file": "src\\renderer\\components\\TTSManager.tsx",
+      "from_func": "TTSManager",
+      "to_file": "src\\renderer\\components\\TTSManager.tsx",
+      "to_func": "enqueue"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "getFloat",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "getFirst"
+    },
+    {
+      "from_file": "src\\main\\coach\\session-coach.ts",
+      "from_func": "createSessionCoachEngine",
+      "to_file": "src\\main\\coach\\session-coach.ts",
+      "to_func": "extractSection5"
+    },
+    {
+      "from_file": "src\\main\\coach\\voice-coach.ts",
+      "from_func": "refreshSession",
+      "to_file": "src\\main\\coach\\voice-coach.ts",
+      "to_func": "t"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "parseFrame",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readFloatArray"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "isNullPtr"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildPdfHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "buildSectionsHtml"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "parseFrame"
+    },
+    {
+      "from_file": "src\\main\\lap-recorder.ts",
+      "from_func": "aggregateZones",
+      "to_file": "src\\main\\lap-recorder.ts",
+      "to_func": "buildBlipSet"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "useVoiceCoach",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "convertToWav"
+    },
+    {
+      "from_file": "src\\main\\coach\\voice-coach.ts",
+      "from_func": "buildVoiceContext",
+      "to_file": "src\\shared\\format.ts",
+      "to_func": "formatLapTime"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "classifyVoiceIntent"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "preprocessTTSText",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "numberToItalian"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "readLen",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "readVarint"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildSessionHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "escapeHtml"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "startMock"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "getAnthropicApiKey"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "pushStatus"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "decodeCarSetup"
+    },
+    {
+      "from_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "from_func": "parseR3EJson",
+      "to_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "to_func": "categorize"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildPdfHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "escapeHtml"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\db\\db.ts",
+      "to_func": "seedCornersFromLap"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "handleLapComplete",
+      "to_file": "src\\main\\coach\\rule-engine.ts",
+      "to_func": "createRuleEngine"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readFloatArray"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "parseFields",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "readVarint"
+    },
+    {
+      "from_file": "src\\main\\coach\\prompt-builder.ts",
+      "from_func": "buildBrakeTempSummary",
+      "to_file": "src\\main\\coach\\prompt-builder.ts",
+      "to_func": "avg"
+    },
+    {
+      "from_file": "src\\main\\coach\\session-coach.ts",
+      "from_func": "createSessionCoachEngine",
+      "to_file": "src\\main\\coach\\session-coach.ts",
+      "to_func": "tableFor"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readDouble"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "rangeLapDeltaPhrase",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "singleLapDeltaPhrase"
+    },
+    {
+      "from_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "from_func": "parseR3EJson",
+      "to_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "to_func": "idToLabel"
+    },
+    {
+      "from_file": "src\\main\\lap-recorder.ts",
+      "from_func": "onLapComplete",
+      "to_file": "src\\main\\lap-recorder.ts",
+      "to_func": "aggregateZones"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "parseFrame",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readString"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "rangeSecondsPhrase",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "singleSecondsPhrase"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "resolveNames"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\db\\db.ts",
+      "to_func": "hasCornerNames"
+    },
+    {
+      "from_file": "src\\renderer\\components\\TTSManager.tsx",
+      "from_func": "TTSManager",
+      "to_file": "src\\renderer\\components\\TTSManager.tsx",
+      "to_func": "toArrayBuffer"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "useVoiceCoach",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "resetToIdle"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "synthesizeAzure"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "openTelemetryLog"
+    },
+    {
+      "from_file": "src\\main\\coach\\prompt-builder.ts",
+      "from_func": "buildPrompt",
+      "to_file": "src\\shared\\format.ts",
+      "to_func": "formatLapTime"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "isNullPtr"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "getAnthropicModel"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "createAceReader"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "poll"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "handleLapComplete"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "startSession"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "isNullPtr"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "handleAudio",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "resetToIdle"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "handleLapComplete",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "createAdaptiveBaseline"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "enrichSession",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "resolveNames"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\db\\db.ts",
+      "to_func": "saveTrackMap"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readFloatArray"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "openTelemetryFile",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getLayoutName"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "createR3EReader"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readString"
+    },
+    {
+      "from_file": "src\\main\\coach\\prompt-builder.ts",
+      "from_func": "buildPrompt",
+      "to_file": "src\\main\\coach\\prompt-builder.ts",
+      "to_func": "getSignificantZones"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "decPartInfo",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "numberToItalian"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\coach\\session-coach.ts",
+      "to_func": "createSessionCoachEngine"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "closeSession",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "pushToRenderer"
+    },
+    {
+      "from_file": "src\\renderer\\components\\TTSManager.tsx",
+      "from_func": "TTSManager",
+      "to_file": "src\\renderer\\components\\TTSManager.tsx",
+      "to_func": "speakWelcome"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "closeTelemetryFile"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildSectionsHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "escapeHtml"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "startSession",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "pushToRenderer"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "parseFrame",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readFloat"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "createAdaptiveBaseline",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "ema"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "_require"
+    },
+    {
+      "from_file": "src\\renderer\\components\\TTSManager.tsx",
+      "from_func": "TTSManager",
+      "to_file": "src\\renderer\\components\\TTSManager.tsx",
+      "to_func": "speakAzure"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "generateMockGameFrame"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readString"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "handleLapComplete",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "t"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "_require"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "preprocessTTSText",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "lapTimeToItalian"
+    },
+    {
+      "from_file": "src\\main\\coach\\rule-engine.ts",
+      "from_func": "createRuleEngine",
+      "to_file": "src\\main\\coach\\rule-engine.ts",
+      "to_func": "checkTcAbsAnomaly"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "pollMock"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "scheduleReconnect",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "tryConnect"
+    },
+    {
+      "from_file": "src\\main\\coach\\prompt-builder.ts",
+      "from_func": "buildSessionPrompt",
+      "to_file": "src\\shared\\format.ts",
+      "to_func": "formatLapTime"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readInt32"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "useVoiceCoach",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "handleAudio"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "singleSecondsPhrase",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "numberToItalian"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useIPC.ts",
+      "from_func": "useIPC",
+      "to_file": "src\\renderer\\hooks\\useIPC.ts",
+      "to_func": "setStatus"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildSetupTableHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "escapeHtml"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "readStatic"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "saveLap",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "pushToRenderer"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "scheduleReconnect"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "preprocessTTSText",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "singleSecondsPhrase"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readUint8"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "openTelemetryFile",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getCarName"
+    },
+    {
+      "from_file": "src\\main\\lap-recorder.ts",
+      "from_func": "aggregateZones",
+      "to_file": "src\\main\\lap-recorder.ts",
+      "to_func": "countTransitions"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "getAzureVoices"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\game-adapter.ts",
+      "to_func": "toGameFrame"
+    },
+    {
+      "from_file": "src\\main\\coach\\session-coach.ts",
+      "from_func": "createSessionCoachEngine",
+      "to_file": "src\\main\\coach\\prompt-builder.ts",
+      "to_func": "buildSessionPrompt"
+    },
+    {
+      "from_file": "src\\main\\coach\\voice-coach.ts",
+      "from_func": "createVoiceCoachEngine",
+      "to_file": "src\\main\\coach\\voice-coach.ts",
+      "to_func": "refreshSession"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "startSession",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "enrichSession"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "pollMock",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "pollMock"
+    },
+    {
+      "from_file": "src\\renderer\\components\\SessionHistory.tsx",
+      "from_func": "handleRowClick",
+      "to_file": "src\\renderer\\components\\SessionHistory.tsx",
+      "to_func": "setDetail"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "rangeSecondsPhrase",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "decPartInfo"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "buildCornerMap"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "parseFrame",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readDouble"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "scheduleReconnect"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "lapTimeToItalian",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "numberToItalian"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "readStatic"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "generateSessionPdfBuffer",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "buildSessionHtml"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "openSHM"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "preprocessTTSText",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "singleLapDeltaPhrase"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "buildWhere"
+    },
+    {
+      "from_file": "src\\main\\lap-recorder.ts",
+      "from_func": "createLapRecorder",
+      "to_file": "src\\main\\lap-recorder.ts",
+      "to_func": "aggregateZones"
+    },
+    {
+      "from_file": "src\\main\\lap-recorder.ts",
+      "from_func": "aggregateZones",
+      "to_file": "src\\main\\lap-recorder.ts",
+      "to_func": "avgByWheel"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readUint8"
+    },
+    {
+      "from_file": "src\\main\\coach\\rule-engine.ts",
+      "from_func": "createRuleEngine",
+      "to_file": "src\\main\\coach\\rule-engine.ts",
+      "to_func": "checkBrakeTemp"
+    },
+    {
+      "from_file": "src\\renderer\\components\\AceSetupPicker.tsx",
+      "from_func": "handleConfirm",
+      "to_file": "src\\renderer\\components\\AceSetupPicker.tsx",
+      "to_func": "handleClose"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "loadSessionDetail",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "t"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "getVoiceCoach",
+      "to_file": "src\\main\\coach\\voice-coach.ts",
+      "to_func": "createVoiceCoachEngine"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "saveLap"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "transcribeAzure"
+    },
+    {
+      "from_file": "src\\main\\lap-recorder.ts",
+      "from_func": "aggregateZones",
+      "to_file": "src\\main\\lap-recorder.ts",
+      "to_func": "avgArr"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "handleLapComplete",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "buildCornerMap"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "writeFrame"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "poll"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "decodeCarSetup",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "getFloat"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "decodeCarSetup",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "push"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "isNullPtr"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "parseFields",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "readLen"
+    },
+    {
+      "from_file": "src\\main\\lap-recorder.ts",
+      "from_func": "avgByWheel",
+      "to_file": "src\\main\\lap-recorder.ts",
+      "to_func": "avgArr"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "loadSessionDetail"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "scheduleReconnect"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "scheduleReconnect",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "tryConnect"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "singleLapDeltaPhrase",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "numberToItalian"
+    },
+    {
+      "from_file": "src\\renderer\\components\\TTSManager.tsx",
+      "from_func": "speakWelcome",
+      "to_file": "src\\renderer\\components\\TTSManager.tsx",
+      "to_func": "speakWelcomeWebSpeech"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "createAdaptiveBaseline",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "detectDeviations"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "enrichSession"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "poll"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "writeTelemetryEntry"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "decodeCarSetup",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "mescolaName"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "numberToItalian",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "numberToItalian"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useIPC.ts",
+      "from_func": "useIPC",
+      "to_file": "src\\renderer\\hooks\\useIPC.ts",
+      "to_func": "setFrame"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "resolveNames",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getCarClassName"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "openSHM"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "decodeCarSetup",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "parseFields"
+    },
+    {
+      "from_file": "src\\main\\coach\\prompt-builder.ts",
+      "from_func": "buildBrakeTempSummary",
+      "to_file": "src\\main\\coach\\prompt-builder.ts",
+      "to_func": "peak"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "decodeBuffer"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "writeTelemetryEntry"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "poll"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "openTelemetryLog"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "cleanup",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "closeTelemetryLog"
+    },
+    {
+      "from_file": "src\\renderer\\components\\AnalysisList.tsx",
+      "from_func": "handleDeleteConfirm",
+      "to_file": "src\\renderer\\components\\AnalysisList.tsx",
+      "to_func": "deleteAnalysis"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "useVoiceCoach",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "toArrayBuffer"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "createAdaptiveBaseline",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "makeDeviation"
+    },
+    {
+      "from_file": "src\\main\\coach\\track-map-builder.ts",
+      "from_func": "buildTrackMap",
+      "to_file": "src\\main\\coach\\track-map-builder.ts",
+      "to_func": "downsample"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readInt32"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "pollMock",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "pollMock"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "scheduleReconnect"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readFloat"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "handleAudio",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "toArrayBuffer"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "handleKeyDown",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "triggerListening"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "detectBoundaries"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "buildCornerMap",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "lookupCorner"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "openTelemetryFile"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "generateSessionPdfBuffer"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "useVoiceCoach",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "playDeactivationSound"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "resolveNames",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getCarName"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "pushToRenderer"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "openTelemetryFile",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "sanitize"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "rangeLapDeltaPhrase",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "decPartInfo"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "createAdaptiveBaseline"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "synthesizeAzure",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "preprocessTTSText"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "decodeCarSetup",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "getAll"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\db\\db.ts",
+      "to_func": "getTrackMap"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "pollMock",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "generateMockGameFrame"
+    },
+    {
+      "from_file": "src\\renderer\\components\\TTSManager.tsx",
+      "from_func": "TTSManager",
+      "to_file": "src\\renderer\\components\\TTSManager.tsx",
+      "to_func": "speakNext"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "pollMock",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "generateMockFrames"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "convertToWav",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "writeStr"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "pushStatus",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getLayoutName"
+    },
+    {
+      "from_file": "src\\renderer\\components\\TTSManager.tsx",
+      "from_func": "speakWelcome",
+      "to_file": "src\\renderer\\components\\TTSManager.tsx",
+      "to_func": "toArrayBuffer"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\coach\\rule-engine.ts",
+      "to_func": "createAlertDispatcher"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "useVoiceCoach",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "pickMimeType"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "startSession",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "closeSession"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readFloat"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "pollMock"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "getVoiceCoach"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "poll"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "decodeBuffer"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "useVoiceCoach",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "triggerListening"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "preprocessTTSText",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "rangeLapDeltaPhrase"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "loadR3EData"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "cleanup"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "generateMockLapFrames"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "preprocessTTSText",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "rangeSecondsPhrase"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "lookupCorner",
+      "to_file": "src\\main\\db\\db.ts",
+      "to_func": "getCornerName"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\coach\\track-map-builder.ts",
+      "to_func": "buildTrackMap"
+    },
+    {
+      "from_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "from_func": "parseR3EJson",
+      "to_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "to_func": "formatValue"
+    },
+    {
+      "from_file": "src\\renderer\\components\\LapsTable.tsx",
+      "from_func": "buildPageWindow",
+      "to_file": "src\\renderer\\components\\LapsTable.tsx",
+      "to_func": "addPage"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\db\\db.ts",
+      "to_func": "getCornerName"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildPdfHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "buildSetupTableHtml"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "lookupCorner"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "lookupCorner",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getLayoutName"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "resolveNames",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getLayoutName"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "generateMockFrames"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getLayoutName"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "speakText",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "synthesizeAzure"
+    },
+    {
+      "from_file": "src\\main\\coach\\prompt-builder.ts",
+      "from_func": "summarizeLapZones",
+      "to_file": "src\\main\\coach\\prompt-builder.ts",
+      "to_func": "getSignificantZones"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "handleLapComplete",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "saveLap"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "saveLap",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "t"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "synthesizeAzure",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "createAzureClient"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "detectDeviations",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "makeDeviation"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "openSHM",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "isNullPtr"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildSessionHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "postProcess"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "tryConnect"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "createAdaptiveBaseline",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "loadFromDb"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "createAdaptiveBaseline",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "tx"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\lap-recorder.ts",
+      "to_func": "createLapRecorder"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "startMock"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "getVoiceCoach",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "getAnthropicModel"
+    },
+    {
+      "from_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "from_func": "handleConfirm",
+      "to_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "to_func": "handleClose"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "openTelemetryFile",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getTrackName"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "getVarint",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "getFirst"
+    },
+    {
+      "from_file": "src\\main\\coach\\prompt-builder.ts",
+      "from_func": "buildPrompt",
+      "to_file": "src\\main\\coach\\prompt-builder.ts",
+      "to_func": "buildBrakeTempSummary"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "pushStatus",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getCarName"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "_require"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readFloatArray"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "scheduleReconnect"
+    },
+    {
+      "from_file": "src\\main\\tts\\azure-tts.ts",
+      "from_func": "singleSecondsPhrase",
+      "to_file": "src\\main\\tts\\azure-tts.ts",
+      "to_func": "decPartInfo"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "parseFrame",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readInt32"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\coach\\voice-coach.ts",
+      "to_func": "createVoiceCoachEngine"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\zone-tracker.ts",
+      "to_func": "createZoneTracker"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\coach\\rule-engine.ts",
+      "to_func": "createRuleEngine"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "tryConnect"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildSessionHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "fmtTime"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "detectBoundaries"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "tryConnect",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "scheduleReconnect"
+    },
+    {
+      "from_file": "src\\main\\db\\db.ts",
+      "from_func": "getDb",
+      "to_file": "src\\main\\db\\db.ts",
+      "to_func": "initSchema"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "parseFrame"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "sanitize"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildPdfHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "fmtTime"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "decodeBuffer"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "startMock",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "pollMock"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "cleanup"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "decodeCarSetup",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "getVarint"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "setupPipeline",
+      "to_file": "src\\main\\r3e\\r3e-data-loader.ts",
+      "to_func": "getCarName"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-struct.ts",
+      "to_func": "readString"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "poll",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readInt32"
+    },
+    {
+      "from_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "from_func": "handleParse",
+      "to_file": "src\\renderer\\components\\R3eSetupPicker.tsx",
+      "to_func": "parseR3EJson"
+    },
+    {
+      "from_file": "src\\renderer\\components\\SessionHistory.tsx",
+      "from_func": "handleRowClick",
+      "to_file": "src\\renderer\\components\\SessionHistory.tsx",
+      "to_func": "loadById"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "closeSession",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "t"
+    },
+    {
+      "from_file": "src\\main\\pdf-generator.ts",
+      "from_func": "buildSectionsHtml",
+      "to_file": "src\\main\\pdf-generator.ts",
+      "to_func": "postProcess"
+    },
+    {
+      "from_file": "src\\main\\r3e\\r3e-reader.ts",
+      "from_func": "createR3EReader",
+      "to_file": "src\\main\\r3e\\r3e-reader.ts",
+      "to_func": "poll"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "updateZone",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "ema"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "from_func": "decodeCarSetup",
+      "to_file": "src\\main\\ace\\ace-setup-reader.ts",
+      "to_func": "getFirst"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "speakText",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "pushToRenderer"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "readStatic",
+      "to_file": "src\\main\\ace\\ace-struct.ts",
+      "to_func": "readString"
+    },
+    {
+      "from_file": "src\\main\\coach\\prompt-builder.ts",
+      "from_func": "buildSessionPrompt",
+      "to_file": "src\\main\\coach\\prompt-builder.ts",
+      "to_func": "summarizeLapZones"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "startSession",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "t"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "useVoiceCoach",
+      "to_file": "src\\renderer\\hooks\\useGamepad.ts",
+      "to_func": "useGamepad"
+    },
+    {
+      "from_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "from_func": "createAdaptiveBaseline",
+      "to_file": "src\\main\\coach\\adaptive-baseline.ts",
+      "to_func": "persistToDb"
+    },
+    {
+      "from_file": "src\\main\\db\\db.ts",
+      "from_func": "initSchema",
+      "to_file": "src\\main\\db\\db.ts",
+      "to_func": "hasColumn"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useIPC.ts",
+      "from_func": "useIPC",
+      "to_file": "src\\renderer\\hooks\\useIPC.ts",
+      "to_func": "setLastLap"
+    },
+    {
+      "from_file": "src\\main\\main.ts",
+      "from_func": "loadSessionDetail",
+      "to_file": "src\\main\\main.ts",
+      "to_func": "enrichSession"
+    },
+    {
+      "from_file": "src\\main\\ace\\ace-reader.ts",
+      "from_func": "createAceReader",
+      "to_file": "src\\main\\ace\\ace-reader.ts",
+      "to_func": "_require"
+    },
+    {
+      "from_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "from_func": "useVoiceCoach",
+      "to_file": "src\\renderer\\hooks\\useVoiceCoach.ts",
+      "to_func": "playActivationSound"
+    },
+    {
+      "from_file": "src\\renderer\\components\\SessionHistory.tsx",
+      "from_func": "buildPageWindow",
+      "to_file": "src\\renderer\\components\\SessionHistory.tsx",
+      "to_func": "addPage"
+    }
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "timestamp": 1778010182.7334876
+}
