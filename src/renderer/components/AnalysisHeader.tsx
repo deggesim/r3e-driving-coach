@@ -54,14 +54,15 @@ const AnalysisHeader = ({
             {currentTrack} {session.layout_name ?? session.layout}
           </span>
           <span className="deb-sep">·</span>
+          <Badge
+            bg={session.game === "ace" ? "info" : "secondary"}
+            className="ms-1"
+          >
+            {session.game === "ace" ? "ACE" : "R3E"}
+          </Badge>
           <Badge bg={sessionActive ? "success" : "secondary"}>
             {sessionActive ? "Attiva" : "Chiusa"}
           </Badge>
-          {!isLive && (
-            <Badge bg="info" className="ms-1">
-              Storica
-            </Badge>
-          )}
           <span className="deb-sep">·</span>
           <span className="text-muted">
             {laps.length} giri

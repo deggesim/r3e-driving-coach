@@ -136,7 +136,7 @@ const SetupSelectionModal = ({
             className="w-100"
           >
             <FontAwesomeIcon icon={faFileCode} className="me-2" />
-            Carica da JSON
+            {game === "ace" ? "Seleziona" : "Carica da JSON"}
           </Button>
         </Modal.Body>
 

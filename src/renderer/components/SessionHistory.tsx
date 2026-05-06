@@ -14,12 +14,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useMemo, useState } from "react";
-import { Badge, Button, Form, Modal, Spinner } from "react-bootstrap";
-import type { GameSource, SessionRow } from "../../shared/types";
+import { Badge, Button, Container, Form, Modal } from "react-bootstrap";
 import { formatLapTime } from "../../shared/format";
+import type { GameSource, SessionRow } from "../../shared/types";
+import { MOCK_DETAILS, MOCK_SESSIONS } from "../mocks/mockData";
 import { useSessionStore } from "../store/sessionStore";
 import { useSettingsStore } from "../store/settingsStore";
-import { MOCK_SESSIONS, MOCK_DETAILS } from "../mocks/mockData";
 import SessionDetail from "./SessionDetail";
 
 const PAGE_SIZE = 10;
@@ -206,12 +206,8 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
   }
 
   return (
-    <div className="session-history h-100 d-flex flex-column overflow-hidden">
-      <div className="px-3 pt-3 pb-2 flex-shrink-0 d-flex align-items-center gap-2">
-        <span className="sh-title">Elenco sessioni</span>
-        {loading && <Spinner size="sm" variant="danger" />}
-      </div>
-
+    <Container fluid className="session-history p-4">
+      <h2 className="fs-5 fw-bold mb-4">Elenco sessioni</h2>
       <div className="sh-filter-bar flex-shrink-0">
         <Form.Select
           size="sm"
@@ -484,7 +480,7 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
           </Button>
         </Modal.Footer>
       </Modal>
-    </div>
+    </Container>
   );
 };
 

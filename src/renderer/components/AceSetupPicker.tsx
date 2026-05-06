@@ -131,8 +131,8 @@ const AceSetupPicker = ({
     setCars([]);
     setTracks([]);
     setFiles([]);
-    setSelectedCar(expectedCar);
-    setSelectedTrack(expectedTrack);
+    setSelectedCar("");
+    setSelectedTrack("");
     setSelectedFile(null);
     setError(null);
     onClose();
