@@ -63,7 +63,6 @@ const App = () => {
     answer,
   } = useVoiceCoach({
     triggerButtonIndex: gamepadButton,
-    keyboardTriggerKey: keyboardVoiceKey,
     enabled: ttsEnabled && !capturingVoiceInput,
     azureTtsEnabled,
   });

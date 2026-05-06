@@ -397,6 +397,7 @@ export type ElectronAPI = {
   onFrame: (callback: (data: R3EFrame) => void) => void;
   onLapComplete: (callback: (data: LapRecord) => void) => void;
   onStatus: (callback: (data: GameStatus) => void) => void;
+  onInputTrigger: (callback: () => void) => void;
   onVoiceChunk: (callback: (data: { token: string }) => void) => void;
   onVoiceDone: (callback: (data: { answer: string }) => void) => void;
   onVoiceAudio: (callback: (data: unknown) => void) => void;

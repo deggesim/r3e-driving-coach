@@ -16,13 +16,11 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useGamepad } from "./useGamepad";
 
 export type VoiceCoachState = "idle" | "listening" | "processing" | "speaking";
 
 type UseVoiceCoachOptions = {
   triggerButtonIndex: number | null;
-  keyboardTriggerKey: string | null;
   enabled: boolean;
   azureTtsEnabled: boolean;
 };
@@ -191,7 +189,6 @@ const convertToWav = async (blob: Blob): Promise<ArrayBuffer> => {
 
 export const useVoiceCoach = ({
   triggerButtonIndex,
-  keyboardTriggerKey,
   enabled,
   azureTtsEnabled,
 }: UseVoiceCoachOptions): UseVoiceCoachResult => {
@@ -387,35 +384,46 @@ export const useVoiceCoach = ({
     };
   }, [enabled, azureTtsEnabled, resetToIdle]);
 
-  // Gamepad trigger
-  useGamepad({
-    buttonIndex: triggerButtonIndex,
-    onButtonPress: triggerListening,
-    enabled,
-  });
-
-  // Keyboard trigger
+  // Global input trigger from main process — handles keyboard shortcut.
   useEffect(() => {
-    if (!enabled || !keyboardTriggerKey) return;
-    const parts = keyboardTriggerKey.split("+");
-    const mainKey = parts[parts.length - 1];
-    const needsCtrl = parts.includes("Ctrl");
-    const needsAlt = parts.includes("Alt");
-    const needsShift = parts.includes("Shift");
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.key === mainKey &&
-        e.ctrlKey === needsCtrl &&
-        e.altKey === needsAlt &&
-        e.shiftKey === needsShift
-      ) {
-        e.preventDefault();
-        triggerListening();
-      }
+    if (!enabled) return;
+    window.electronAPI.onInputTrigger(triggerListening);
+    return () => {
+      window.electronAPI.removeAllListeners("input:trigger");
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [enabled, keyboardTriggerKey, triggerListening]);
+  }, [enabled, triggerListening]);
+
+  // Gamepad trigger — poll navigator.getGamepads() in the renderer.
+  // backgroundThrottling:false on the BrowserWindow keeps this running at
+  // full rate even when the simulator is in the foreground.
+  const prevGamepadRef = useRef<boolean>(false);
+  useEffect(() => {
+    if (!enabled || triggerButtonIndex === null) return;
+
+    // Seed prevGamepadRef with the current button state so that a button still
+    // held from the settings-capture phase does not fire a spurious trigger.
+    const snapshot = navigator.getGamepads();
+    for (const gp of snapshot) {
+      if (!gp) continue;
+      prevGamepadRef.current = gp.buttons[triggerButtonIndex]?.pressed ?? false;
+      break;
+    }
+
+    const id = setInterval(() => {
+      const gamepads = navigator.getGamepads();
+      for (const gp of gamepads) {
+        if (!gp) continue;
+        const pressed = gp.buttons[triggerButtonIndex]?.pressed ?? false;
+        if (pressed && !prevGamepadRef.current) triggerListening();
+        prevGamepadRef.current = pressed;
+        break;
+      }
+    }, 100);
+    return () => {
+      clearInterval(id);
+      prevGamepadRef.current = false;
+    };
+  }, [enabled, triggerButtonIndex, triggerListening]);
 
   // Cleanup on unmount
   useEffect(() => {

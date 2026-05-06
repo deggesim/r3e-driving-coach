@@ -10,6 +10,7 @@
 
 import type BetterSqlite3 from "better-sqlite3";
 import { app, BrowserWindow, ipcMain } from "electron";
+import { createInputManager, type InputManager } from "./input-manager.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -105,6 +106,10 @@ const createWindow = (): void => {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Keep timers running at full rate when the window is not focused so
+      // that navigator.getGamepads() polling in the renderer keeps working
+      // while the user is driving in the simulator.
+      backgroundThrottling: false,
     },
   });
 
@@ -224,6 +229,8 @@ const setupPipeline = (): void => {
       | undefined;
   });
 
+  let inputManager: InputManager | null = null;
+
   ipcMain.handle("config:set", (_event, key: string, value: unknown) => {
     db.prepare(
       "INSERT OR REPLACE INTO app_config (key, value) VALUES (?, ?)",
@@ -233,6 +240,9 @@ const setupPipeline = (): void => {
     if (key === "telemetryLogEnabled") {
       telemetryEnabled = String(value) === "true";
       if (!telemetryEnabled) closeTelemetryFile();
+    }
+    if (key === "keyboardVoiceKey") {
+      inputManager?.setKeyboard(String(value) || null);
     }
   });
 
@@ -1517,9 +1527,22 @@ const setupPipeline = (): void => {
     "UPDATE sessions_ace SET ended_at = ? WHERE ended_at IS NULL",
   ).run(crashCloseTs);
 
+  // Global input listener — works even when the app window is not focused.
+  inputManager = createInputManager(() => {
+    pushToRenderer("input:trigger", {});
+  });
+
+  const kbKey = (
+    db.prepare("SELECT value FROM app_config WHERE key = ?").get("keyboardVoiceKey") as
+      | { value: string }
+      | undefined
+  )?.value;
+  if (kbKey) inputManager.setKeyboard(kbKey);
+
   // Ensure the active session is closed when the app exits normally
   app.on("before-quit", () => {
     closeSession("app closing");
+    inputManager?.destroy();
   });
 
   // Start both readers

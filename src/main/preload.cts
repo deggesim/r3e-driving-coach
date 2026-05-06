@@ -18,6 +18,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("status", (_event, data) => callback(data));
   },
 
+  // Global input trigger (Main → Renderer) — fires when keyboard shortcut or
+  // gamepad button is pressed, regardless of window focus.
+  onInputTrigger: (callback: () => void) => {
+    ipcRenderer.on("input:trigger", () => callback());
+  },
+
   // Voice coach push channels (Main → Renderer)
   onVoiceChunk: (callback: (data: unknown) => void) => {
     ipcRenderer.on("coach:voiceChunk", (_event, data) => callback(data));
