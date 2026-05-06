@@ -610,13 +610,12 @@ const setupPipeline = (): void => {
   });
 
   aceReader.on("ace:frame", (frame: GameFrame) => {
-    // Populate car as soon as the first AC_LIVE frame makes it available
-    if (!currentCar) {
-      const info = aceReader.getSessionInfo();
-      if (info.car) {
-        currentCar = info.car;
-        pushStatus();
-      }
+    // Update car from the first valid AC_LIVE frame; also re-sync if it was
+    // previously set to "0" or another placeholder before the car was loaded.
+    const info = aceReader.getSessionInfo();
+    if (info.car && info.car !== currentCar) {
+      currentCar = info.car;
+      pushStatus();
     }
     if (currentSessionId) {
       zoneTracker.update(frame);

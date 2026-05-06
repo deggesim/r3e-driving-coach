@@ -45,7 +45,7 @@ Azioni concrete che il pilota può applicare al prossimo giro, in ordine di prio
 Massimo 3 frasi, senza markdown (no asterischi, no grassetto). Questa sezione viene letta ad alta voce — menziona SOLO il problema più critico del giro con il dato numerico e l'unica azione correttiva prioritaria per il giro successivo. Non elencare tutto: concentrati su un punto solo.
 
 Regole:
-- Usa il nome ufficiale delle curve quando disponibile
+- Usa il nome delle curve SOLO se esplicitamente fornito nei dati della sessione. NON inventare o dedurre nomi di curve da conoscenze esterne sul circuito. Se i dati riportano solo "@XXXm zona N", usa ESCLUSIVAMENTE quella notazione senza aggiungere nomi inventati
 - Ogni osservazione deve includere almeno un dato numerico
 - Temperatura freni ideale: 550°C ±137.5°C (finestra 413-688°C)
 - Pressioni gomme espresse in PSI per Assetto Corsa EVO, in kPa per R3E (converti 1 bar = 14.5038 PSI)
@@ -370,7 +370,7 @@ Questa sezione viene letta ad alta voce — NO elenchi, NO tabelle, NO intestazi
 ---
 
 ## Regole Generali
-- Usa @XXXm per posizione + nome curva ufficiale quando disponibile.
+- Usa @XXXm per posizione + nome curva SOLO se il nome è esplicitamente fornito nei dati della sessione. NON inventare o dedurre nomi di curve da conoscenze esterne sul circuito. Se i dati mostrano solo "@XXXm zona N", usa ESCLUSIVAMENTE quella notazione senza aggiungere nomi inventati.
 - Temperatura freni ideale: 550°C ±137.5°C (finestra 413-688°C). Se valore = -1, ignora.
 - Pressioni gomme: PSI per ACE, kPa per R3E (1 bar = 14.5038 PSI).
 - R3E Leaderboard: gomme fisse 85°C → non è un problema da segnalare.

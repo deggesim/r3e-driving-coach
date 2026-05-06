@@ -245,9 +245,11 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       const gfxBuf = decodeBuffer(gfxView, ACE_GRAPHIC_BUF);
       const status = readInt32(gfxBuf, GFX.status);
 
-      // Car model is readable even when paused — update cache opportunistically
+      // Car model is readable even when paused — update cache opportunistically.
+      // Require length > 1 to reject single-char placeholders like "0" that ACE
+      // may write before a car is fully loaded.
       const carModelEarly = readString(gfxBuf, GFX.carModel, 33);
-      if (carModelEarly.length > 0) cachedCarModel = carModelEarly;
+      if (carModelEarly.length > 1) cachedCarModel = carModelEarly;
 
       if (firstPoll) {
         const wx = readFloat(gfxBuf, GFX.carCoordinates + 0 * 4);
@@ -321,9 +323,11 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
         // TC: phy_tc_intensity (PHY offset 204) is the only reliable field in ACE.
         // gfx_tcActive (GFX offset 45) and phy_tcinAction (PHY offset 672) are always 0.
         tcActive: tcIntensity > 0 || tcActive > 0 || tcinAction > 0 ? 1 : 0,
-        // ABS: phy_abs_intensity (PHY offset 252) pulsates during ABS modulation.
+        // ABS: phy_abs_intensity (PHY offset 252) pulsates during ABS modulation but has a
+        // residual non-zero decay after braking ends. Guard on brake > 0.05 to prevent false
+        // positives in acceleration zones immediately following heavy braking.
         // gfx_absActive (GFX offset 46) and phy_absInAction (PHY offset 676) are always 0.
-        absActive: absIntensity > 0 || absActive > 0 || absInAction > 0 ? 1 : 0,
+        absActive: brake > 0.05 && (absIntensity > 0 || absActive > 0 || absInAction > 0) ? 1 : 0,
         brakeTempFL: brakeTempArr[0] ?? -1,
         brakeTempFR: brakeTempArr[1] ?? -1,
         brakeTempRL: brakeTempArr[2] ?? -1,
