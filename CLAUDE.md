@@ -44,17 +44,18 @@ Active game selected via Settings (R3E | ACE)
           |          |                    TTSManager (Azure TTS / Web Speech)
           |
           +-- onLapComplete → LapRecorder → AdaptiveBaseline → RuleEngine (P3 post-corner)
-                                                |
-                                           SQLite DB (laps_*, zones_json)
-                                                |
-                             [User clicks "Esegui analisi"]
-                                                |
-                                      SessionCoachEngine → Claude API → Template v3
-                                                |                         |
-                                         session_analyses_*         PdfGenerator
-                                         (versioned, multiple)
+                                    |               |
+                             TrackMapBuilder    SQLite DB (laps_*, zones_json, frames_blob)
+                             (world-pos frames)      |
+                             → track_maps table      |
+                                                [User clicks "Esegui analisi"]
+                                                     |
+                                          SessionCoachEngine → Claude API → Template v3
+                                                     |                         |
+                                              session_analyses_*         PdfGenerator
+                                              (versioned, multiple)
 
-Gamepad button held
+Gamepad button held (or keyboard shortcut via InputManager)
     → MediaRecorder (getUserMedia)
     → IPC: sttTranscribe (Azure STT)
     → IPC: voiceQuery
@@ -68,14 +69,15 @@ Gamepad button held
 - **main.ts** — Electron entry point; wires IPC handlers, selects R3E/ACE reader based on `activeGame` config, manages session/lap lifecycle in SQLite
 - **preload.cts** — Context bridge exposing `window.electronAPI` to renderer (CommonJS module, `.cts` extension required by Electron)
 - **game-adapter.ts** — Projects R3EFrame → GameFrame (unified 7-field struct: lapDistance, tcActive, absActive, brakeTemps FL/FR/RL/RR). ACE reader emits GameFrame natively
+- **input-manager.ts** — Registers global keyboard shortcuts via Electron `globalShortcut`. Fires `onInputTrigger` push event to renderer when the configured key is pressed. Non-Windows stub returns no-ops
+- **lap-recorder.ts** — Attaches to reader, aggregates frames into 50m zones with driving metrics, handles 2-lap calibration phase
+- **zone-tracker.ts** — Stateful tracker for current 50m zone during a lap (feeds RuleEngine real-time checks)
 
 #### `r3e/`
 
 - **r3e-struct.ts** — R3E shared memory struct layout (v14.0+, 1324 bytes), Pack=4 alignment, auto-computed offsets, read helpers
 - **r3e-reader.ts** — Opens `$R3E` via `koffi` + kernel32.dll, polls at 16ms, emits `frame`, `lapComplete`, `connected/disconnected`. Auto-enters mock mode on non-Windows
 - **r3e-data-loader.ts** — Loads `r3e-data.json` from the R3E Steam install; resolves numeric IDs → display names for car, track, and layout. Used in prompts and UI; DB always stores numeric IDs for R3E
-- **lap-recorder.ts** — Attaches to reader, aggregates frames into 50m zones with driving metrics, handles 2-lap calibration phase
-- **zone-tracker.ts** — Stateful tracker for current 50m zone during a lap (feeds RuleEngine real-time checks)
 
 #### `ace/`
 
@@ -89,6 +91,7 @@ Gamepad button held
 - **rule-engine.ts** — AlertDispatcher (priority queue, P1>P2>P3, dedup per zone/type/lap, 4s silence window) + RuleEngine (frame-level P1/P2, post-lap P3)
 - **session-coach.ts** — On-demand session analysis engine (`createSessionCoachEngine`). Loads all laps + setups + prior analyses for a session, builds session-level prompt, streams Claude response, persists versioned `SessionAnalysisRow` to `session_analyses_*`. Multiple analyses per session supported (incremental version counter). Extracts section [5] (max 3 sentences) for TTS.
 - **prompt-builder.ts** — Builds Claude prompt from session data + laps + setups + deviations + corner names for Template v3 output. Exports `buildSessionPrompt` and `SESSION_SYSTEM_PROMPT`
+- **track-map-builder.ts** — Derives a 2D SVG path of the circuit from a lap's world-space frames (wx/wz). Down-samples to ~100ms intervals, filters outliers, returns `TrackMapGeometry` (svgPath + bounds). Called after lap completion; result persisted to `track_maps` table
 - **voice-coach.ts** — Handles free-form voice queries; builds session context from SQLite (laps, zones, deviations, corner names), streams Claude response in Italian (max 3-4 sentences, radio tone)
 
 #### `tts/`
@@ -97,7 +100,7 @@ Gamepad button held
 
 #### `db/`
 
-- **db.ts** — `better-sqlite3` wrapper. Schema has separate tables for each game (see Database Schema below). Also exposes `seedCornersFromLap()` which auto-generates "Curva N" corner names from braking zones on first lap if no corner data exists for the track
+- **db.ts** — `better-sqlite3` wrapper. Schema has separate tables for each game (see Database Schema below). Exposes `seedCornersFromLap()` (auto-generates "Curva N" corner names from braking zones), `getTrackMap()` / `saveTrackMap()` (track-map geometry cache)
 
 #### `pdf-generator.ts`
 
@@ -107,24 +110,30 @@ Gamepad button held
 
 #### `components/`
 
+- **TitleBar.tsx** — Custom frameless title bar with app icon, tab switcher (current session / session list / settings), TTS mute toggle, and window controls (minimize/maximize/close). Drag region for frameless mode
 - **RealtimeAnalysis.tsx** — Live session panel (tab "Analisi in tempo reale"). Manages session lifecycle (start/end), setup loading, on-demand analysis trigger. Composed of `AnalysisHeader` + `LapsTable` + `AnalysisList`
 - **SessionDetail.tsx** — Historical session detail panel. Shown when a row is clicked in `SessionHistory`. Same composition as RealtimeAnalysis but read-only for session lifecycle (analyze + PDF export still enabled). Has a "Indietro" button
 - **AnalysisHeader.tsx** — Session header bar with car/track/status badge and action buttons: [Nuova sessione] [Chiudi sessione] [Carica setup] [Esegui analisi] [Esporta PDF] [Indietro]. Reads from `sessionStore`
 - **AnalysisList.tsx** — Accordion of all `SessionAnalysisRow` versions for the current session. Shows a streaming placeholder (with Spinner) while an analysis is in progress. Renders Template v3 markdown via `marked`
-- **LapsTable.tsx** — Bootstrap dark Table listing laps for the current session (lap#, time, sectors, valid flag, setup badge, timestamp). Reads from `sessionStore`. Setup badge shows "#N" index linked to session setups
+- **LapsTable.tsx** — Bootstrap dark Table listing laps for the current session (lap#, time, sectors, valid flag, setup badge, timestamp). Reads from `sessionStore`. Setup badge shows "#N" index linked to session setups. Row click opens `LapTelemetryCharts`
+- **LapTelemetryCharts.tsx** — Modal/panel with Recharts line charts (brake, throttle, speed vs. lap distance) and a SVG track-map overlay for a selected lap. Fetches frame data via `lapGetFrames` IPC and track geometry via `trackMapGet` IPC
 - **SessionHistory.tsx** — Paginated list of all past sessions (R3E + ACE). Columns: Sim, Auto (with class), Circuito, Giri, Best lap, Data, Stato. Filters: game/car/track. Sort: date asc/desc. Bulk delete with confirmation modal. Row click → `SessionDetail` inline (back button returns to list). Loads all sessions client-side (up to 500), then filters/paginates in-memory
 - **TTSManager.tsx** — Headless component, Web Speech API (it-IT), priority queue, P1 interrupts. Used for real-time lap alerts when Azure TTS is not enabled
 - **StatusBar.tsx** — Connection status, car/track/layout (resolved names), calibration state, last alert
-- **SettingsPanel.tsx** — All user settings: API key, Anthropic model selector, assistant name, active game selector (R3E/ACE toggle), Azure TTS/STT config, voice selection, gamepad button capture, mock mode toggle
+- **SettingsPanel.tsx** — All user settings: API key, Anthropic model selector, assistant name, active game selector (R3E/ACE toggle), Azure TTS/STT config, voice selection, keyboard shortcut capture, mock mode toggle
 - **VoiceCoachOverlay.tsx** — Fixed overlay showing voice interaction state: idle (hidden), listening (pulsing mic), processing (spinner + transcript), speaking (streaming answer)
-- **ScreenshotPicker.tsx** — R3E only. Modal to select Steam screenshots for setup decoding via Claude Vision; thumbnails, multi-select, calls `decodeSetup` IPC
+- **R3eSetupPicker.tsx** — R3E only. Modal to paste the JSON exported by RaceRoom (CTRL+C in the setup screen). Parses JSON into categorised `SetupParam[]` (Italian labels), previews via `R3eSetupTabs`, then saves as `SetupData`
+- **R3eSetupTabs.tsx** — Tabbed display of R3E `SetupParam[]` grouped by category (Freni, Gomme, Sospensioni, etc.). Used inside `R3eSetupPicker` and `SetupDetailModal`
+- **SetupSelectionModal.tsx** — Modal for loading a setup. Offers two tabs: (1) browse setup history for the current car/track (`sessionGetSetupHistory` IPC → reuse via `sessionReuseSetup`); (2) open the game-specific picker (`R3eSetupPicker` or `AceSetupPicker`). Shows `SetupDetailModal` for preview
+- **SetupDetailModal.tsx** — Read-only modal showing all parameters of a `SessionSetupRow` via `R3eSetupTabs`. Optionally shows a "Usa" button to reuse the setup
 - **AceSetupPicker.tsx** — ACE only. Modal to browse `D:\Salvataggi\ACE\Car Setups\` via 3-step flow: car dropdown → track dropdown → .carsetup file list. IPC calls: `aceListSetupCars`, `aceListSetupTracks`, `aceListSetupFiles`, `aceReadSetup`. Shows a validation badge when the selected car/track doesn't match `expectedCar`/`expectedTrack`
 
 #### `hooks/`
 
-- **useIPC.ts** — Subscribes to push channels (`onFrame`, `onLapComplete`, `onStatus`, voice channels) and writes to `ipcStore`. Also exposes `useConfig()` (configGet/configSet)
-- **useVoiceCoach.ts** — Integrates gamepad button, MediaRecorder (audio capture), Azure STT via IPC, voice query streaming, and Azure/Web Speech TTS playback. State machine: idle → listening → processing → speaking
-- **useGamepad.ts** — Detects gamepad button press/release via `navigator.getGamepads()`
+- **useIPC.ts** — Subscribes to push channels (`onFrame`, `onLapComplete`, `onStatus`, `onInputTrigger`, voice channels) and writes to `ipcStore`. Also exposes `useConfig()` (configGet/configSet)
+- **useVoiceCoach.ts** — Integrates keyboard shortcut (via `onInputTrigger`), MediaRecorder (audio capture), Azure STT via IPC, voice query streaming, and Azure/Web Speech TTS playback. State machine: idle → listening → processing → speaking
+- **useSetupPicker.ts** — Manages setup selection UI state (open/close, selected game-specific picker, reuse flow)
+- **useFlash.ts** — Returns a boolean that briefly becomes `true` when triggered (used for visual flash animation on new lap)
 
 #### `store/`
 
@@ -138,10 +147,9 @@ Gamepad button held
 
 ### Shared (`src/shared/`)
 
-- **types.ts** — All shared types: `GameSource`, `Alert`, `AlertType`, `AlertPriority`, `Deviation`, `DeviationType`, `GameFrame`, `CompactFrame` (with ACE-only optional fields), `ZoneData` (with ACE-only optional fields), `LapRecord`, `GameStatus`, `SessionRow` (with `ended_at`, `car_class_name`, resolved name fields), `LapRow` (with `setup_id`, `zones_json`), `SessionSetupRow`, `SessionAnalysisRow`, `SessionDetail`, `SessionStartResult`, `SessionListParams`, `SessionListResult`, `SetupData`, `SetupParam`, `R3EFrame`, `CornerEntry`, `CornerNamesMap`, `AzureVoice`, `ElectronAPI`
+- **types.ts** — All shared types: `GameSource`, `Alert`, `AlertType`, `AlertPriority`, `Deviation`, `DeviationType`, `GameFrame`, `CompactFrame` (with ACE-only optional fields + world-space `wx`/`wy`/`wz` for track map), `ZoneData` (with ACE-only optional fields), `TrackMapGeometry`, `TrackMapBounds`, `TrackMapRow`, `LapRecord`, `GameStatus`, `SessionRow` (with `ended_at`, `car_class_name`, resolved name fields), `LapRow` (with `setup_id`, `zones_json`), `SessionSetupRow`, `SessionAnalysisRow`, `SessionDetail`, `SessionStartResult`, `SessionListParams`, `SessionListResult`, `SetupData`, `SetupParam`, `R3EFrame`, `CornerEntry`, `CornerNamesMap`, `AzureVoice`, `ElectronAPI`
 - **format.ts** — `formatLapTime(seconds)` utility (M:SS.mmm)
 - **alert-types.ts** — Alert type constants, BRAKE_TEMP thresholds, ANTI_SPAM constants, CALIBRATION_LAPS, POLL_INTERVAL_MS, BASELINE_EMA_ALPHA, DEVIATION_THRESHOLDS
-- **corner-names.json** — Track corner names with distance ranges (seed data for known circuits)
 
 ## Database Schema
 
@@ -150,7 +158,7 @@ Gamepad button held
 sessions_r3e         (id PK, car, track, layout, session_type, started_at, ended_at, best_lap, lap_count)
 session_setups_r3e   (id PK, session_id FK→sessions_r3e, loaded_at, setup_json, setup_screenshots)
 laps_r3e             (id PK, session_id FK→sessions_r3e, setup_id FK→session_setups_r3e,
-                      lap_number, lap_time, sector1/2/3, valid, zones_json, recorded_at)
+                      lap_number, lap_time, sector1/2/3, valid, zones_json, frames_blob, recorded_at)
 session_analyses_r3e (id PK, session_id FK→sessions_r3e, version, template_v3, section5_summary,
                       created_at) -- UNIQUE(session_id, version)
 
@@ -158,7 +166,7 @@ session_analyses_r3e (id PK, session_id FK→sessions_r3e, version, template_v3,
 sessions_ace         (id PK, car, track, layout, session_type, started_at, ended_at, best_lap, lap_count)
 session_setups_ace   (id PK, session_id FK→sessions_ace, loaded_at, setup_json, setup_screenshots)
 laps_ace             (id PK, session_id FK→sessions_ace, setup_id FK→session_setups_ace,
-                      lap_number, lap_time, sector1/2/3, valid, zones_json, recorded_at)
+                      lap_number, lap_time, sector1/2/3, valid, zones_json, frames_blob, recorded_at)
 session_analyses_ace (id PK, session_id FK→sessions_ace, version, template_v3, section5_summary,
                       created_at) -- UNIQUE(session_id, version)
 
@@ -167,12 +175,15 @@ baseline             (game, car, track, zone_id, data JSON, updated_at)  -- PK: 
 baseline_tc_zones    (game, car, track, zone_id)
 baseline_abs_zones   (game, car, track, zone_id)
 corner_names         (track, layout, dist_min PK, dist_max, name)
+track_maps           (game, car, track, layout PK, geometry JSON, created_at)
 app_config           (key PK, value)
 ```
 
 R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_porsche_718_gt4"`).
 
 `zones_json` on laps stores the serialized `ZoneData[]` for each completed lap (used for baseline and prompt building).
+
+`frames_blob` on laps stores gzip-compressed `CompactFrame[]` (used for telemetry charts and track-map generation on demand).
 
 `session_setups_*` is separate from laps — one session can have multiple setups loaded over time. Each lap row has a `setup_id` FK pointing to which setup was active when the lap was recorded.
 
@@ -185,6 +196,7 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 | Push      | `onFrame`                                                                  | Main → Renderer, `R3EFrame`                                  |
 | Push      | `onLapComplete`                                                            | Main → Renderer, `LapRecord`                                 |
 | Push      | `onStatus`                                                                 | Main → Renderer, `GameStatus`                                |
+| Push      | `onInputTrigger`                                                           | Keyboard shortcut fired (from `InputManager`)                |
 | Push      | `onVoiceChunk / onVoiceDone / onVoiceAudio`                                | Voice coach streaming                                        |
 | Push      | `onSessionStarted`                                                         | `SessionRow`                                                 |
 | Push      | `onSessionClosed`                                                          | `{ id, game }`                                               |
@@ -195,18 +207,25 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 | Handle    | `configGet / configSet`                                                    | app_config table                                             |
 | Handle    | `sessionStart`                                                             | Opens new session → `SessionStartResult`                     |
 | Handle    | `sessionEnd`                                                               | Closes active session                                        |
+| Handle    | `sessionReopen`                                                            | Reopens a closed session as active → `SessionStartResult`    |
 | Handle    | `sessionAnalyze`                                                           | Triggers `SessionCoachEngine` on-demand                      |
 | Handle    | `sessionLoadSetup`                                                         | Saves setup to `session_setups_*`, links to active session   |
+| Handle    | `sessionGetSetupHistory`                                                   | Past setups for car/track/layout → `SessionSetupRow[]`       |
+| Handle    | `sessionReuseSetup`                                                        | Copies an existing setup to the active session               |
 | Handle    | `sessionList`                                                              | Paginated session list → `SessionListResult`                 |
 | Handle    | `sessionGetCurrent`                                                        | Current session + laps + setups + analyses → `SessionDetail` |
 | Handle    | `sessionGetDetail`                                                         | Historical session by id+game → `SessionDetail`              |
 | Handle    | `sessionExportPdf`                                                         | Generates PDF → file path                                    |
 | Handle    | `sessionDelete`                                                            | Delete single session `{ id, game }`                         |
 | Handle    | `sessionDeleteAll`                                                         | Bulk delete `[{ id, game }]` (transaction)                   |
+| Handle    | `sessionDeleteAnalysis`                                                    | Delete a single `SessionAnalysisRow` by id                   |
+| Handle    | `lapGetFrames`                                                             | Decompress `frames_blob` → `CompactFrame[]` for a lap        |
+| Handle    | `lapAssignSetup`                                                           | Reassign (or clear) the `setup_id` on a lap row              |
+| Handle    | `trackMapGet`                                                              | Retrieve cached `TrackMapGeometry` for game/car/track/layout |
 | Handle    | `voiceQuery`                                                               | Streaming voice response via `VoiceCoach`                    |
 | Handle    | `sttTranscribe`                                                            | Azure STT → transcribed string                               |
 | Handle    | `ttsGetVoices / ttsSynthesize / ttsTest`                                   | Azure TTS                                                    |
-| Handle    | `listScreenshots / decodeSetup`                                            | R3E screenshot setup (Claude Vision)                         |
+| Handle    | `telemetryLogGetDir`                                                       | Returns the path of the telemetry log directory              |
 | Handle    | `aceListSetupCars / aceListSetupTracks / aceListSetupFiles / aceReadSetup` | ACE file-based setup                                         |
 | One-way   | `windowClose / windowMinimize / windowMaximize`                            | Frameless window                                             |
 
@@ -215,7 +234,7 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 - **Multi-game**: Active game selected at startup via `activeGame` config. R3E and ACE share the same coach/analysis pipeline via `GameFrame` abstraction
 - **Data source R3E**: Shared Memory (`$R3E`) via `koffi` — not telemetry files. Numeric car/track/layout IDs resolved via R3EDataLoader
 - **Data source ACE**: Three SHM pages (PhysicsEvo, GraphicsEvo, StaticEvo) via `koffi`. Car/track/layout are readable strings from SHM
-- **Setup loading R3E**: Steam screenshot thumbnails → Claude Vision API decode → `SetupData`
+- **Setup loading R3E**: User pastes the JSON exported by RaceRoom (CTRL+C in setup screen) into `R3eSetupPicker`. Parsed client-side into `SetupParam[]` with Italian labels — no Claude Vision, no IPC round-trip
 - **Setup loading ACE**: `.carsetup` binary files browsed via car→track→file dropdown flow in `AceSetupPicker` → protobuf decode (no Claude Vision). Validation badge warns when selected car/track doesn't match the reference
 - **Session lifecycle**: Explicit start/end managed by the user. Laps accumulate in the active session. Setup loads are stored as `session_setups_*` rows and linked to subsequent laps via `setup_id`. Analysis is triggered on demand ("Esegui analisi"), not automatically per-lap
 - **Analysis model**: Session-level, on-demand, versioned. `SessionCoachEngine` reads all laps + setups + prior analyses for the session and produces a new `SessionAnalysisRow`. Multiple analyses per session supported. Section [5] (max 3 sentences) is extracted for TTS playback
@@ -229,13 +248,16 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 - **Zones**: 50m segments along track distance
 - **Brake temp window**: ideal 550°C ±137.5°C (413-688°C). Skip if value is -1 (unavailable)
 - **Qualification/Leaderboard**: Tire temps fixed at 85°C — do not flag as issue
-- **Delete**: Single (`sessionDelete`) and bulk (`sessionDeleteAll`) session deletion. Cascade deletes laps, setups, and analyses
+- **Delete**: Single (`sessionDelete`) and bulk (`sessionDeleteAll`) session deletion. Cascade deletes laps, setups, and analyses. Individual analyses can also be deleted via `sessionDeleteAnalysis`
 - **Window**: 1200×800, no frame, contextIsolation: true, nodeIntegration: false
 - **Platform**: Windows only (both R3E and ACE are Windows-only)
 - **TTS**: Azure Cognitive Services is the primary TTS/STT provider. Web Speech API is the fallback for real-time lap alerts only
 - **State management**: Three Zustand stores — `ipcStore` (real-time frames/alerts), `sessionStore` (active/selected session), `settingsStore` (user settings). Do not scatter state back into `App.tsx`
 - **PDF**: `printToPDF` + HTML/CSS template (Electron main process). Do not reintroduce jsPDF
-- **Voice queries**: Gamepad button hold → Azure STT → Claude streaming → Azure TTS. Max 3-4 sentences, radio tone, Italian, no bullet points
+- **Track map**: World-space (wx/wz) frames in `CompactFrame` are used by `track-map-builder.ts` to derive an SVG path after each lap. Geometry is cached in `track_maps` and retrieved on demand via `trackMapGet` for `LapTelemetryCharts`
+- **Telemetry charts**: `LapTelemetryCharts` fetches raw frames via `lapGetFrames` (gzip-decompress from `frames_blob`) and renders brake/throttle/speed vs. distance with Recharts. Track-map SVG is overlaid in the same view
+- **Input trigger**: `InputManager` (main process) registers a `globalShortcut`. Fires `onInputTrigger` push to renderer. `useVoiceCoach` uses this to start/stop audio capture — no gamepad polling in the renderer
+- **Voice queries**: Keyboard shortcut hold → Azure STT → Claude streaming → Azure TTS. Max 3-4 sentences, radio tone, Italian, no bullet points
 - **Mock mode**: `mockHistoryMode` in settingsStore injects `MOCK_SESSIONS` and `MOCK_DETAILS` from `mockData.ts` into the session list (negative IDs). Used to test SessionHistory and SessionDetail without a live session
 
 ## Struct Offset Debugging
