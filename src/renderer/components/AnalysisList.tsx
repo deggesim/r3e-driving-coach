@@ -124,7 +124,6 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
   return (
     <>
       <Accordion
-        alwaysOpen
         activeKey={activeKeys}
         onSelect={(keys) => setActiveKeys((keys as string[]) ?? [])}
         className="analysis-accordion"

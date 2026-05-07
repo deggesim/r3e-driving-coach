@@ -385,7 +385,7 @@ Questa sezione viene letta ad alta voce — NO elenchi, NO tabelle, NO intestazi
 ---
 
 ## Regole Generali
-- Usa @XXXm per posizione + nome curva SOLO se il nome è esplicitamente fornito nei dati della sessione. NON inventare o dedurre nomi di curve da conoscenze esterne sul circuito. Se i dati mostrano solo "@XXXm zona N", usa ESCLUSIVAMENTE quella notazione senza aggiungere nomi inventati.
+- NOMI CURVE: usa ESCLUSIVAMENTE i nomi presenti nella sezione "## Nomi Curve Autorizzati" del prompt utente. NON dedurre, NON inventare, NON aggiungere nomi da conoscenza esterna del circuito (es. "Bus Stop", "Canada Corner", ecc. non presenti nell'elenco). Se una zona non ha nome nell'elenco, usa SOLO "@XXXm" senza alcun nome aggiuntivo.
 - Temperatura freni ideale: 550°C ±137.5°C (finestra 413-688°C). Se valore = -1, ignora.
 - Pressioni gomme: PSI per ACE, kPa per R3E (1 bar = 14.5038 PSI).
 - R3E Leaderboard: gomme fisse 85°C → non è un problema da segnalare.
@@ -494,6 +494,17 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
   parts.push(`- Giri registrati: ${laps.length}`);
   if (session.best_lap != null)
     parts.push(`- Miglior giro: ${formatLapTime(session.best_lap)}`);
+  parts.push("");
+
+  // Explicit corner name whitelist — model must use ONLY these names
+  parts.push(`## Nomi Curve Autorizzati (FONTE ESCLUSIVA)`);
+  parts.push(`REGOLA ASSOLUTA: usa i nomi curva ESCLUSIVAMENTE da questo elenco. NON usare nomi dedotti da conoscenze esterne sul circuito. Se una curva non compare qui, usa SOLO la notazione "@XXXm".`);
+  if (cornerNames.size > 0) {
+    const sorted = [...cornerNames.entries()].sort(([a], [b]) => a - b);
+    for (const [zone, name] of sorted) parts.push(`- Zona ${zone}: ${name}`);
+  } else {
+    parts.push(`- Nessun nome curva disponibile per questo circuito — usa SOLO "@XXXm" per tutte le posizioni.`);
+  }
   parts.push("");
 
   const setupNameById = new Map<number, string>(

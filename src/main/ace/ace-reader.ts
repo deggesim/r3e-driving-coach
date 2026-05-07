@@ -219,26 +219,34 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
   const poll = (): void => {
     if (stopped || !physView || !gfxView || !staView) return;
 
-    // Periodically verify ACE SHM still exists by releasing and re-acquiring
-    // the physics handle. If ACE has exited and we were the last holder, the
-    // named object disappears and OpenFileMappingA returns NULL.
+    // Periodically verify ACE SHM still exists by releasing ALL views and
+    // handles, then re-opening. Closing only the handle is insufficient:
+    // MapViewOfFile internally holds a reference to the mapping object, so
+    // the named object survives ACE's exit and OpenFileMappingA always
+    // succeeds. We must unmap every view to drop our last reference.
     if (++shmProbeCounter >= SHM_PROBE_INTERVAL) {
       shmProbeCounter = 0;
-      if (physHandle) {
-        kernel32!.CloseHandle(physHandle);
-        physHandle = null;
-      }
-      const probe = kernel32!.OpenFileMappingA(
-        FILE_MAP_READ,
-        0,
-        ACE_SHM_PHYSICS,
-      );
-      if (isNullPtr(probe)) {
-        cleanup();
-        scheduleReconnect();
-        return;
-      }
-      physHandle = probe;
+      if (physView) { kernel32!.UnmapViewOfFile(physView); physView = null; }
+      if (physHandle) { kernel32!.CloseHandle(physHandle); physHandle = null; }
+      if (gfxView) { kernel32!.UnmapViewOfFile(gfxView); gfxView = null; }
+      if (gfxHandle) { kernel32!.CloseHandle(gfxHandle); gfxHandle = null; }
+      if (staView) { kernel32!.UnmapViewOfFile(staView); staView = null; }
+      if (staHandle) { kernel32!.CloseHandle(staHandle); staHandle = null; }
+
+      const phyProbe = openSHM(ACE_SHM_PHYSICS);
+      if (!phyProbe) { cleanup(); scheduleReconnect(); return; }
+      physHandle = phyProbe.handle;
+      physView = phyProbe.view;
+
+      const gfxProbe = openSHM(ACE_SHM_GRAPHIC);
+      if (!gfxProbe) { cleanup(); scheduleReconnect(); return; }
+      gfxHandle = gfxProbe.handle;
+      gfxView = gfxProbe.view;
+
+      const staProbe = openSHM(ACE_SHM_STATIC);
+      if (!staProbe) { cleanup(); scheduleReconnect(); return; }
+      staHandle = staProbe.handle;
+      staView = staProbe.view;
     }
 
     try {
