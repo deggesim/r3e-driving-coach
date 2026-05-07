@@ -69,9 +69,9 @@ const RealtimeAnalysis = () => {
     showFlash("secondary", "Sessione chiusa.");
   };
 
-  const handleAnalyze = async (): Promise<void> => {
+  const handleAnalyze = async (flags: { leaderboardMode: boolean; fixedSetup: boolean }): Promise<void> => {
     if (!session) return;
-    const res = await window.electronAPI.sessionAnalyze({});
+    const res = await window.electronAPI.sessionAnalyze({ ...flags });
     if (!res.ok) showFlash("danger", res.reason ?? "Errore durante l'analisi");
     else showFlash("info", "Analisi in corso…");
   };

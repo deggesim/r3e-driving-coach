@@ -37,11 +37,12 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
     handleLapReuseSetup,
   } = useSetupPicker({ session, setups, assignLapSetup, showFlash, explicit: true });
 
-  const handleAnalyze = async (): Promise<void> => {
+  const handleAnalyze = async (flags: { leaderboardMode: boolean; fixedSetup: boolean }): Promise<void> => {
     if (!session) return;
     const res = await window.electronAPI.sessionAnalyze({
       sessionId: session.id,
       game: session.game,
+      ...flags,
     });
     if (!res.ok) showFlash("danger", res.reason ?? "Errore durante l'analisi");
     else showFlash("info", "Analisi in corso…");

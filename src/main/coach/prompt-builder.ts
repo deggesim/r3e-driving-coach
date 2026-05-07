@@ -79,10 +79,14 @@ export const buildPrompt = (
 
   const zone0 = lap.zones[0];
   if (zone0?.tcSetting !== undefined && zone0.tcSetting > 0) {
-    parts.push(`- **Preset TC**: ${zone0.tcSetting}/6 (1=massimo intervento, 6=minimo/spento)`);
+    parts.push(
+      `- **Preset TC**: ${zone0.tcSetting}/6 (1=massimo intervento, 6=minimo/spento)`,
+    );
   }
   if (zone0?.absSetting !== undefined && zone0.absSetting > 0) {
-    parts.push(`- **Preset ABS**: ${zone0.absSetting}/6 (1=massimo intervento, 6=minimo/spento)`);
+    parts.push(
+      `- **Preset ABS**: ${zone0.absSetting}/6 (1=massimo intervento, 6=minimo/spento)`,
+    );
   }
   parts.push("");
 
@@ -133,12 +137,20 @@ export const buildPrompt = (
         parts.push(`- Frame overlap freno-gas: ${zone.overlapFrames}`);
       }
       if (zone.tcActivations > 0) {
-        const durMs = ((zone.tcActiveFrames ?? zone.tcActivations) * 16).toFixed(0);
-        parts.push(`- Attivazioni TC: ${zone.tcActivations} eventi (~${durMs}ms totale)`);
+        const durMs = (
+          (zone.tcActiveFrames ?? zone.tcActivations) * 16
+        ).toFixed(0);
+        parts.push(
+          `- Attivazioni TC: ${zone.tcActivations} eventi (~${durMs}ms totale)`,
+        );
       }
       if (zone.absActivations > 0) {
-        const durMs = ((zone.absActiveFrames ?? zone.absActivations) * 16).toFixed(0);
-        parts.push(`- Attivazioni ABS: ${zone.absActivations} eventi (~${durMs}ms totale)`);
+        const durMs = (
+          (zone.absActiveFrames ?? zone.absActivations) * 16
+        ).toFixed(0);
+        parts.push(
+          `- Attivazioni ABS: ${zone.absActivations} eventi (~${durMs}ms totale)`,
+        );
       }
       if (zone.avgTyrePressure) {
         const [fl, fr, rl, rr] = zone.avgTyrePressure;
@@ -274,7 +286,8 @@ export const getSignificantZones = (
 };
 
 export const SESSION_SYSTEM_PROMPT = `Sei un ingegnere di pista esperto che analizza l'intera sessione di guida di un pilota.
-Rispondi SEMPRE in italiano con tono tecnico da ingegnere. Includi SEMPRE dati numerici specifici (frame counts, delta secondi, PSI, km/h, percentuali).
+Rispondi SEMPRE in italiano con tono tecnico da ingegnere. Includi SEMPRE dati numerici specifici (durate in secondi, delta secondi, PSI/kPa, km/h, percentuali).
+I dati di telemetria riportano durate in millisecondi (1 campione = 16ms). Converti SEMPRE in secondi quando citi questi valori (es. 160ms → 0.16s).
 
 Analizzi più giri e più setup caricati nella sessione. Devi:
 - Identificare trend (miglioramento/peggioramento tra giri).
@@ -282,7 +295,7 @@ Analizzi più giri e più setup caricati nella sessione. Devi:
 - Segnalare problemi ricorrenti per curva con volume di alert.
 - Se esistono analisi precedenti nella sessione, tieni conto di quanto già detto e aggiungi nuove osservazioni o conferma/smentisci raccomandazioni.
 
-Usa il simbolo ∆ per i delta di tempo. Esprimi i frame problematici come "+N frame". Calcola sempre l'impatto stimato in secondi per giro.
+Usa il simbolo ∆ per i delta di tempo. Esprimi sempre le durate in secondi (es. "0.16s di overlap freno/gas"). Calcola sempre l'impatto stimato in secondi per giro.
 Quando citi un tempo sul giro usa SEMPRE la forma "il tempo di X" (es. "il tempo di 1:16.322" oppure "il tempo di 58.322s"). Non usare mai l'articolo apostrofato davanti al numero (mai "l'1:16").
 
 ---
@@ -299,17 +312,35 @@ Lista bullet, uno per transizione Giro N→N+1. Descrivi la causa meccanica del 
 
 **Curve Critiche (per volume di alert):**
 Lista numerata, ordinata per numero totale di alert. Formato per ogni voce:
-  @XXXm NomeCurva: N alert (tipo+frame, tipo+frame, …). Causa probabile e comportamento del pilota.
+  @XXXm NomeCurva: N alert (tipo+durata in secondi, tipo+durata in secondi, …). Causa probabile e comportamento del pilota.
 
 **Osservazioni Pressioni Gomme:** (ometti se dati non disponibili)
-Valori FL/FR/RL/RR in PSI, margine operativo, valutazione bilanciamento ant/post.
+Valori FL/FR/RL/RR in PSI/kPa, margine operativo, valutazione bilanciamento ant/post.
 
 **Dati Critici Mancanti:** (ometti se nessuno)
 Riporta onestamente quali dati non erano disponibili (es. settori S1/S2/S3, temperature freni) e il loro impatto sull'analisi.
 
 ---
 
-### [2] Setup Attuale vs Proposto
+### [2] Problemi Identificati
+
+Tabella markdown con colonne: Rank | Problema | Localizzazione | Alert Count | Impatto Stim.
+- Rank: numero progressivo per impatto decrescente
+- Localizzazione: @XXXm NomeCurva (più localizzazioni separate da virgola)
+- Alert Count: numero di alert + descrizione tipo
+- Impatto Stim.: range in secondi/giro (es. -0.15 a -0.25s/giro)
+
+**Dettagli per Curva:**
+Lista bullet, una per curva critica. Formato:
+  @XXXm NomeCurva (NomeUfficiale se disponibile): descrizione comportamento con dati numerici (entry speed, ∆ sterzata %, durate in secondi). Causa meccanica e impatto teorico sul delta.
+
+**Pattern Sistemico:**
+Paragrafo di analisi trasversale: confronto alert tra giri, distinzione tra miglioramento da apprendimento pilota vs da gestione termica vs da setup.
+
+
+---
+
+### [3] Setup Attuale vs Proposto
 
 (Ometti l'intera sezione se nessun setup è stato caricato.)
 
@@ -320,27 +351,11 @@ Includi tutti i parametri rilevanti: sterzo, ripartizione freno, ARB, molle, amm
 **Proposte Concrete:**
 Lista numerata. Per ogni proposta:
   N. **Descrizione modifica (Parametro: ValoreAttuale → ValoreNuovo):**
-  Paragrafo con razionale meccanico, collegamento agli alert specifici (tipo @XXXm +N frame), effetto atteso.
+  Paragrafo con razionale meccanico, collegamento agli alert specifici (tipo @XXXm, durata in secondi), effetto atteso.
 
 **Sintesi Setup:**
 Paragrafo riassuntivo: punti di forza del setup attuale e trade-off sfavorevoli identificati.
 
----
-
-### [3] Problemi Identificati
-
-Tabella markdown con colonne: Rank | Problema | Localizzazione | Alert Count | Impatto Stim.
-- Rank: numero progressivo per impatto decrescente
-- Localizzazione: @XXXm NomeCurva (più localizzazioni separate da virgola)
-- Alert Count: numero di alert + descrizione tipo
-- Impatto Stim.: range in secondi/giro (es. -0.15 a -0.25s/giro)
-
-**Dettagli per Curva:**
-Lista bullet, una per curva critica. Formato:
-  @XXXm NomeCurva (NomeUfficiale se disponibile): descrizione comportamento con dati numerici (entry speed, ∆ sterzata %, frame counts). Causa meccanica e impatto teorico sul delta.
-
-**Pattern Sistemico:**
-Paragrafo di analisi trasversale: confronto alert tra giri, distinzione tra miglioramento da apprendimento pilota vs da gestione termica vs da setup.
 
 ---
 
@@ -354,7 +369,7 @@ Per ogni modifica usa un H3 con label di priorità:
 - **Implementazione:** numero setup da caricare, parametri da modificare.
 - **Target:** alert/metriche da eliminare (es. "alert sterzata anomala delta >10% scompaiono").
 - **Giro di verifica:** quando e dove verificare l'effetto (curva specifica, entry speed).
-- **Metrica di successo:** dato numerico misurabile (es. "alert coasting <3 frame; velocità exit +2 km/h").
+- **Metrica di successo:** dato numerico misurabile (es. "overlap freno/gas <0.05s; velocità exit +2 km/h").
 - **Cautela:** (solo se la modifica ha rischi o effetti collaterali da monitorare)
 
 Usa label "Prioritaria" per modifiche setup che impattano >0.10s/giro, "Secondaria" per 0.05-0.10s, "Terziaria" per <0.05s o condizionali.
@@ -381,6 +396,39 @@ Questa sezione viene letta ad alta voce — NO elenchi, NO tabelle, NO intestazi
 Le sezioni [1], [3], [4] e [5] devono essere SEMPRE presenti, qualunque sia la quantità di dati disponibili.
 La sezione [2] è l'UNICA che può essere omessa (solo se nessun setup è stato caricato).`;
 
+/** Aggregate brake temps across all zones of a lap (best-effort from zones_json). */
+const buildBrakeTempSummaryFromZones = (zones: ZoneData[]): string | null => {
+  const UNAVAIL = -1;
+  const collect = (idx: number): number[] =>
+    zones
+      .flatMap((z) => (z.avgBrakeTempC ? [z.avgBrakeTempC[idx]] : []))
+      .filter((v) => v !== UNAVAIL);
+
+  const fl = collect(0);
+  if (fl.length === 0) return null;
+  const fr = collect(1);
+  const rl = collect(2);
+  const rr = collect(3);
+
+  const avg = (arr: number[]) =>
+    arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : UNAVAIL;
+  const peak = (arr: number[]) => (arr.length > 0 ? Math.max(...arr) : UNAVAIL);
+
+  const lines = [
+    `  Freni: ANT-SX ${avg(fl).toFixed(0)}°C (picco ${peak(fl).toFixed(0)}°C)` +
+      ` | ANT-DX ${avg(fr).toFixed(0)}°C (picco ${peak(fr).toFixed(0)}°C)` +
+      ` | POST-SX ${avg(rl).toFixed(0)}°C (picco ${peak(rl).toFixed(0)}°C)` +
+      ` | POST-DX ${avg(rr).toFixed(0)}°C (picco ${peak(rr).toFixed(0)}°C)`,
+  ];
+
+  const allPeaks = [peak(fl), peak(fr), peak(rl), peak(rr)].filter((v) => v !== UNAVAIL);
+  const overheating = allPeaks.filter((t) => t > BRAKE_TEMP.max);
+  if (overheating.length > 0) {
+    lines.push(`  ⚠ ${overheating.length} freni oltre soglia critica ${BRAKE_TEMP.max}°C`);
+  }
+  return lines.join("\n");
+};
+
 const summarizeLapZones = (
   zones: ZoneData[],
   cornerNames: Map<number, string>,
@@ -402,7 +450,7 @@ const summarizeLapZones = (
       const durMs = ((z.absActiveFrames ?? z.absActivations) * 16).toFixed(0);
       bits.push(`ABS:${z.absActivations}ev/${durMs}ms`);
     }
-    if (z.overlapFrames > 3) bits.push(`overlap:${z.overlapFrames}`);
+    if (z.overlapFrames > 3) bits.push(`overlap:${(z.overlapFrames * 16).toFixed(0)}ms`);
     lines.push(`  - ${label} → ${bits.join(", ")}`);
   }
   return lines;
@@ -418,10 +466,12 @@ export type SessionPromptInput = {
   trackName?: string;
   layoutName?: string;
   alerts?: Alert[];
+  leaderboardMode?: boolean;
+  fixedSetup?: boolean;
 };
 
 export const buildSessionPrompt = (input: SessionPromptInput): string => {
-  const { session, laps, setups, priorAnalyses, cornerNames, alerts } = input;
+  const { session, laps, setups, priorAnalyses, cornerNames, alerts, leaderboardMode, fixedSetup } = input;
   const parts: string[] = [];
 
   parts.push(`## Sessione`);
@@ -431,6 +481,15 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
     `- Circuito: ${input.trackName ?? session.track} (${input.layoutName ?? session.layout})`,
   );
   parts.push(`- Inizio: ${session.started_at}`);
+
+  if (session.game === "r3e") {
+    if (leaderboardMode) {
+      parts.push(`- **Modalità Leaderboard ATTIVA**: temperature e pressioni gomme fisse a 85°C, temperature freni potrebbero non essere significative — non diagnosticare questi valori come problemi.`);
+    }
+    if (fixedSetup) {
+      parts.push(`- **Setup Fisso ATTIVO**: il pilota può modificare SOLO bilanciamento freni e pressione frenante. Tutte le altre raccomandazioni di setup (sospensioni, aerodinamica, differenziale, ecc.) non sono applicabili — ometti o segnala esplicitamente questa limitazione nella sezione [3] e [4].`);
+    }
+  }
   if (session.ended_at) parts.push(`- Fine: ${session.ended_at}`);
   parts.push(`- Giri registrati: ${laps.length}`);
   if (session.best_lap != null)
@@ -464,10 +523,20 @@ export const buildSessionPrompt = (input: SessionPromptInput): string => {
           const zones = JSON.parse(lap.zones_json) as ZoneData[];
           const z0 = zones[0];
           if (z0?.tcSetting !== undefined && z0.tcSetting > 0) {
-            parts.push(`  TC preset: ${z0.tcSetting}/6 | ABS preset: ${z0.absSetting ?? "?"}/6 (1=max, 6=min/off)`);
+            if (session.game === "r3e") {
+              parts.push(
+                `  TC preset: ${z0.tcSetting}/6 | ABS preset: ${z0.absSetting ?? "?"}/6 (scala inversa: 1=massimo, 6=minimo/assente)`,
+              );
+            } else {
+              parts.push(
+                `  TC: ${z0.tcSetting} | ABS: ${z0.absSetting ?? "?"}`,
+              );
+            }
           }
           const summary = summarizeLapZones(zones, cornerNames);
           if (summary.length > 0) parts.push(...summary);
+          const btSummary = buildBrakeTempSummaryFromZones(zones);
+          if (btSummary) parts.push(btSummary);
         } catch {
           // ignore malformed
         }

@@ -1,4 +1,5 @@
-import { Badge, Button } from "react-bootstrap";
+import { useState } from "react";
+import { Badge, Button, Form } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlay,
@@ -19,7 +20,7 @@ interface Props {
   currentTrack: string;
   onStart: () => void;
   onEnd: () => void;
-  onAnalyze: () => void;
+  onAnalyze: (flags: { leaderboardMode: boolean; fixedSetup: boolean }) => void;
   onExportPdf: () => void;
   onOpenPicker: () => void;
   onBack?: () => void;
@@ -43,6 +44,11 @@ const AnalysisHeader = ({
   const laps = useSessionStore((s) => s.laps);
   const setups = useSessionStore((s) => s.setups);
   const analyses = useSessionStore((s) => s.analyses);
+
+  const [leaderboardMode, setLeaderboardMode] = useState(true);
+  const [fixedSetup, setFixedSetup] = useState(true);
+
+  const isR3E = session?.game === "r3e";
 
   return (
     <div className="debriefing-header d-flex align-items-center gap-2 flex-wrap flex-shrink-0 p-2">
@@ -76,7 +82,28 @@ const AnalysisHeader = ({
         </span>
       )}
 
-      <div className="ms-auto d-flex gap-1 flex-wrap">
+      <div className="ms-auto d-flex align-items-center gap-2 flex-wrap">
+        {isR3E && session && (
+          <div className="d-flex gap-3 me-1">
+            <Form.Check
+              type="switch"
+              id="leaderboard-mode"
+              label="Leaderboard"
+              checked={leaderboardMode}
+              onChange={(e) => setLeaderboardMode(e.target.checked)}
+              className="text-muted"
+            />
+            <Form.Check
+              type="switch"
+              id="fixed-setup"
+              label="Setup fisso"
+              checked={fixedSetup}
+              onChange={(e) => setFixedSetup(e.target.checked)}
+              className="text-muted"
+            />
+          </div>
+        )}
+        <div className="d-flex gap-1 flex-wrap">
         {isLive && !sessionActive && (
           <Button size="sm" variant="success" onClick={onStart}>
             <FontAwesomeIcon icon={faPlay} className="me-1" /> Nuova sessione
@@ -96,7 +123,7 @@ const AnalysisHeader = ({
         <Button
           size="sm"
           variant="primary"
-          onClick={onAnalyze}
+          onClick={() => onAnalyze({ leaderboardMode, fixedSetup })}
           disabled={!session || (isLive && laps.length === 0)}
         >
           <FontAwesomeIcon icon={faChartLine} className="me-1" /> Esegui analisi
@@ -121,6 +148,7 @@ const AnalysisHeader = ({
             Indietro
           </Button>
         )}
+        </div>
       </div>
     </div>
   );

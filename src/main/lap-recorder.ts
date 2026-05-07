@@ -152,6 +152,17 @@ const aggregateZones = (
         ? { tcSetting: zoneFrames[0].tcs, absSetting: zoneFrames[0].abss }
         : {};
 
+    // Brake temps: average per wheel over zone, filter out -1 (unavailable)
+    const UNAVAIL = -1;
+    const btAvg = (idx: number): number => {
+      const vals = zoneFrames.map((f) => f.bt[idx]).filter((v) => v !== UNAVAIL);
+      return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : UNAVAIL;
+    };
+    const hasBt = zoneFrames.some((f) => f.bt[0] !== UNAVAIL);
+    const avgBrakeTempC: [number, number, number, number] | undefined = hasBt
+      ? [btAvg(0), btAvg(1), btAvg(2), btAvg(3)]
+      : undefined;
+
     zones.push({
       zone: z,
       dist: z * ZONE_SIZE_M,
@@ -173,6 +184,7 @@ const aggregateZones = (
       brakeEndDist,
       throttlePickupDist,
       ...aidPreset,
+      ...(avgBrakeTempC !== undefined && { avgBrakeTempC }),
       ...(hasExtended && {
         avgRpm: avgArr(rpmValues),
         maxGLat:

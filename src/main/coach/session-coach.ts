@@ -45,6 +45,7 @@ export type SessionCoachEngine = {
     game: GameSource,
     resolved?: { carName?: string; trackName?: string; layoutName?: string },
     alerts?: Alert[],
+    flags?: { leaderboardMode?: boolean; fixedSetup?: boolean },
   ) => Promise<SessionAnalysisRow | null>;
 };
 
@@ -85,7 +86,7 @@ export const createSessionCoachEngine = (
       cornerNames = names;
     },
 
-    analyzeSession: async (sessionId, game, resolved, alerts) => {
+    analyzeSession: async (sessionId, game, resolved, alerts, flags) => {
       const sessionsTable = tableFor(game, "sessions");
       const lapsTable = tableFor(game, "laps");
       const setupsTable = tableFor(game, "session_setups");
@@ -165,6 +166,8 @@ export const createSessionCoachEngine = (
         trackName: resolved?.trackName,
         layoutName: resolved?.layoutName,
         alerts,
+        leaderboardMode: flags?.leaderboardMode,
+        fixedSetup: flags?.fixedSetup,
       });
 
       const nextVersion = (priorAnalyses.at(-1)?.version ?? 0) + 1;

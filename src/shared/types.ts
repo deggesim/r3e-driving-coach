@@ -141,6 +141,8 @@ export type ZoneData = {
   // Aid presets (stored once on zone 0 per lap; R3E: 1=max invasive, 6=min/off; ACE: uint8 car-dependent)
   tcSetting?: number;
   absSetting?: number;
+  // Brake temps averaged over zone (°C, -1 if unavailable for this car)
+  avgBrakeTempC?: [number, number, number, number]; // FL FR RL RR
   // Extended (ACE only; present when source frames have the fields)
   avgRpm?: number;
   maxGLat?: number; // peak lateral G-force magnitude
@@ -417,7 +419,7 @@ export type ElectronAPI = {
   // Session lifecycle
   sessionStart: () => Promise<SessionStartResult>;
   sessionEnd: () => Promise<void>;
-  sessionAnalyze: (params?: { sessionId?: number; game?: GameSource }) => Promise<{ ok: boolean; reason?: string }>;
+  sessionAnalyze: (params?: { sessionId?: number; game?: GameSource; leaderboardMode?: boolean; fixedSetup?: boolean }) => Promise<{ ok: boolean; reason?: string }>;
   sessionLoadSetup: (params: { setup: SetupData; sessionId?: number; game?: GameSource }) => Promise<{ setupId: number }>;
   sessionList: (params: SessionListParams) => Promise<SessionListResult>;
   sessionGetCurrent: () => Promise<SessionDetail | null>;

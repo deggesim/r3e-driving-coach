@@ -874,7 +874,7 @@ const setupPipeline = (): void => {
 
   ipcMain.handle(
     "session:analyze",
-    async (_event, params: { sessionId?: number; game?: GameSource } = {}) => {
+    async (_event, params: { sessionId?: number; game?: GameSource; leaderboardMode?: boolean; fixedSetup?: boolean } = {}) => {
       const sessionId = params.sessionId ?? currentSessionId;
       const game = params.game ?? currentSessionGame;
       if (!sessionId) {
@@ -901,8 +901,9 @@ const setupPipeline = (): void => {
 
       const alertsForSession =
         sessionId === currentSessionId ? [...sessionAlerts] : undefined;
+      const flags = { leaderboardMode: params.leaderboardMode, fixedSetup: params.fixedSetup };
       sessionCoach
-        .analyzeSession(sessionId, game, resolved, alertsForSession)
+        .analyzeSession(sessionId, game, resolved, alertsForSession, flags)
         .catch((err) => console.error("[SessionCoach] error:", err));
 
       return { ok: true };
