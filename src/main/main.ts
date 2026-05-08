@@ -58,6 +58,7 @@ import {
   getTrackMap,
   hasCornerNames,
   saveTrackMap,
+  seedAceCornersFromR3E,
   seedCornersFromLap,
 } from "./db/db.js";
 import { toGameFrame } from "./game-adapter.js";
@@ -307,10 +308,11 @@ const setupPipeline = (): void => {
 
   const lookupCorner = (dist: number): string | null => {
     if (activeGame === "ace") {
-      return getCornerName(db, currentTrack, currentLayout, dist);
+      return getCornerName(db, "ace", currentTrack, currentLayout, dist);
     }
     return getCornerName(
       db,
+      "r3e",
       currentTrack ? getTrackName(Number(currentTrack)) : currentTrack,
       currentLayout ? getLayoutName(Number(currentLayout)) : currentLayout,
       dist,
@@ -715,8 +717,8 @@ const setupPipeline = (): void => {
       pushStatus();
 
       // Seed corner names from first lap on a new track/layout
-      if (!hasCornerNames(db, names.trackName, names.layoutName)) {
-        seedCornersFromLap(db, names.trackName, names.layoutName, lap.zones);
+      if (!hasCornerNames(db, activeGame, names.trackName, names.layoutName)) {
+        seedCornersFromLap(db, activeGame, names.trackName, names.layoutName, lap.zones);
       }
 
       // Build track map geometry from the first valid lap on this car/track/layout
@@ -810,6 +812,10 @@ const setupPipeline = (): void => {
       currentSessionGame = activeGame;
       currentSetupId = null;
       sessionAlerts.length = 0;
+
+      if (activeGame === "ace") {
+        seedAceCornersFromR3E(db, currentTrack, currentLayout);
+      }
 
       const row = db
         .prepare(`SELECT * FROM ${t("sessions")} WHERE id = ?`)
