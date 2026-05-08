@@ -281,16 +281,15 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     if (stopped || !viewPtr) return;
 
     // Periodically verify the named SHM object still exists.
-    // We release our file-mapping handle before probing: if R3E has exited and
-    // we were the last holder, the named object disappears and OpenFileMappingA
-    // returns NULL. Keeping our handle open would keep the object alive and
-    // make the probe always succeed even after R3E closes.
+    // We must unmap viewPtr BEFORE closing mapHandle: MapViewOfFile holds an
+    // internal reference to the mapping object, so the named SHM survives R3E's
+    // exit as long as viewPtr is alive. Only after unmapping does the object
+    // disappear and OpenFileMappingA return NULL.
     if (++shmProbeCounter >= SHM_PROBE_INTERVAL) {
       shmProbeCounter = 0;
-      if (mapHandle) {
-        kernel32!.CloseHandle(mapHandle);
-        mapHandle = null;
-      }
+      if (viewPtr) { kernel32!.UnmapViewOfFile(viewPtr); viewPtr = null; }
+      if (mapHandle) { kernel32!.CloseHandle(mapHandle); mapHandle = null; }
+
       const probe = kernel32!.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
       if (isNullPtr(probe)) {
         cleanup();
@@ -298,6 +297,15 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         return;
       }
       mapHandle = probe;
+      const newView = kernel32!.MapViewOfFile(mapHandle, FILE_MAP_READ, 0, 0, 0);
+      if (isNullPtr(newView)) {
+        kernel32!.CloseHandle(mapHandle);
+        mapHandle = null;
+        cleanup();
+        scheduleReconnect();
+        return;
+      }
+      viewPtr = newView;
     }
 
     try {
