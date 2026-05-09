@@ -50,35 +50,5 @@
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.8",
     "wait-on": "^9.0.5"
-  },
-  "build": {
-    "appId": "com.sim-driving-coach.app",
-    "productName": "Sim Driving Coach",
-    "directories": {
-      "output": "release"
-    },
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ],
-      "icon": "build/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico"
-    },
-    "files": [
-      "dist/main/**/*",
-      "dist/renderer/**/*",
-      "dist/shared/**/*",
-      "node_modules/**/*",
-      "package.json"
-    ],
-    "asarUnpack": [
-      "**/*.node"
-    ]
   }
 }

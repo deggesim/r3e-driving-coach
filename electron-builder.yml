@@ -1,0 +1,99 @@
+appId: com.sim-driving-coach.app
+productName: Sim Driving Coach
+
+directories:
+  output: release
+
+# ---------------------------------------------------------------------------
+# Windows target (#18 — code signing)
+# ---------------------------------------------------------------------------
+# Code signing prevents the Windows SmartScreen "Unknown Publisher" warning
+# and may be required for distribution on some machines.
+#
+# To enable signing, set these environment variables before running
+# `npm run build:electron` (or in your CI secrets):
+#
+#   CSC_LINK          Path or HTTPS URL to the .pfx certificate file
+#   CSC_KEY_PASSWORD  Password protecting the .pfx file
+#
+# If the certificate is already installed in the Windows Certificate Store,
+# set certificateSubjectName to the exact CN of your cert and omit CSC_LINK.
+# electron-builder will locate it automatically via signtool.exe.
+#
+# See full docs: https://www.electron.build/configuration/win
+# ---------------------------------------------------------------------------
+win:
+  target:
+    - nsis
+    - portable
+  icon: build/icon.ico
+  signtoolOptions:
+    signingHashAlgorithms:
+      - sha256
+  # Uncomment and set to the CN of your code-signing certificate when ready:
+  # certificateSubjectName: "Simone De Gennaro"
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+
+# ---------------------------------------------------------------------------
+# Files included in the asar bundle (#19 — exclude dev/source files)
+# ---------------------------------------------------------------------------
+# Whitelist approach: only compiled output and runtime node_modules are
+# included. TypeScript sources, source maps, test files, and dev tooling
+# are never part of the installer.
+#
+# The explicit exclusions inside node_modules further trim cache artifacts,
+# native build intermediates, and unnecessary platform binaries.
+# ---------------------------------------------------------------------------
+files:
+  - dist/main/**/*
+  - dist/renderer/**/*
+  - dist/shared/**/*
+  - package.json
+  # Runtime node_modules — exclude dev-only and build-time debris
+  - node_modules/**/*
+  - "!node_modules/.cache/**/*"
+  - "!node_modules/.bin/**/*"
+  - "!**/node_modules/*/test/**/*"
+  - "!**/node_modules/*/tests/**/*"
+  - "!**/node_modules/*/__tests__/**/*"
+  - "!**/node_modules/*/spec/**/*"
+  - "!**/node_modules/*/*.md"
+  - "!**/node_modules/*/*.map"
+  - "!**/node_modules/*/src/**/*"
+  # Exclude native build intermediates (keep only compiled .node files)
+  - "!**/node_modules/better-sqlite3/build/Release/obj.target/**/*"
+  - "!**/node_modules/better-sqlite3/src/**/*"
+  - "!**/node_modules/better-sqlite3/deps/**/*"
+  # koffi ships pre-built .node files per platform; exclude all non-win32 builds
+  - "!**/node_modules/koffi/build/koffi/darwin_*/**/*"
+  - "!**/node_modules/koffi/build/koffi/linux_*/**/*"
+  - "!**/node_modules/koffi/build/koffi/freebsd_*/**/*"
+  - "!**/node_modules/koffi/build/koffi/openbsd_*/**/*"
+  - "!**/node_modules/koffi/build/koffi/musl_*/**/*"
+  - "!**/node_modules/koffi/build/koffi/win32_ia32/**/*"
+
+# ---------------------------------------------------------------------------
+# asar unpack — native binaries that must live outside the asar (#9)
+# ---------------------------------------------------------------------------
+# Files matching these patterns are extracted next to the asar archive so
+# that the OS loader can access them directly (asar is a virtual filesystem
+# and cannot expose raw .node files to dlopen/LoadLibrary).
+#
+# koffi: pre-built .node files at build/koffi/<platform>/koffi.node
+#   On win32-x64 builds: build/koffi/win32_x64/koffi.node
+#   On win32-arm64 builds: build/koffi/win32_arm64/koffi.node
+#
+# better-sqlite3: build/Release/better_sqlite3.node
+#   (rebuilt against Electron's Node via `npm run rebuild:native`)
+# ---------------------------------------------------------------------------
+asarUnpack:
+  - "**/*.node"
+  # Explicit patterns as a belt-and-suspenders guarantee:
+  - "node_modules/koffi/build/koffi/win32_x64/koffi.node"
+  - "node_modules/koffi/build/koffi/win32_arm64/koffi.node"
+  - "node_modules/better-sqlite3/build/Release/better_sqlite3.node"
