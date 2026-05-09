@@ -127,7 +127,7 @@ const createWindow = (): void => {
   const csp = IS_DEV
     ? [
         "default-src 'self' http://localhost:5173",
-        "script-src 'self' 'unsafe-eval' http://localhost:5173",
+        "script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:5173",
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: blob:",
         "media-src blob:",
@@ -457,10 +457,14 @@ const setupPipeline = (): void => {
     return voiceCoach;
   };
 
+  const MAX_SESSION_ALERTS = 500;
   const sessionAlerts: Alert[] = [];
 
   dispatcher.on("alert", (alert: Alert) => {
     sessionAlerts.push(alert);
+    if (sessionAlerts.length > MAX_SESSION_ALERTS) {
+      sessionAlerts.splice(0, sessionAlerts.length - MAX_SESSION_ALERTS);
+    }
   });
 
   // ──────────────────────────────────────────────

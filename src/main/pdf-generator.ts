@@ -365,7 +365,7 @@ export async function generatePdfBuffer(data: PdfData): Promise<Buffer> {
     show: false,
     webPreferences: {
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
       nodeIntegration: false,
     },
   });
@@ -494,7 +494,7 @@ export async function generateSessionPdfBuffer(
     show: false,
     webPreferences: {
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
       nodeIntegration: false,
     },
   });

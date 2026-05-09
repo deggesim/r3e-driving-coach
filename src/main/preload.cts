@@ -9,50 +9,76 @@ import { contextBridge, ipcRenderer } from "electron";
 contextBridge.exposeInMainWorld("electronAPI", {
   // Main → Renderer (push channels)
   onFrame: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("session:frame", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("session:frame", listener);
+    return () => ipcRenderer.removeListener("session:frame", listener);
   },
   onLapComplete: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("lapComplete", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("lapComplete", listener);
+    return () => ipcRenderer.removeListener("lapComplete", listener);
   },
   onStatus: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("status", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("status", listener);
+    return () => ipcRenderer.removeListener("status", listener);
   },
 
   // Global input trigger (Main → Renderer) — fires when keyboard shortcut or
   // gamepad button is pressed, regardless of window focus.
   onInputTrigger: (callback: () => void) => {
-    ipcRenderer.on("input:trigger", () => callback());
+    const listener = () => callback();
+    ipcRenderer.on("input:trigger", listener);
+    return () => ipcRenderer.removeListener("input:trigger", listener);
   },
 
   // Voice coach push channels (Main → Renderer)
   onVoiceChunk: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("coach:voiceChunk", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("coach:voiceChunk", listener);
+    return () => ipcRenderer.removeListener("coach:voiceChunk", listener);
   },
   onVoiceDone: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("coach:voiceDone", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("coach:voiceDone", listener);
+    return () => ipcRenderer.removeListener("coach:voiceDone", listener);
   },
   onVoiceAudio: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("coach:voiceAudio", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("coach:voiceAudio", listener);
+    return () => ipcRenderer.removeListener("coach:voiceAudio", listener);
   },
 
   // Session push channels
   onSessionStarted: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("session:started", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("session:started", listener);
+    return () => ipcRenderer.removeListener("session:started", listener);
   },
   onSessionClosed: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("session:closed", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("session:closed", listener);
+    return () => ipcRenderer.removeListener("session:closed", listener);
   },
   onSessionLapAdded: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("session:lapAdded", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("session:lapAdded", listener);
+    return () => ipcRenderer.removeListener("session:lapAdded", listener);
   },
   onSessionSetupLoaded: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("session:setupLoaded", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("session:setupLoaded", listener);
+    return () => ipcRenderer.removeListener("session:setupLoaded", listener);
   },
   onSessionAnalysisChunk: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("session:analysisChunk", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("session:analysisChunk", listener);
+    return () => ipcRenderer.removeListener("session:analysisChunk", listener);
   },
   onSessionAnalysisDone: (callback: (data: unknown) => void) => {
-    ipcRenderer.on("session:analysisDone", (_event, data) => callback(data));
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("session:analysisDone", listener);
+    return () => ipcRenderer.removeListener("session:analysisDone", listener);
   },
 
   // Config

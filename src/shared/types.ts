@@ -396,21 +396,22 @@ export type SessionListResult = {
 
 export type ElectronAPI = {
   // Push channels (Main → Renderer)
-  onFrame: (callback: (data: R3EFrame) => void) => void;
-  onLapComplete: (callback: (data: LapRecord) => void) => void;
-  onStatus: (callback: (data: GameStatus) => void) => void;
-  onInputTrigger: (callback: () => void) => void;
-  onVoiceChunk: (callback: (data: { token: string }) => void) => void;
-  onVoiceDone: (callback: (data: { answer: string }) => void) => void;
-  onVoiceAudio: (callback: (data: unknown) => void) => void;
+  // Each method returns a cleanup function that removes the listener.
+  onFrame: (callback: (data: R3EFrame) => void) => () => void;
+  onLapComplete: (callback: (data: LapRecord) => void) => () => void;
+  onStatus: (callback: (data: GameStatus) => void) => () => void;
+  onInputTrigger: (callback: () => void) => () => void;
+  onVoiceChunk: (callback: (data: { token: string }) => void) => () => void;
+  onVoiceDone: (callback: (data: { answer: string }) => void) => () => void;
+  onVoiceAudio: (callback: (data: unknown) => void) => () => void;
 
   // Session push channels
-  onSessionStarted: (callback: (data: SessionRow) => void) => void;
-  onSessionClosed: (callback: (data: { id: number; game: GameSource }) => void) => void;
-  onSessionLapAdded: (callback: (data: { sessionId: number; game: GameSource; lap: LapRow }) => void) => void;
-  onSessionSetupLoaded: (callback: (data: { sessionId: number; game: GameSource; setup: SessionSetupRow }) => void) => void;
-  onSessionAnalysisChunk: (callback: (data: { sessionId: number; version: number; token: string }) => void) => void;
-  onSessionAnalysisDone: (callback: (data: { sessionId: number; analysis: SessionAnalysisRow }) => void) => void;
+  onSessionStarted: (callback: (data: SessionRow) => void) => () => void;
+  onSessionClosed: (callback: (data: { id: number; game: GameSource }) => void) => () => void;
+  onSessionLapAdded: (callback: (data: { sessionId: number; game: GameSource; lap: LapRow }) => void) => () => void;
+  onSessionSetupLoaded: (callback: (data: { sessionId: number; game: GameSource; setup: SessionSetupRow }) => void) => () => void;
+  onSessionAnalysisChunk: (callback: (data: { sessionId: number; version: number; token: string }) => void) => () => void;
+  onSessionAnalysisDone: (callback: (data: { sessionId: number; analysis: SessionAnalysisRow }) => void) => () => void;
 
   // Config
   configGet: (key: string) => Promise<unknown>;
