@@ -9,7 +9,7 @@
  */
 
 import type BetterSqlite3 from "better-sqlite3";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { createInputManager, type InputManager } from "./input-manager.js";
 import fs from "fs";
 import path from "path";
@@ -122,6 +122,54 @@ const createWindow = (): void => {
       callback(permission === "media");
     },
   );
+
+  // Content Security Policy — blocks XSS from injected HTML (e.g. marked output)
+  const csp = IS_DEV
+    ? [
+        "default-src 'self' http://localhost:5173",
+        "script-src 'self' 'unsafe-eval' http://localhost:5173",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: blob:",
+        "media-src blob:",
+        "connect-src ws://localhost:5173 http://localhost:5173",
+        "font-src 'self' data:",
+      ].join("; ")
+    : [
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: blob:",
+        "media-src blob:",
+        "connect-src 'none'",
+        "font-src 'self' data:",
+      ].join("; ");
+
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        "Content-Security-Policy": [csp],
+      },
+    });
+  });
+
+  // Block navigation to external URLs; redirect them to the system browser.
+  // Prevents markdown links in analysis text from hijacking the app window.
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    const allowedOrigins = IS_DEV
+      ? ["http://localhost:5173"]
+      : [`file://${path.join(__dirname, "../renderer")}`];
+    if (!allowedOrigins.some((o) => url.startsWith(o))) {
+      event.preventDefault();
+      shell.openExternal(url).catch(() => {});
+    }
+  });
+
+  // Deny all attempts to open a new window (e.g. target="_blank" in markdown).
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url).catch(() => {});
+    return { action: "deny" };
+  });
 
   if (IS_DEV) {
     mainWindow.loadURL("http://localhost:5173");
@@ -1492,13 +1540,20 @@ const setupPipeline = (): void => {
     async (_event, { filePath }: { filePath: string }) => {
       const fs = await import("fs");
       const pathMod = await import("path");
-      const buf = fs.readFileSync(filePath);
-      const parts = filePath.split(/[\\/]/);
+      const ACE_SETUPS_BASE = "D:\\Salvataggi\\ACE\\Car Setups";
+      const resolvedBase = pathMod.resolve(ACE_SETUPS_BASE);
+      const resolvedPath = pathMod.resolve(filePath);
+      // Prevent path traversal: filePath must be inside the ACE setups directory
+      if (!resolvedPath.startsWith(resolvedBase + pathMod.sep)) {
+        throw new Error("Percorso file non consentito.");
+      }
+      const buf = fs.readFileSync(resolvedPath);
+      const parts = resolvedPath.split(pathMod.sep);
       const carIdx = parts.findIndex((p) => p.toLowerCase() === "car setups");
       const carId =
         carIdx >= 0
           ? (parts[carIdx + 1] ?? "")
-          : pathMod.basename(pathMod.dirname(pathMod.dirname(filePath)));
+          : pathMod.basename(pathMod.dirname(pathMod.dirname(resolvedPath)));
       return decodeCarSetup(buf, carId);
     },
   );
