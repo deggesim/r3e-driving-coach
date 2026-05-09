@@ -192,27 +192,31 @@ export const useSessionStore = create<State>((set, get) => ({
 
 /**
  * Subscribe once to all session:* push channels. Call from the app root.
+ * Guard prevents duplicate registration (e.g. React Strict Mode double-mount).
  */
-export const subscribeSessionIPC = (): void => {
-  if (!window.electronAPI) return;
-  const s = useSessionStore.getState();
+let ipcSubscribed = false;
 
-  window.electronAPI.onSessionStarted((d) => s._applySessionStarted(d as SessionRow));
+export const subscribeSessionIPC = (): void => {
+  if (!window.electronAPI || ipcSubscribed) return;
+  ipcSubscribed = true;
+
+  const store = () => useSessionStore.getState();
+  window.electronAPI.onSessionStarted((d) => store()._applySessionStarted(d as SessionRow));
   window.electronAPI.onSessionClosed((d) =>
-    s._applySessionClosed(d as { id: number; game: GameSource }),
+    store()._applySessionClosed(d as { id: number; game: GameSource }),
   );
   window.electronAPI.onSessionLapAdded((d) =>
-    s._applyLapAdded(d as { sessionId: number; game: GameSource; lap: LapRow }),
+    store()._applyLapAdded(d as { sessionId: number; game: GameSource; lap: LapRow }),
   );
   window.electronAPI.onSessionSetupLoaded((d) =>
-    s._applySetupLoaded(
+    store()._applySetupLoaded(
       d as { sessionId: number; game: GameSource; setup: SessionSetupRow },
     ),
   );
   window.electronAPI.onSessionAnalysisChunk((d) =>
-    s._applyAnalysisChunk(d as { sessionId: number; version: number; token: string }),
+    store()._applyAnalysisChunk(d as { sessionId: number; version: number; token: string }),
   );
   window.electronAPI.onSessionAnalysisDone((d) =>
-    s._applyAnalysisDone(d as { sessionId: number; analysis: SessionAnalysisRow }),
+    store()._applyAnalysisDone(d as { sessionId: number; analysis: SessionAnalysisRow }),
   );
 };

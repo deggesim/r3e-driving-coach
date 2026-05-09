@@ -295,6 +295,7 @@ const setupPipeline = (): void => {
   let currentCar = "";
   let currentTrack = "";
   let currentLayout = "";
+  let currentLayoutLength = 6000;
   let r3eConnected = false;
   let aceConnected = false;
   let activeGame: GameSource = "r3e";
@@ -321,7 +322,8 @@ const setupPipeline = (): void => {
 
   const buildCornerMap = (): Map<number, string> => {
     const map = new Map<number, string>();
-    for (let d = 0; d < 6000; d += 50) {
+    const limit = Math.max(currentLayoutLength, 6000);
+    for (let d = 0; d < limit; d += 50) {
       const name = lookupCorner(d);
       if (name) map.set(Math.floor(d / 50), name);
     }
@@ -392,6 +394,7 @@ const setupPipeline = (): void => {
     onChunk: (data) => pushToRenderer("session:analysisChunk", data),
     onDone: (data) => pushToRenderer("session:analysisDone", data),
   });
+  const analyzingInProgress = new Set<string>();
 
   let voiceCoach: VoiceCoachEngine | null = null;
   const getVoiceCoach = (): VoiceCoachEngine | null => {
@@ -648,6 +651,7 @@ const setupPipeline = (): void => {
       if (lapData.track) currentTrack = lapData.track;
       if (lapData.layout) currentLayout = lapData.layout;
     }
+    if (lapData.layoutLength > 0) currentLayoutLength = lapData.layoutLength;
 
     // Baseline/rule engine reset (per-car/track)
     if (lapData.car !== baseline.car || lapData.track !== baseline.track) {
@@ -658,6 +662,7 @@ const setupPipeline = (): void => {
         activeGame,
       );
       ruleEngine = createRuleEngine(dispatcher, baseline, lookupCorner);
+      recorder.reset(baseline.isReady());
       sessionCoach.updateCornerNames(buildCornerMap());
     }
 
@@ -905,12 +910,20 @@ const setupPipeline = (): void => {
         ? resolveNames(game, sRow.car, sRow.track, sRow.layout)
         : undefined;
 
+      const analyzeKey = `${sessionId}:${game}`;
+      if (analyzingInProgress.has(analyzeKey)) {
+        return { ok: false, reason: "Analisi già in corso per questa sessione." };
+      }
+
       const alertsForSession =
         sessionId === currentSessionId ? [...sessionAlerts] : undefined;
       const flags = { leaderboardMode: params.leaderboardMode, fixedSetup: params.fixedSetup };
+
+      analyzingInProgress.add(analyzeKey);
       sessionCoach
         .analyzeSession(sessionId, game, resolved, alertsForSession, flags)
-        .catch((err) => console.error("[SessionCoach] error:", err));
+        .catch((err) => console.error("[SessionCoach] error:", err))
+        .finally(() => analyzingInProgress.delete(analyzeKey));
 
       return { ok: true };
     },
@@ -975,7 +988,9 @@ const setupPipeline = (): void => {
       const page = params.page ?? 0;
       const pageSize = params.pageSize ?? 10;
       const sort = params.sort === "asc" ? "ASC" : "DESC";
-      const game = params.game ?? null;
+      const rawGame = params.game ?? null;
+      const game: GameSource | null =
+        rawGame === "r3e" || rawGame === "ace" ? rawGame : null;
       const carFilter = params.car ?? null;
       const trackFilter = params.track ?? null;
 

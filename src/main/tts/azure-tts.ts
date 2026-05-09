@@ -237,7 +237,8 @@ function preprocessTTSText(text: string): string {
   });
 
   // Bare meters: 450m (without @ prefix, e.g. from voice coach responses)
-  text = text.replace(/\b(\d+)\s*m\b/g, (_m, digits) => {
+  // Negative lookahead excludes compound units like m/h, m/s, m²
+  text = text.replace(/\b(\d+)\s*m\b(?!\/|²)/g, (_m, digits) => {
     return numberToItalian(parseInt(digits, 10)) + " metri";
   });
 

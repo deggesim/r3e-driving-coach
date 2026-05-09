@@ -48,6 +48,7 @@ const _require = createRequire(import.meta.url);
 
 type AceReaderOptions = {
   mock?: boolean;
+  enableInternalLog?: boolean;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,6 +91,7 @@ export type AceReader = {
 export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
   const emitter = new EventEmitter();
   const isMock = options.mock ?? process.platform !== "win32";
+  const internalLogEnabled = options.enableInternalLog ?? false;
 
   let connected = false;
   let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -581,7 +583,7 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       readStatic(staBuf);
 
       connected = true;
-      openTelemetryLog();
+      if (internalLogEnabled) openTelemetryLog();
       emitter.emit("connected");
       poll();
     } catch (err) {

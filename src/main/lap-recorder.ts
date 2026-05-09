@@ -31,6 +31,7 @@ interface LapEventReader {
 
 export type LapRecorder = {
   attach: (reader: LapEventReader) => void;
+  reset: (hasExistingBaseline: boolean) => void;
   isCalibrating: () => boolean;
   lapsToCalibration: () => number;
   on: EventEmitter["on"];
@@ -272,6 +273,11 @@ export const createLapRecorder = (hasExistingBaseline = false): LapRecorder => {
   return {
     attach: (reader) => {
       reader.on("lapComplete", onLapComplete);
+    },
+    reset: (hasExistingBaseline) => {
+      lapsRecorded = 0;
+      calibrationDone = hasExistingBaseline;
+      bestLapTime = Infinity;
     },
     isCalibrating: () => !calibrationDone,
     lapsToCalibration: () =>

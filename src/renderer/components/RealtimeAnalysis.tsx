@@ -105,7 +105,7 @@ const RealtimeAnalysis = () => {
         onAnalyze={handleAnalyze}
         onExportPdf={handleExportPdf}
         onOpenPicker={
-          status.game === "r3e"
+          (session?.game ?? status.game) === "r3e"
             ? () => setShowSetupSelection(true)
             : () => setShowPicker(true)
         }
@@ -138,7 +138,7 @@ const RealtimeAnalysis = () => {
       </div>
 
       {/* Setup pickers */}
-      {status.game === "ace" ? (
+      {(session?.game ?? status.game) === "ace" ? (
         <AceSetupPicker
           show={showPicker}
           expectedCar={currentCar}

@@ -50,7 +50,7 @@ export type SessionCoachEngine = {
 };
 
 const extractSection5 = (text: string): string => {
-  const match = text.match(/\[5\][^\n]*\n([\s\S]*?)(?:\[6\]|$)/);
+  const match = text.match(/\[5\][^\n]*\n([\s\S]*?)(?=\n\[\d+\]|$)/);
   if (!match) return "";
   const raw = match[1].trim();
   const stripped = raw
