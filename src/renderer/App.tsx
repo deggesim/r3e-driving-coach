@@ -50,6 +50,7 @@ const App = () => {
     setAzureRegion,
     setAzureVoiceName,
     setTelemetryLogEnabled,
+    setAceSetupsPath,
   } = useSettingsStore();
 
   const { get: configGet } = useConfig();
@@ -70,7 +71,7 @@ const App = () => {
   // Load all settings from config on mount
   useEffect(() => {
     const load = async () => {
-      const [ak, az, key, region, voice, name, button, model, telLog, kbKey] =
+      const [ak, az, key, region, voice, name, button, model, telLog, kbKey, acePath] =
         await Promise.all([
           configGet("anthropicApiKey"),
           configGet("azureTtsEnabled"),
@@ -82,6 +83,7 @@ const App = () => {
           configGet("anthropicModel"),
           configGet("telemetryLogEnabled"),
           configGet("keyboardVoiceKey"),
+          configGet("aceSetupsPath"),
         ]);
       if (ak) setApiKey(ak);
       if (az) setAzureTtsEnabled(az === "true");
@@ -93,6 +95,7 @@ const App = () => {
       if (model) setAnthropicModel(model);
       if (telLog) setTelemetryLogEnabled(telLog === "true");
       setKeyboardVoiceKey(kbKey || null);
+      if (acePath) setAceSetupsPath(acePath);
       setSettingsLoaded(true);
     };
     load().catch(console.error);
@@ -108,6 +111,7 @@ const App = () => {
     setAnthropicModel,
     setTelemetryLogEnabled,
     setKeyboardVoiceKey,
+    setAceSetupsPath,
   ]);
 
   return (

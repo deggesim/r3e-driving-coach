@@ -1514,14 +1514,24 @@ const setupPipeline = (): void => {
     await speakText(fullAnswer);
   });
 
-  // ACE setup file-based IPC (unchanged)
+  // ACE setup file-based IPC
+  // getAceSetupsBase reads the user-configurable path from the DB, falling back
+  // to the default installation path when the config key is not set.
+  const ACE_SETUPS_DEFAULT = "D:\\Salvataggi\\ACE\\Car Setups";
+  const getAceSetupsBase = (): string => {
+    const row = db
+      .prepare("SELECT value FROM app_config WHERE key = ?")
+      .get("aceSetupsPath") as { value: string } | undefined;
+    return row?.value?.trim() || ACE_SETUPS_DEFAULT;
+  };
+
   ipcMain.handle(
     "ace:listSetupFiles",
     async (_event, { car, track }: { car: string; track: string }) => {
       const fs = await import("fs");
       const pathMod = await import("path");
-      const ACE_SETUPS_BASE = "D:\\Salvataggi\\ACE\\Car Setups";
-      const dir = pathMod.join(ACE_SETUPS_BASE, car, track);
+      const aceSetupsBase = getAceSetupsBase();
+      const dir = pathMod.join(aceSetupsBase, car, track);
       try {
         const files = fs
           .readdirSync(dir)
@@ -1544,8 +1554,8 @@ const setupPipeline = (): void => {
     async (_event, { filePath }: { filePath: string }) => {
       const fs = await import("fs");
       const pathMod = await import("path");
-      const ACE_SETUPS_BASE = "D:\\Salvataggi\\ACE\\Car Setups";
-      const resolvedBase = pathMod.resolve(ACE_SETUPS_BASE);
+      const aceSetupsBase = getAceSetupsBase();
+      const resolvedBase = pathMod.resolve(aceSetupsBase);
       const resolvedPath = pathMod.resolve(filePath);
       // Prevent path traversal: filePath must be inside the ACE setups directory
       if (!resolvedPath.startsWith(resolvedBase + pathMod.sep)) {
@@ -1565,12 +1575,12 @@ const setupPipeline = (): void => {
   ipcMain.handle("ace:listSetupCars", async () => {
     const fs = await import("fs");
     const pathMod = await import("path");
-    const ACE_SETUPS_BASE = "D:\\Salvataggi\\ACE\\Car Setups";
+    const aceSetupsBase = getAceSetupsBase();
     try {
       return fs
-        .readdirSync(ACE_SETUPS_BASE)
+        .readdirSync(aceSetupsBase)
         .filter((f: string) =>
-          fs.statSync(pathMod.join(ACE_SETUPS_BASE, f)).isDirectory(),
+          fs.statSync(pathMod.join(aceSetupsBase, f)).isDirectory(),
         )
         .sort();
     } catch {
@@ -1583,8 +1593,8 @@ const setupPipeline = (): void => {
     async (_event, { car }: { car: string }) => {
       const fs = await import("fs");
       const pathMod = await import("path");
-      const ACE_SETUPS_BASE = "D:\\Salvataggi\\ACE\\Car Setups";
-      const carDir = pathMod.join(ACE_SETUPS_BASE, car);
+      const aceSetupsBase = getAceSetupsBase();
+      const carDir = pathMod.join(aceSetupsBase, car);
       try {
         return fs
           .readdirSync(carDir)
@@ -1619,10 +1629,14 @@ const setupPipeline = (): void => {
   )?.value;
   if (kbKey) inputManager.setKeyboard(kbKey);
 
-  // Ensure the active session is closed when the app exits normally
+  // Ensure the active session is closed and all resources released on exit.
+  // This is the single before-quit handler; the module-level one has been removed
+  // to avoid double execution of cleanup logic.
   app.on("before-quit", () => {
     closeSession("app closing");
     inputManager?.destroy();
+    r3eReader.stop();
+    aceReader.stop();
   });
 
   // Start both readers
@@ -1647,8 +1661,10 @@ void ({} as BetterSqlite3.Database);
 // ──────────────────────────────────────────────
 
 app.whenReady().then(() => {
-  createWindow();
+  // setupPipeline must run before createWindow so that all ipcMain.handle
+  // registrations are in place before the renderer sends its first IPC calls.
   setupPipeline();
+  createWindow();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -1661,7 +1677,6 @@ app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
 
-app.on("before-quit", () => {
-  r3eReaderInst?.stop();
-  aceReaderInst?.stop();
-});
+// Note: reader stop on quit is handled by the before-quit listener in setupPipeline()
+// which has direct closure access to r3eReader and aceReader instances.
+// The r3eReaderInst / aceReaderInst module-level refs are kept for window-all-closed below.

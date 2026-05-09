@@ -173,6 +173,8 @@ const SettingsPanel = () => {
     setMockHistoryMode,
     telemetryLogEnabled,
     setTelemetryLogEnabled,
+    aceSetupsPath,
+    setAceSetupsPath,
     settingSaved,
     showSaved,
   } = useSettingsStore();
@@ -204,6 +206,11 @@ const SettingsPanel = () => {
       gamepadButton !== null ? String(gamepadButton) : "",
     );
     showSaved("assistant");
+  };
+
+  const handleSaveAceSetupsPath = async () => {
+    await configSet("aceSetupsPath", aceSetupsPath);
+    showSaved("aceSetupsPath");
   };
 
   const handleToggleTelemetry = async () => {
@@ -725,6 +732,40 @@ const SettingsPanel = () => {
             <Form.Label className="setting-section-label">
               Test &amp; sviluppo
             </Form.Label>
+
+            <Form.Group as={Row} className="mb-2" controlId="ace-setups-path">
+              <Form.Label column sm={3}>
+                Setup ACE
+              </Form.Label>
+              <Col sm={7}>
+                <Form.Control
+                  type="text"
+                  value={aceSetupsPath}
+                  onChange={(e) => setAceSetupsPath(e.target.value)}
+                  placeholder="D:\Salvataggi\ACE\Car Setups"
+                />
+              </Col>
+              <Col sm={2}>
+                <Button variant="danger" onClick={handleSaveAceSetupsPath}>
+                  {settingSaved === "aceSetupsPath" ? (
+                    <>
+                      <FontAwesomeIcon icon={faCheck} /> Salvato
+                    </>
+                  ) : (
+                    "Salva"
+                  )}
+                </Button>
+              </Col>
+            </Form.Group>
+            <Row className="mb-3">
+              <Col sm={{ span: 9, offset: 3 }}>
+                <Form.Text>
+                  Cartella di base dei setup ACE (file <code>.carsetup</code>).
+                  Lascia vuoto per usare il percorso predefinito:{" "}
+                  <code>D:\Salvataggi\ACE\Car Setups</code>.
+                </Form.Text>
+              </Col>
+            </Row>
 
             <Form.Group as={Row} className="mb-2">
               <Form.Label column sm={3}>

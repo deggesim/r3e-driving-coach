@@ -28,6 +28,9 @@ type SettingsStore = {
   mockHistoryMode: boolean;
   telemetryLogEnabled: boolean;
 
+  // ACE
+  aceSetupsPath: string;
+
   // Setters
   setApiKey: (v: string) => void;
   setAssistantName: (v: string) => void;
@@ -42,6 +45,7 @@ type SettingsStore = {
   setMockHistoryMode: (v: boolean) => void;
   setTelemetryLogEnabled: (v: boolean) => void;
   setCapturingVoiceInput: (v: boolean) => void;
+  setAceSetupsPath: (v: string) => void;
   showSaved: (key: string) => void;
   clearSaved: () => void;
 };
@@ -61,6 +65,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   capturingVoiceInput: false,
   mockHistoryMode: false,
   telemetryLogEnabled: false,
+  aceSetupsPath: "",
 
   setApiKey: (apiKey) => set({ apiKey }),
   setAssistantName: (assistantName) => set({ assistantName }),
@@ -75,6 +80,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   setCapturingVoiceInput: (capturingVoiceInput) => set({ capturingVoiceInput }),
   setMockHistoryMode: (mockHistoryMode) => set({ mockHistoryMode }),
   setTelemetryLogEnabled: (telemetryLogEnabled) => set({ telemetryLogEnabled }),
+  setAceSetupsPath: (aceSetupsPath) => set({ aceSetupsPath }),
   showSaved: (key) => {
     set({ settingSaved: key });
     setTimeout(() => set({ settingSaved: null }), 2000);
