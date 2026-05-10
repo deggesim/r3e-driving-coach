@@ -27,6 +27,7 @@ type BaselineZone = {
 export type AdaptiveBaseline = {
   readonly car: string;
   readonly track: string;
+  readonly layout: string;
   isReady: () => boolean;
   ingestLap: (zones: ZoneData[], lapNumber: number, isCalibrating: boolean) => Deviation[] | null;
   checkZoneRealtime: (zoneData: { zone: number; tcActive: boolean; absActive: boolean }) => {
@@ -42,7 +43,7 @@ const makeDeviation = (type: DeviationType, zone: ZoneData, delta: number, messa
   type, zone: zone.zone, dist: zone.dist, delta, message,
 });
 
-export const createAdaptiveBaseline = (car: string, track: string, db?: Database.Database, game = 'r3e'): AdaptiveBaseline => {
+export const createAdaptiveBaseline = (car: string, track: string, layout: string, db?: Database.Database, game = 'r3e'): AdaptiveBaseline => {
   const zones = new Map<number, BaselineZone>();
   const tcZones = new Set<number>();
   const absZones = new Set<number>();
@@ -152,22 +153,28 @@ export const createAdaptiveBaseline = (car: string, track: string, db?: Database
     return deviations;
   };
 
+  const isR3E = game === 'r3e';
+  const carKey   = isR3E ? Number(car)    : car;
+  const trackKey = isR3E ? Number(track)  : track;
+  const layoutKey = isR3E ? Number(layout) : layout;
+
   const loadFromDb = (): void => {
     if (!dbRef) return;
 
+    const suffix = isR3E ? 'r3e' : 'ace';
     const rows = dbRef.prepare(
-      'SELECT zone_id, data FROM baseline WHERE car = ? AND track = ? AND game = ?',
-    ).all(car, track, game) as Array<{ zone_id: number; data: string }>;
+      `SELECT zone_id, data FROM baseline_${suffix} WHERE car = ? AND track = ? AND layout = ?`,
+    ).all(carKey, trackKey, layoutKey) as Array<{ zone_id: number; data: string }>;
     for (const row of rows) zones.set(row.zone_id, JSON.parse(row.data));
 
     const tcRows = dbRef.prepare(
-      'SELECT zone_id FROM baseline_tc_zones WHERE car = ? AND track = ? AND game = ?',
-    ).all(car, track, game) as Array<{ zone_id: number }>;
+      `SELECT zone_id FROM baseline_tc_zones_${suffix} WHERE car = ? AND track = ? AND layout = ?`,
+    ).all(carKey, trackKey, layoutKey) as Array<{ zone_id: number }>;
     for (const row of tcRows) tcZones.add(row.zone_id);
 
     const absRows = dbRef.prepare(
-      'SELECT zone_id FROM baseline_abs_zones WHERE car = ? AND track = ? AND game = ?',
-    ).all(car, track, game) as Array<{ zone_id: number }>;
+      `SELECT zone_id FROM baseline_abs_zones_${suffix} WHERE car = ? AND track = ? AND layout = ?`,
+    ).all(carKey, trackKey, layoutKey) as Array<{ zone_id: number }>;
     for (const row of absRows) absZones.add(row.zone_id);
 
     if (zones.size > 0) ready = true;
@@ -176,29 +183,30 @@ export const createAdaptiveBaseline = (car: string, track: string, db?: Database
   const persistToDb = (): void => {
     if (!dbRef) return;
 
+    const suffix = isR3E ? 'r3e' : 'ace';
     const upsert = dbRef.prepare(`
-      INSERT OR REPLACE INTO baseline (car, track, zone_id, game, data, updated_at)
+      INSERT OR REPLACE INTO baseline_${suffix} (car, track, layout, zone_id, data, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
     const upsertTc = dbRef.prepare(`
-      INSERT OR IGNORE INTO baseline_tc_zones (car, track, zone_id, game)
+      INSERT OR IGNORE INTO baseline_tc_zones_${suffix} (car, track, layout, zone_id)
       VALUES (?, ?, ?, ?)
     `);
     const upsertAbs = dbRef.prepare(`
-      INSERT OR IGNORE INTO baseline_abs_zones (car, track, zone_id, game)
+      INSERT OR IGNORE INTO baseline_abs_zones_${suffix} (car, track, layout, zone_id)
       VALUES (?, ?, ?, ?)
     `);
 
     const nowIso = new Date().toISOString();
     const tx = dbRef.transaction(() => {
       for (const [zoneId, data] of zones) {
-        upsert.run(car, track, zoneId, game, JSON.stringify(data), nowIso);
+        upsert.run(carKey, trackKey, layoutKey, zoneId, JSON.stringify(data), nowIso);
       }
       for (const zoneId of tcZones) {
-        upsertTc.run(car, track, zoneId, game);
+        upsertTc.run(carKey, trackKey, layoutKey, zoneId);
       }
       for (const zoneId of absZones) {
-        upsertAbs.run(car, track, zoneId, game);
+        upsertAbs.run(carKey, trackKey, layoutKey, zoneId);
       }
     });
 
@@ -210,6 +218,7 @@ export const createAdaptiveBaseline = (car: string, track: string, db?: Database
   return {
     car,
     track,
+    layout,
     isReady: () => ready,
     ingestLap: (zoneList, _lapNumber, isCalibrating) => {
       for (const zone of zoneList) updateZone(zone);

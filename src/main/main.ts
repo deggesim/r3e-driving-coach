@@ -57,7 +57,6 @@ import {
   getTrackMap,
   hasCornerNames,
   saveTrackMap,
-  seedAceCornersFromR3E,
   seedCornersFromLap,
 } from "./db/db.js";
 import { toGameFrame } from "./game-adapter.js";
@@ -359,8 +358,8 @@ const setupPipeline = (): void => {
     return getCornerName(
       db,
       "r3e",
-      currentTrack ? getTrackName(Number(currentTrack)) : currentTrack,
-      currentLayout ? getLayoutName(Number(currentLayout)) : currentLayout,
+      currentTrack ? Number(currentTrack) : 0,
+      currentLayout ? Number(currentLayout) : 0,
       dist,
     );
   };
@@ -380,6 +379,7 @@ const setupPipeline = (): void => {
   const zoneTracker = createZoneTracker();
 
   let baseline: AdaptiveBaseline = createAdaptiveBaseline(
+    "unknown",
     "unknown",
     "unknown",
     db,
@@ -680,11 +680,12 @@ const setupPipeline = (): void => {
     }
     if (lapData.layoutLength > 0) currentLayoutLength = lapData.layoutLength;
 
-    // Baseline/rule engine reset (per-car/track)
-    if (lapData.car !== baseline.car || lapData.track !== baseline.track) {
+    // Baseline/rule engine reset (per-car/track/layout)
+    if (lapData.car !== baseline.car || lapData.track !== baseline.track || lapData.layout !== baseline.layout) {
       baseline = createAdaptiveBaseline(
         lapData.car,
         lapData.track,
+        lapData.layout ?? currentLayout,
         db,
         activeGame,
       );
@@ -748,21 +749,26 @@ const setupPipeline = (): void => {
       pushToRenderer("lapComplete", lapWithNames);
       pushStatus();
 
-      // Seed corner names from first lap (R3E only — ACE uses seedAceCornersFromR3E at session start)
-      if (activeGame !== "ace" && !hasCornerNames(db, activeGame, names.trackName, names.layoutName)) {
-        seedCornersFromLap(db, activeGame, names.trackName, names.layoutName, lap.zones);
+      // Seed corner names from first lap if not already present
+      const cnTrack = activeGame === "r3e" ? Number(lap.track) : lap.track;
+      const cnLayout = activeGame === "r3e" ? Number(lap.layout) : lap.layout;
+      if (!hasCornerNames(db, activeGame, cnTrack, cnLayout)) {
+        seedCornersFromLap(db, activeGame, cnTrack, cnLayout, lap.zones);
       }
 
       // Build track map geometry from the first valid lap on this car/track/layout
       if (lap.valid) {
         const geometry = buildTrackMap(lap.frames, lap.layoutLength);
         if (geometry) {
+          const tmCar    = activeGame === "r3e" ? Number(lap.car)    : lap.car;
+          const tmTrack  = activeGame === "r3e" ? Number(lap.track)  : lap.track;
+          const tmLayout = activeGame === "r3e" ? Number(lap.layout) : lap.layout;
           saveTrackMap(
             db,
             activeGame,
-            lap.car,
-            lap.track,
-            lap.layout,
+            tmCar,
+            tmTrack,
+            tmLayout,
             geometry,
           );
           console.log(
@@ -845,9 +851,6 @@ const setupPipeline = (): void => {
       currentSetupId = null;
       sessionAlerts.length = 0;
 
-      if (activeGame === "ace") {
-        seedAceCornersFromR3E(db, currentTrack, currentLayout);
-      }
 
       const row = db
         .prepare(`SELECT * FROM ${t("sessions")} WHERE id = ?`)
@@ -979,7 +982,10 @@ const setupPipeline = (): void => {
         layout,
       }: { game: GameSource; car: string; track: string; layout: string },
     ) => {
-      return getTrackMap(db, game, car, track, layout);
+      const tmCar    = game === "r3e" ? Number(car)    : car;
+      const tmTrack  = game === "r3e" ? Number(track)  : track;
+      const tmLayout = game === "r3e" ? Number(layout) : layout;
+      return getTrackMap(db, game, tmCar, tmTrack, tmLayout);
     },
   );
 

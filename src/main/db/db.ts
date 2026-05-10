@@ -1,15 +1,21 @@
 import Database from "better-sqlite3";
 import path from "path";
-import type { GameSource, TrackMapGeometry, ZoneData } from "../../shared/types.js";
+import type {
+  GameSource,
+  TrackMapGeometry,
+  ZoneData,
+} from "../../shared/types.js";
 import { R3E_CORNERS } from "./r3e-corners.js";
 
 let _db: Database.Database | null = null;
 
 const seedR3ECorners = (db: Database.Database): void => {
-  const count = (db.prepare(`SELECT COUNT(*) as n FROM corner_names WHERE game = 'r3e'`).get() as { n: number }).n;
+  const count = (
+    db.prepare(`SELECT COUNT(*) as n FROM corner_names_r3e`).get() as { n: number }
+  ).n;
   if (count > 0) return;
   const insert = db.prepare(
-    `INSERT OR IGNORE INTO corner_names (game, track, layout, dist_min, dist_max, name) VALUES ('r3e', ?, ?, ?, ?, ?)`,
+    `INSERT OR IGNORE INTO corner_names_r3e (track, layout, dist_min, dist_max, name) VALUES (?, ?, ?, ?, ?)`,
   );
   db.transaction(() => {
     for (const c of R3E_CORNERS) {
@@ -21,40 +27,74 @@ const seedR3ECorners = (db: Database.Database): void => {
 
 const initSchema = (db: Database.Database): void => {
   db.exec(`
-    CREATE TABLE IF NOT EXISTS baseline (
-      game      TEXT NOT NULL DEFAULT 'r3e',
-      car       TEXT NOT NULL,
-      track     TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS baseline_r3e (
+      car       INTEGER NOT NULL,
+      track     INTEGER NOT NULL,
+      layout    INTEGER NOT NULL,
       zone_id   INTEGER NOT NULL,
       data      TEXT NOT NULL,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (game, car, track, zone_id)
+      PRIMARY KEY (car, track, layout, zone_id)
     );
 
-    CREATE TABLE IF NOT EXISTS baseline_tc_zones (
-      game      TEXT NOT NULL DEFAULT 'r3e',
+    CREATE TABLE IF NOT EXISTS baseline_ace (
       car       TEXT NOT NULL,
       track     TEXT NOT NULL,
+      layout    TEXT NOT NULL,
       zone_id   INTEGER NOT NULL,
-      PRIMARY KEY (game, car, track, zone_id)
+      data      TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (car, track, layout, zone_id)
     );
 
-    CREATE TABLE IF NOT EXISTS baseline_abs_zones (
-      game      TEXT NOT NULL DEFAULT 'r3e',
+    CREATE TABLE IF NOT EXISTS baseline_tc_zones_r3e (
+      car       INTEGER NOT NULL,
+      track     INTEGER NOT NULL,
+      layout    INTEGER NOT NULL,
+      zone_id   INTEGER NOT NULL,
+      PRIMARY KEY (car, track, layout, zone_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS baseline_tc_zones_ace (
       car       TEXT NOT NULL,
       track     TEXT NOT NULL,
+      layout    TEXT NOT NULL,
       zone_id   INTEGER NOT NULL,
-      PRIMARY KEY (game, car, track, zone_id)
+      PRIMARY KEY (car, track, layout, zone_id)
     );
 
-    CREATE TABLE IF NOT EXISTS corner_names (
-      game      TEXT NOT NULL DEFAULT 'r3e',
+    CREATE TABLE IF NOT EXISTS baseline_abs_zones_r3e (
+      car       INTEGER NOT NULL,
+      track     INTEGER NOT NULL,
+      layout    INTEGER NOT NULL,
+      zone_id   INTEGER NOT NULL,
+      PRIMARY KEY (car, track, layout, zone_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS baseline_abs_zones_ace (
+      car       TEXT NOT NULL,
+      track     TEXT NOT NULL,
+      layout    TEXT NOT NULL,
+      zone_id   INTEGER NOT NULL,
+      PRIMARY KEY (car, track, layout, zone_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS corner_names_r3e (
+      track     INTEGER NOT NULL,
+      layout    INTEGER NOT NULL,
+      dist_min  REAL NOT NULL,
+      dist_max  REAL NOT NULL,
+      name      TEXT NOT NULL,
+      PRIMARY KEY (track, layout, dist_min)
+    );
+
+    CREATE TABLE IF NOT EXISTS corner_names_ace (
       track     TEXT NOT NULL,
       layout    TEXT NOT NULL,
       dist_min  REAL NOT NULL,
       dist_max  REAL NOT NULL,
       name      TEXT NOT NULL,
-      PRIMARY KEY (game, track, layout, dist_min)
+      PRIMARY KEY (track, layout, dist_min)
     );
 
     CREATE TABLE IF NOT EXISTS sessions_r3e (
@@ -158,60 +198,26 @@ const initSchema = (db: Database.Database): void => {
       value TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS track_maps (
-      game       TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS track_maps_r3e (
+      car        INTEGER NOT NULL,
+      track      INTEGER NOT NULL,
+      layout     INTEGER NOT NULL,
+      geometry   TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (car, track, layout)
+    );
+
+    CREATE TABLE IF NOT EXISTS track_maps_ace (
       car        TEXT NOT NULL,
       track      TEXT NOT NULL,
       layout     TEXT NOT NULL,
       geometry   TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (game, car, track, layout)
+      PRIMARY KEY (car, track, layout)
     );
   `);
 
-  // Migration: add frames_blob to pre-existing laps_* tables
-  const hasColumn = (table: string, column: string): boolean => {
-    const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
-    return rows.some((r) => r.name === column);
-  };
-  if (!hasColumn("laps_r3e", "frames_blob")) {
-    db.exec(`ALTER TABLE laps_r3e ADD COLUMN frames_blob BLOB`);
-  }
-  if (!hasColumn("laps_ace", "frames_blob")) {
-    db.exec(`ALTER TABLE laps_ace ADD COLUMN frames_blob BLOB`);
-  }
-
-  // Migration: add game column to corner_names and reseed R3E data
-  if (!hasColumn("corner_names", "game")) {
-    db.exec(`
-      ALTER TABLE corner_names ADD COLUMN game TEXT NOT NULL DEFAULT 'r3e';
-      DELETE FROM corner_names;
-    `);
-  }
-
   seedR3ECorners(db);
-
-  // Migration: invalidate R3E laps where any sector was stored as 0 (not counted by the sim).
-  // Zero sectors indicate an incomplete lap recorded before R3E populated the SHM sector fields.
-  db.exec(`
-    UPDATE laps_r3e
-    SET valid = 0
-    WHERE valid = 1
-      AND (sector1 <= 0 OR sector1 IS NULL
-        OR sector2 <= 0 OR sector2 IS NULL
-        OR sector3 <= 0 OR sector3 IS NULL)
-  `);
-
-  // Migration: recompute best_lap from valid laps only (previously invalid laps could overwrite it).
-  for (const game of ["r3e", "ace"] as const) {
-    db.exec(`
-      UPDATE sessions_${game}
-      SET best_lap = (
-        SELECT MIN(lap_time) FROM laps_${game}
-        WHERE session_id = sessions_${game}.id AND valid = 1
-      )
-    `);
-  }
 };
 
 export const getDb = (userDataPath: string): Database.Database => {
@@ -238,24 +244,8 @@ export const seedAceCornersFromR3E = (
 ): void => {
   if (hasCornerNames(db, "ace", aceTrack, aceLayout)) return;
 
-  const rows = R3E_CORNERS.filter(
-    (c) => c.track === aceTrack && c.layout === aceLayout,
-  );
-  if (rows.length === 0) return;
-
-  const insert = db.prepare(
-    `INSERT OR IGNORE INTO corner_names (game, track, layout, dist_min, dist_max, name)
-     VALUES ('ace', ?, ?, ?, ?, ?)`,
-  );
-  db.transaction(() => {
-    for (const c of rows) {
-      insert.run(aceTrack, aceLayout, c.distMin, c.distMax, c.name);
-    }
-  })();
-
-  console.log(
-    `[DB] Seeded ${rows.length} ACE corner(s) for ${aceTrack}|${aceLayout} (exact R3E_CORNERS match)`,
-  );
+  // R3E_CORNERS now uses numeric IDs — ACE matching is not possible via this path.
+  // ACE corner names are seeded via seedCornersFromLap instead.
 };
 
 /**
@@ -265,17 +255,18 @@ export const seedAceCornersFromR3E = (
 export const getCornerName = (
   db: Database.Database,
   game: GameSource,
-  track: string,
-  layout: string,
+  track: number | string,
+  layout: number | string,
   dist: number,
 ): string | null => {
+  const table = game === "r3e" ? "corner_names_r3e" : "corner_names_ace";
   const row = db
     .prepare(
-      `SELECT name FROM corner_names
-       WHERE game = ? AND track = ? AND layout = ? AND dist_min <= ? AND dist_max >= ?
+      `SELECT name FROM ${table}
+       WHERE track = ? AND layout = ? AND dist_min <= ? AND dist_max >= ?
        LIMIT 1`,
     )
-    .get(game, track, layout, dist, dist) as { name: string } | undefined;
+    .get(track, layout, dist, dist) as { name: string } | undefined;
 
   return row?.name ?? null;
 };
@@ -283,14 +274,13 @@ export const getCornerName = (
 export const hasCornerNames = (
   db: Database.Database,
   game: GameSource,
-  track: string,
-  layout: string,
+  track: number | string,
+  layout: number | string,
 ): boolean => {
+  const table = game === "r3e" ? "corner_names_r3e" : "corner_names_ace";
   const row = db
-    .prepare(
-      "SELECT 1 FROM corner_names WHERE game = ? AND track = ? AND layout = ? LIMIT 1",
-    )
-    .get(game, track, layout);
+    .prepare(`SELECT 1 FROM ${table} WHERE track = ? AND layout = ? LIMIT 1`)
+    .get(track, layout);
   return row !== undefined;
 };
 
@@ -302,8 +292,8 @@ export const hasCornerNames = (
 export const seedCornersFromLap = (
   db: Database.Database,
   game: GameSource,
-  track: string,
-  layout: string,
+  track: number | string,
+  layout: number | string,
   zones: ZoneData[],
 ): void => {
   const ZONE_M = 50;
@@ -331,14 +321,21 @@ export const seedCornersFromLap = (
   }
   if (current) groups.push(current);
 
+  const table = game === "r3e" ? "corner_names_r3e" : "corner_names_ace";
   const insert = db.prepare(`
-    INSERT OR IGNORE INTO corner_names (game, track, layout, dist_min, dist_max, name)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO ${table} (track, layout, dist_min, dist_max, name)
+    VALUES (?, ?, ?, ?, ?)
   `);
 
   db.transaction(() => {
     groups.forEach((g, i) => {
-      insert.run(game, track, layout, g.start * ZONE_M, (g.end + 1) * ZONE_M, `Curva ${i + 1}`);
+      insert.run(
+        track,
+        layout,
+        g.start * ZONE_M,
+        (g.end + 1) * ZONE_M,
+        `Curva ${i + 1}`,
+      );
     });
   })();
 
@@ -351,16 +348,16 @@ export const seedCornersFromLap = (
 export const getTrackMap = (
   db: Database.Database,
   game: GameSource,
-  car: string,
-  track: string,
-  layout: string,
+  car: number | string,
+  track: number | string,
+  layout: number | string,
 ): TrackMapGeometry | null => {
+  const table = game === "r3e" ? "track_maps_r3e" : "track_maps_ace";
   const row = db
     .prepare(
-      `SELECT geometry FROM track_maps
-       WHERE game = ? AND car = ? AND track = ? AND layout = ?`,
+      `SELECT geometry FROM ${table} WHERE car = ? AND track = ? AND layout = ?`,
     )
-    .get(game, car, track, layout) as { geometry: string } | undefined;
+    .get(car, track, layout) as { geometry: string } | undefined;
   if (!row) return null;
   try {
     return JSON.parse(row.geometry) as TrackMapGeometry;
@@ -372,15 +369,16 @@ export const getTrackMap = (
 export const saveTrackMap = (
   db: Database.Database,
   game: GameSource,
-  car: string,
-  track: string,
-  layout: string,
+  car: number | string,
+  track: number | string,
+  layout: number | string,
   geometry: TrackMapGeometry,
 ): void => {
+  const table = game === "r3e" ? "track_maps_r3e" : "track_maps_ace";
   db.prepare(
-    `INSERT OR REPLACE INTO track_maps (game, car, track, layout, geometry, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).run(game, car, track, layout, JSON.stringify(geometry), new Date().toISOString());
+    `INSERT OR REPLACE INTO ${table} (car, track, layout, geometry, created_at)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(car, track, layout, JSON.stringify(geometry), new Date().toISOString());
 };
 
 export const closeDb = (): void => {
