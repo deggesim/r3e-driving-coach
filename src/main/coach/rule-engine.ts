@@ -44,7 +44,7 @@ export const createRuleEngine = (
   baseline: AdaptiveBaseline,
   getCornerName: GetCornerNameFn,
 ): RuleEngine => {
-  const checkBrakeTemp = (frame: GameFrame, zone: number, _location: string, lap: number): void => {
+  const checkBrakeTemp = (frame: GameFrame, zone: number, lap: number): void => {
     const temps = [
       { label: 'anteriore sinistro', value: frame.brakeTempFL },
       { label: 'anteriore destro', value: frame.brakeTempFR },
@@ -113,7 +113,7 @@ export const createRuleEngine = (
         ? `${cornerName}, metro ${Math.round(frame.lapDistance)}`
         : `metro ${Math.round(frame.lapDistance)}`;
 
-      checkBrakeTemp(frame, zone, location, currentLap);
+      checkBrakeTemp(frame, zone, currentLap);
       if (baseline.isReady()) checkTcAbsAnomaly(frame, zone, location, currentLap);
     },
 

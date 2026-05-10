@@ -12,6 +12,7 @@ import {
   SESSION_SYSTEM_PROMPT,
   buildSessionPrompt,
 } from "./prompt-builder.js";
+import { parseSetupRow, tableFor } from "../db/setup-row.js";
 import type {
   Alert,
   GameSource,
@@ -19,7 +20,6 @@ import type {
   SessionAnalysisRow,
   SessionRow,
   SessionSetupRow,
-  SetupData,
 } from "../../shared/types.js";
 
 type SessionCoachOptions = {
@@ -64,9 +64,6 @@ const extractSection5 = (text: string): string => {
   const sentences = stripped.match(/[^.!?]+[.!?]+/g) ?? [];
   return sentences.slice(0, 3).join(" ").trim();
 };
-
-const tableFor = (game: GameSource, base: string): string =>
-  `${base}_${game === "ace" ? "ace" : "r3e"}`;
 
 export const createSessionCoachEngine = (
   options: SessionCoachOptions,
@@ -128,27 +125,7 @@ export const createSessionCoachEngine = (
         setup_screenshots: string | null;
       }>;
 
-      const setups: SessionSetupRow[] = setupRowsRaw.map((r) => {
-        let setup: SetupData;
-        try {
-          setup = JSON.parse(r.setup_json) as SetupData;
-        } catch {
-          setup = {
-            carVerified: false,
-            carFound: "",
-            setupText: "",
-            params: [],
-            screenshots: [],
-          };
-        }
-        return {
-          id: r.id,
-          session_id: r.session_id,
-          loaded_at: r.loaded_at,
-          setup,
-          setup_screenshots: r.setup_screenshots,
-        };
-      });
+      const setups: SessionSetupRow[] = setupRowsRaw.map(parseSetupRow);
 
       const priorAnalyses = db
         .prepare(

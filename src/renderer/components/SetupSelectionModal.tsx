@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Modal, Spinner } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faFileCode } from "@fortawesome/free-solid-svg-icons";
@@ -59,7 +59,7 @@ const SetupSelectionModal = ({
       .finally(() => setLoading(false));
   }, [show, car, track, layout, game]);
 
-  const setupById = new Map(history.map((r) => [r.id, r]));
+  const setupById = useMemo(() => new Map(history.map((r) => [r.id, r])), [history]);
 
   return (
     <>
@@ -115,7 +115,7 @@ const SetupSelectionModal = ({
                             </Badge>
                           )}
                         </td>
-                        <td className="text-dim">{formatDate(row.loaded_at)}</td>
+                        <td className="text-muted">{formatDate(row.loaded_at)}</td>
                       </tr>
                     );
                   })}

@@ -8,7 +8,6 @@
  * - Setups are cumulative per session and tagged on subsequent laps.
  */
 
-import type BetterSqlite3 from "better-sqlite3";
 import { app, BrowserWindow, ipcMain, shell } from "electron";
 import { createInputManager, type InputManager } from "./input-manager.js";
 import fs from "fs";
@@ -63,11 +62,8 @@ import {
 } from "./db/db.js";
 import { toGameFrame } from "./game-adapter.js";
 import { createLapRecorder } from "./lap-recorder.js";
-import {
-  generatePdfBuffer,
-  generateSessionPdfBuffer,
-  type PdfData,
-} from "./pdf-generator.js";
+import { generateSessionPdfBuffer } from "./pdf-generator.js";
+import { parseSetupRow } from "./db/setup-row.js";
 import {
   getCarClassName,
   getCarName,
@@ -270,6 +266,9 @@ const setupPipeline = (): void => {
   const userDataPath = app.getPath("userData");
   const db = getDb(userDataPath);
 
+  const getConfig = (key: string): string | undefined =>
+    (db.prepare("SELECT value FROM app_config WHERE key = ?").get(key) as { value: string } | undefined)?.value;
+
   // Register config handlers immediately — renderer may call configGet before
   // the rest of setupPipeline (readers, baseline, etc.) finishes initializing.
   ipcMain.handle("config:get", (_event, key: string) => {
@@ -300,9 +299,7 @@ const setupPipeline = (): void => {
   // ── Telemetry logger ─────────────────────────────────────────────────────────
   const telemetryLogDir = path.join(userDataPath, "telemetry");
 
-  let telemetryEnabled =
-    (db.prepare("SELECT value FROM app_config WHERE key = ?").get("telemetryLogEnabled") as { value: string } | undefined)
-      ?.value === "true";
+  let telemetryEnabled = getConfig("telemetryLogEnabled") === "true";
 
   let telemetryStream: ReturnType<typeof fs.createWriteStream> | null = null;
   let telemetryCurrentPath: string | null = null;
@@ -421,19 +418,8 @@ const setupPipeline = (): void => {
     pushToRenderer("status", status);
   };
 
-  const getAnthropicApiKey = (): string | undefined => {
-    const row = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("anthropicApiKey") as { value: string } | undefined;
-    return row?.value;
-  };
-
-  const getAnthropicModel = (): string => {
-    const row = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("anthropicModel") as { value: string } | undefined;
-    return row?.value ?? "claude-haiku-4-5-20251001";
-  };
+  const getAnthropicApiKey = (): string | undefined => getConfig("anthropicApiKey");
+  const getAnthropicModel = (): string => getConfig("anthropicModel") ?? "claude-haiku-4-5-20251001";
 
   const sessionCoach = createSessionCoachEngine({
     db,
@@ -446,10 +432,7 @@ const setupPipeline = (): void => {
 
   let voiceCoach: VoiceCoachEngine | null = null;
   const getVoiceCoach = (): VoiceCoachEngine | null => {
-    const row = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("anthropicApiKey") as { value: string } | undefined;
-    const apiKey = row?.value;
+    const apiKey = getConfig("anthropicApiKey");
     if (!apiKey) return null;
     if (!voiceCoach) {
       voiceCoach = createVoiceCoachEngine(db, apiKey, getAnthropicModel());
@@ -504,27 +487,7 @@ const setupPipeline = (): void => {
       setup_screenshots: string | null;
     }>;
 
-    const setups: SessionSetupRow[] = setupsRaw.map((r) => {
-      let setup: SetupData;
-      try {
-        setup = JSON.parse(r.setup_json) as SetupData;
-      } catch {
-        setup = {
-          carVerified: false,
-          carFound: "",
-          setupText: "",
-          params: [],
-          screenshots: [],
-        };
-      }
-      return {
-        id: r.id,
-        session_id: r.session_id,
-        loaded_at: r.loaded_at,
-        setup,
-        setup_screenshots: r.setup_screenshots,
-      };
-    });
+    const setups: SessionSetupRow[] = setupsRaw.map(parseSetupRow);
 
     const analyses = db
       .prepare(
@@ -1133,7 +1096,6 @@ const setupPipeline = (): void => {
     "session:exportPdf",
     async (_event, { id, game }: { id: number; game: GameSource }) => {
       const { dialog } = await import("electron");
-      const fs = await import("fs");
 
       const detail = loadSessionDetail(id, game);
       if (!detail) return null;
@@ -1250,27 +1212,7 @@ const setupPipeline = (): void => {
         setup_screenshots: string | null;
       }>;
 
-      return setupsRaw.map((r) => {
-        let setup: SetupData;
-        try {
-          setup = JSON.parse(r.setup_json) as SetupData;
-        } catch {
-          setup = {
-            carVerified: false,
-            carFound: "",
-            setupText: "",
-            params: [],
-            screenshots: [],
-          };
-        }
-        return {
-          id: r.id,
-          session_id: r.session_id,
-          loaded_at: r.loaded_at,
-          setup,
-          setup_screenshots: r.setup_screenshots,
-        } as SessionSetupRow;
-      });
+      return setupsRaw.map(parseSetupRow);
     },
   );
 
@@ -1290,67 +1232,36 @@ const setupPipeline = (): void => {
   // ──────────────────────────────────────────────
 
   ipcMain.handle("tts:getVoices", async () => {
-    const keyRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureSpeechKey") as { value: string } | undefined;
-    const regionRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureRegion") as { value: string } | undefined;
-    if (!keyRow?.value || !regionRow?.value)
-      throw new Error("Azure Speech Key e Region non configurati");
-    return getAzureVoices(keyRow.value, regionRow.value);
+    const key = getConfig("azureSpeechKey");
+    const region = getConfig("azureRegion");
+    if (!key || !region) throw new Error("Azure Speech Key e Region non configurati");
+    return getAzureVoices(key, region);
   });
 
   ipcMain.handle("tts:synthesize", async (_event, text: string) => {
-    const keyRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureSpeechKey") as { value: string } | undefined;
-    const regionRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureRegion") as { value: string } | undefined;
-    const voiceRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureVoiceName") as { value: string } | undefined;
-    if (!keyRow?.value || !regionRow?.value || !voiceRow?.value)
-      throw new Error("Azure TTS non completamente configurato");
-    return synthesizeAzure(text, keyRow.value, regionRow.value, voiceRow.value);
+    const key = getConfig("azureSpeechKey");
+    const region = getConfig("azureRegion");
+    const voice = getConfig("azureVoiceName");
+    if (!key || !region || !voice) throw new Error("Azure TTS non completamente configurato");
+    return synthesizeAzure(text, key, region, voice);
   });
 
   ipcMain.handle("tts:test", async (_event, voiceName: string) => {
-    const keyRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureSpeechKey") as { value: string } | undefined;
-    const regionRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureRegion") as { value: string } | undefined;
-    const nameRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("assistantName") as { value: string } | undefined;
-    if (!keyRow?.value || !regionRow?.value)
-      throw new Error("Azure Speech Key e Region non configurati");
-    const assistantName = nameRow?.value ?? "Aria";
+    const key = getConfig("azureSpeechKey");
+    const region = getConfig("azureRegion");
+    if (!key || !region) throw new Error("Azure Speech Key e Region non configurati");
+    const assistantName = getConfig("assistantName") ?? "Aria";
     const testPhrase = `Ciao, sono ${assistantName} e oggi sono il tuo assistente in pista.`;
-    return synthesizeAzure(
-      testPhrase,
-      keyRow.value,
-      regionRow.value,
-      voiceName,
-    );
+    return synthesizeAzure(testPhrase, key, region, voiceName);
   });
 
   ipcMain.handle(
     "stt:transcribe",
     async (_event, audioBuffer: ArrayBuffer, mimeType?: string) => {
-      const keyRow = db
-        .prepare("SELECT value FROM app_config WHERE key = ?")
-        .get("azureSpeechKey") as { value: string } | undefined;
-      const regionRow = db
-        .prepare("SELECT value FROM app_config WHERE key = ?")
-        .get("azureRegion") as { value: string } | undefined;
-      if (!keyRow?.value || !regionRow?.value)
-        throw new Error("Azure Speech Key e Region non configurati");
-      const buf = Buffer.from(audioBuffer);
-      return transcribeAzure(buf, keyRow.value, regionRow.value, mimeType);
+      const key = getConfig("azureSpeechKey");
+      const region = getConfig("azureRegion");
+      if (!key || !region) throw new Error("Azure Speech Key e Region non configurati");
+      return transcribeAzure(Buffer.from(audioBuffer), key, region, mimeType);
     },
   );
 
@@ -1388,27 +1299,13 @@ const setupPipeline = (): void => {
 
   const speakText = async (text: string): Promise<void> => {
     pushToRenderer("coach:voiceDone", { answer: text });
-    const azureEnabledRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureTtsEnabled") as { value: string } | undefined;
-    if (azureEnabledRow?.value !== "true") return;
-    const keyRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureSpeechKey") as { value: string } | undefined;
-    const regionRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureRegion") as { value: string } | undefined;
-    const voiceRow = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("azureVoiceName") as { value: string } | undefined;
-    if (!keyRow?.value || !regionRow?.value || !voiceRow?.value) return;
+    if (getConfig("azureTtsEnabled") !== "true") return;
+    const key = getConfig("azureSpeechKey");
+    const region = getConfig("azureRegion");
+    const voice = getConfig("azureVoiceName");
+    if (!key || !region || !voice) return;
     try {
-      const audio = await synthesizeAzure(
-        text,
-        keyRow.value,
-        regionRow.value,
-        voiceRow.value,
-      );
+      const audio = await synthesizeAzure(text, key, region, voice);
       pushToRenderer("coach:voiceAudio", { audio });
     } catch (err) {
       console.error("[VoiceCoach] TTS synthesis error:", err);
@@ -1518,20 +1415,13 @@ const setupPipeline = (): void => {
   // getAceSetupsBase reads the user-configurable path from the DB, falling back
   // to the default installation path when the config key is not set.
   const ACE_SETUPS_DEFAULT = "D:\\Salvataggi\\ACE\\Car Setups";
-  const getAceSetupsBase = (): string => {
-    const row = db
-      .prepare("SELECT value FROM app_config WHERE key = ?")
-      .get("aceSetupsPath") as { value: string } | undefined;
-    return row?.value?.trim() || ACE_SETUPS_DEFAULT;
-  };
+  const getAceSetupsBase = (): string => getConfig("aceSetupsPath")?.trim() || ACE_SETUPS_DEFAULT;
 
   ipcMain.handle(
     "ace:listSetupFiles",
-    async (_event, { car, track }: { car: string; track: string }) => {
-      const fs = await import("fs");
-      const pathMod = await import("path");
+    (_event, { car, track }: { car: string; track: string }) => {
       const aceSetupsBase = getAceSetupsBase();
-      const dir = pathMod.join(aceSetupsBase, car, track);
+      const dir = path.join(aceSetupsBase, car, track);
       try {
         const files = fs
           .readdirSync(dir)
@@ -1539,7 +1429,7 @@ const setupPipeline = (): void => {
           .sort()
           .reverse();
         return files.map((filename: string): AceSetupFileInfo => {
-          const filePath = pathMod.join(dir, filename);
+          const filePath = path.join(dir, filename);
           const stat = fs.statSync(filePath);
           return { filename, filePath, modifiedAt: stat.mtime.toISOString() };
         });
@@ -1551,37 +1441,31 @@ const setupPipeline = (): void => {
 
   ipcMain.handle(
     "ace:readSetup",
-    async (_event, { filePath }: { filePath: string }) => {
-      const fs = await import("fs");
-      const pathMod = await import("path");
+    (_event, { filePath }: { filePath: string }) => {
       const aceSetupsBase = getAceSetupsBase();
-      const resolvedBase = pathMod.resolve(aceSetupsBase);
-      const resolvedPath = pathMod.resolve(filePath);
+      const resolvedBase = path.resolve(aceSetupsBase);
+      const resolvedPath = path.resolve(filePath);
       // Prevent path traversal: filePath must be inside the ACE setups directory
-      if (!resolvedPath.startsWith(resolvedBase + pathMod.sep)) {
+      if (!resolvedPath.startsWith(resolvedBase + path.sep)) {
         throw new Error("Percorso file non consentito.");
       }
       const buf = fs.readFileSync(resolvedPath);
-      const parts = resolvedPath.split(pathMod.sep);
+      const parts = resolvedPath.split(path.sep);
       const carIdx = parts.findIndex((p) => p.toLowerCase() === "car setups");
       const carId =
         carIdx >= 0
           ? (parts[carIdx + 1] ?? "")
-          : pathMod.basename(pathMod.dirname(pathMod.dirname(resolvedPath)));
+          : path.basename(path.dirname(path.dirname(resolvedPath)));
       return decodeCarSetup(buf, carId);
     },
   );
 
-  ipcMain.handle("ace:listSetupCars", async () => {
-    const fs = await import("fs");
-    const pathMod = await import("path");
+  ipcMain.handle("ace:listSetupCars", () => {
     const aceSetupsBase = getAceSetupsBase();
     try {
       return fs
         .readdirSync(aceSetupsBase)
-        .filter((f: string) =>
-          fs.statSync(pathMod.join(aceSetupsBase, f)).isDirectory(),
-        )
+        .filter((f: string) => fs.statSync(path.join(aceSetupsBase, f)).isDirectory())
         .sort();
     } catch {
       return [];
@@ -1590,17 +1474,13 @@ const setupPipeline = (): void => {
 
   ipcMain.handle(
     "ace:listSetupTracks",
-    async (_event, { car }: { car: string }) => {
-      const fs = await import("fs");
-      const pathMod = await import("path");
+    (_event, { car }: { car: string }) => {
       const aceSetupsBase = getAceSetupsBase();
-      const carDir = pathMod.join(aceSetupsBase, car);
+      const carDir = path.join(aceSetupsBase, car);
       try {
         return fs
           .readdirSync(carDir)
-          .filter((f: string) =>
-            fs.statSync(pathMod.join(carDir, f)).isDirectory(),
-          )
+          .filter((f: string) => fs.statSync(path.join(carDir, f)).isDirectory())
           .sort();
       } catch {
         return [];
@@ -1622,11 +1502,7 @@ const setupPipeline = (): void => {
     pushToRenderer("input:trigger", {});
   });
 
-  const kbKey = (
-    db.prepare("SELECT value FROM app_config WHERE key = ?").get("keyboardVoiceKey") as
-      | { value: string }
-      | undefined
-  )?.value;
+  const kbKey = getConfig("keyboardVoiceKey");
   if (kbKey) inputManager.setKeyboard(kbKey);
 
   // Ensure the active session is closed and all resources released on exit.
@@ -1648,13 +1524,6 @@ const setupPipeline = (): void => {
     pushStatus();
   });
 };
-
-// ──────────────────────────────────────────────
-// Suppress unused warnings (kept for future per-lap exports)
-// ──────────────────────────────────────────────
-void generatePdfBuffer;
-void ([] as PdfData[]);
-void ({} as BetterSqlite3.Database);
 
 // ──────────────────────────────────────────────
 // App lifecycle

@@ -7,6 +7,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type Database from "better-sqlite3";
+import { parseSetupRow, tableFor } from "../db/setup-row.js";
 import type {
   Alert,
   Deviation,
@@ -14,7 +15,6 @@ import type {
   LapRow,
   SessionAnalysisRow,
   SessionSetupRow,
-  SetupData,
 } from "../../shared/types.js";
 import { formatLapTime } from "../../shared/format.js";
 
@@ -157,8 +157,7 @@ export type VoiceCoachEngine = {
   updateContext: (ctx: Partial<SessionContext>) => void;
 };
 
-const t = (base: string, game: GameSource): string =>
-  `${base}_${game === "ace" ? "ace" : "r3e"}`;
+const t = (base: string, game: GameSource): string => tableFor(game, base);
 
 export const createVoiceCoachEngine = (
   db: Database.Database,
@@ -214,27 +213,7 @@ export const createVoiceCoachEngine = (
         setup_json: string;
         setup_screenshots: string | null;
       }>;
-      currentContext.setups = setupsRaw.map((r) => {
-        let setup: SetupData;
-        try {
-          setup = JSON.parse(r.setup_json) as SetupData;
-        } catch {
-          setup = {
-            carVerified: false,
-            carFound: "",
-            setupText: "",
-            params: [],
-            screenshots: [],
-          };
-        }
-        return {
-          id: r.id,
-          session_id: r.session_id,
-          loaded_at: r.loaded_at,
-          setup,
-          setup_screenshots: r.setup_screenshots,
-        };
-      });
+      currentContext.setups = setupsRaw.map(parseSetupRow);
 
       currentContext.analyses = db
         .prepare(
