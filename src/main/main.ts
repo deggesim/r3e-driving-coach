@@ -748,8 +748,8 @@ const setupPipeline = (): void => {
       pushToRenderer("lapComplete", lapWithNames);
       pushStatus();
 
-      // Seed corner names from first lap on a new track/layout
-      if (!hasCornerNames(db, activeGame, names.trackName, names.layoutName)) {
+      // Seed corner names from first lap (R3E only — ACE uses seedAceCornersFromR3E at session start)
+      if (activeGame !== "ace" && !hasCornerNames(db, activeGame, names.trackName, names.layoutName)) {
         seedCornersFromLap(db, activeGame, names.trackName, names.layoutName, lap.zones);
       }
 

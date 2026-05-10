@@ -191,6 +191,10 @@ const initSchema = (db: Database.Database): void => {
 
   seedR3ECorners(db);
 
+  // Clear all ACE corner entries on every startup so the new exact-match seeder
+  // starts fresh (removes any "Curva N" rows from the old braking-zone approach).
+  db.exec(`DELETE FROM corner_names WHERE game = 'ace'`);
+
   // Migration: invalidate R3E laps where any sector was stored as 0 (not counted by the sim).
   // Zero sectors indicate an incomplete lap recorded before R3E populated the SHM sector fields.
   db.exec(`
@@ -226,57 +230,10 @@ export const getDb = (userDataPath: string): Database.Database => {
   return _db;
 };
 
-/** Maps ACE track identifiers to R3E corner name sources, in layout-priority order. */
-const ACE_TO_R3E_CORNERS: Record<
-  string,
-  Array<{ layoutPattern: string | null; r3eTrack: string; r3eLayout: string }>
-> = {
-  monza:         [{ layoutPattern: "junior",        r3eTrack: "Monza Circuit",                   r3eLayout: "Junior" },
-                  { layoutPattern: null,             r3eTrack: "Monza Circuit",                   r3eLayout: "Grand Prix" }],
-  spa:           [{ layoutPattern: null,             r3eTrack: "Circuit de Spa-Francorchamps",    r3eLayout: "Grand Prix" }],
-  nurburgring:   [{ layoutPattern: null,             r3eTrack: "Nürburgring",                     r3eLayout: "Grand Prix" }],
-  nordschleife:  [{ layoutPattern: null,             r3eTrack: "Nordschleife",                    r3eLayout: "Nordschleife" }],
-  imola:         [{ layoutPattern: null,             r3eTrack: "Imola",                           r3eLayout: "Grand Prix" }],
-  hungaroring:   [{ layoutPattern: null,             r3eTrack: "Hungaroring",                     r3eLayout: "Grand Prix" }],
-  brands_hatch:  [{ layoutPattern: "indy",           r3eTrack: "Brands Hatch Indy",               r3eLayout: "Indy" },
-                  { layoutPattern: null,             r3eTrack: "Brands Hatch Grand Prix",         r3eLayout: "Grand Prix" }],
-  silverstone:   [{ layoutPattern: "national",       r3eTrack: "Silverstone Circuit",             r3eLayout: "National" },
-                  { layoutPattern: "international",  r3eTrack: "Silverstone Circuit",             r3eLayout: "International" },
-                  { layoutPattern: null,             r3eTrack: "Silverstone Circuit",             r3eLayout: "Grand Prix" }],
-  donington:     [{ layoutPattern: "national",       r3eTrack: "Donington Park",                  r3eLayout: "National" },
-                  { layoutPattern: null,             r3eTrack: "Donington Park",                  r3eLayout: "Grand Prix" }],
-  red_bull_ring: [{ layoutPattern: null,             r3eTrack: "Red Bull Ring Spielberg",         r3eLayout: "Grand Prix Circuit" }],
-  zandvoort:     [{ layoutPattern: "club",           r3eTrack: "Circuit Zandvoort",               r3eLayout: "Club" },
-                  { layoutPattern: "national",       r3eTrack: "Circuit Zandvoort",               r3eLayout: "National" },
-                  { layoutPattern: null,             r3eTrack: "Circuit Zandvoort",               r3eLayout: "Grand Prix" }],
-  portimao:      [{ layoutPattern: "national",       r3eTrack: "Portimao Circuit",                r3eLayout: "National" },
-                  { layoutPattern: "club",           r3eTrack: "Portimao Circuit",                r3eLayout: "Club" },
-                  { layoutPattern: null,             r3eTrack: "Portimao Circuit",                r3eLayout: "Grand Prix" }],
-  interlagos:    [{ layoutPattern: null,             r3eTrack: "Interlagos",                      r3eLayout: "Grand Prix" }],
-  suzuka:        [{ layoutPattern: "east",           r3eTrack: "Suzuka Circuit",                  r3eLayout: "East Course" },
-                  { layoutPattern: "west",           r3eTrack: "Suzuka Circuit",                  r3eLayout: "West Course" },
-                  { layoutPattern: null,             r3eTrack: "Suzuka Circuit",                  r3eLayout: "Grand Prix" }],
-  laguna_seca:   [{ layoutPattern: null,             r3eTrack: "WeatherTech Raceway Laguna Seca", r3eLayout: "Grand Prix" }],
-  watkins_glen:  [{ layoutPattern: null,             r3eTrack: "Watkins Glen International",      r3eLayout: "Grand Prix" }],
-  zolder:        [{ layoutPattern: null,             r3eTrack: "Circuit Zolder",                  r3eLayout: "Grand Prix" }],
-  assen:         [{ layoutPattern: "moto",           r3eTrack: "TT Circuit Assen",                r3eLayout: "Motorcycle Course" },
-                  { layoutPattern: "north",          r3eTrack: "TT Circuit Assen",                r3eLayout: "North Course" },
-                  { layoutPattern: null,             r3eTrack: "TT Circuit Assen",                r3eLayout: "Grand Prix" }],
-  vallelunga:    [{ layoutPattern: "classic",        r3eTrack: "Vallelunga",                      r3eLayout: "Classic" },
-                  { layoutPattern: "chicane",        r3eTrack: "Vallelunga",                      r3eLayout: "Chicane" },
-                  { layoutPattern: "short",          r3eTrack: "Vallelunga",                      r3eLayout: "Short" },
-                  { layoutPattern: null,             r3eTrack: "Vallelunga",                      r3eLayout: "International" }],
-  brno:          [{ layoutPattern: null,             r3eTrack: "Automotodrom Brno",               r3eLayout: "Grand Prix" }],
-  paul_ricard:   [{ layoutPattern: null,             r3eTrack: "Paul Ricard",                     r3eLayout: "Solution 3C" }],
-  sepang:        [{ layoutPattern: "north",          r3eTrack: "Sepang",                          r3eLayout: "North" },
-                  { layoutPattern: "south",          r3eTrack: "Sepang",                          r3eLayout: "South" },
-                  { layoutPattern: null,             r3eTrack: "Sepang",                          r3eLayout: "Grand Prix" }],
-  shanghai:      [{ layoutPattern: null,             r3eTrack: "Shanghai Circuit",                r3eLayout: "Grand Prix" }],
-};
-
 /**
- * Seeds corner names for an ACE session by copying entries from the R3E corner map.
- * No-op if corners are already present for this track+layout or if no mapping exists.
+ * Seeds corner names for an ACE session from R3E_CORNERS using exact track+layout match.
+ * No mapping table — only writes rows when ACE track and layout strings match exactly.
+ * No-op if corners are already present or if no exact match exists in R3E_CORNERS.
  */
 export const seedAceCornersFromR3E = (
   db: Database.Database,
@@ -285,36 +242,23 @@ export const seedAceCornersFromR3E = (
 ): void => {
   if (hasCornerNames(db, "ace", aceTrack, aceLayout)) return;
 
-  const candidates = ACE_TO_R3E_CORNERS[aceTrack.toLowerCase()];
-  if (!candidates) return;
-
-  const layoutLower = aceLayout.toLowerCase();
-  const match = candidates.find(
-    (c) => c.layoutPattern === null || layoutLower.includes(c.layoutPattern),
+  const rows = R3E_CORNERS.filter(
+    (c) => c.track === aceTrack && c.layout === aceLayout,
   );
-  if (!match) return;
-
-  const r3eRows = db
-    .prepare(
-      `SELECT dist_min, dist_max, name FROM corner_names
-       WHERE game = 'r3e' AND track = ? AND layout = ?`,
-    )
-    .all(match.r3eTrack, match.r3eLayout) as Array<{ dist_min: number; dist_max: number; name: string }>;
-
-  if (r3eRows.length === 0) return;
+  if (rows.length === 0) return;
 
   const insert = db.prepare(
     `INSERT OR IGNORE INTO corner_names (game, track, layout, dist_min, dist_max, name)
      VALUES ('ace', ?, ?, ?, ?, ?)`,
   );
   db.transaction(() => {
-    for (const row of r3eRows) {
-      insert.run(aceTrack, aceLayout, row.dist_min, row.dist_max, row.name);
+    for (const c of rows) {
+      insert.run(aceTrack, aceLayout, c.distMin, c.distMax, c.name);
     }
   })();
 
   console.log(
-    `[DB] Seeded ${r3eRows.length} ACE corner(s) for ${aceTrack}|${aceLayout} ← R3E ${match.r3eTrack}|${match.r3eLayout}`,
+    `[DB] Seeded ${rows.length} ACE corner(s) for ${aceTrack}|${aceLayout} (exact R3E_CORNERS match)`,
   );
 };
 
