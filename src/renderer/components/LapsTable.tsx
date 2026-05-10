@@ -7,7 +7,7 @@ import {
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Badge, Button, Table } from "react-bootstrap";
 import { formatLapTime } from "../../shared/format";
 import type { LapRow, SessionSetupRow } from "../../shared/types";
@@ -71,10 +71,11 @@ const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => 
   }, null);
 
   // Auto-advance to last page when new laps arrive (live session only).
-  if (live && visibleLaps.length > trackedLapCount) {
+  useEffect(() => {
+    if (!live || visibleLaps.length <= trackedLapCount) return;
     setTrackedLapCount(visibleLaps.length);
     setPage(pageCount);
-  }
+  }, [live, visibleLaps.length, trackedLapCount, pageCount]);
 
   // Close expanded row when changing page.
   const goToPage = (p: number) => {

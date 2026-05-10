@@ -193,6 +193,9 @@ export const useVoiceCoach = ({
   azureTtsEnabled,
 }: UseVoiceCoachOptions): UseVoiceCoachResult => {
   const [state, setState] = useState<VoiceCoachState>("idle");
+  const stateRef = useRef<VoiceCoachState>("idle");
+  useEffect(() => { stateRef.current = state; }, [state]);
+
   const [transcript, setTranscript] = useState("");
   const [answer, setAnswer] = useState("");
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -210,7 +213,7 @@ export const useVoiceCoach = ({
   }, []);
 
   const triggerListening = useCallback(() => {
-    if (!enabled || state !== "idle") return;
+    if (!enabled || stateRef.current !== "idle") return;
 
     // Cancel any ongoing TTS
     window.speechSynthesis.cancel();
@@ -311,7 +314,7 @@ export const useVoiceCoach = ({
         console.error("[VoiceCoach] Microphone access error:", err);
         setState("idle");
       });
-  }, [enabled, state]);
+  }, [enabled]);
 
   // Subscribe to voice coach push channels
   useEffect(() => {
@@ -371,26 +374,24 @@ export const useVoiceCoach = ({
       }
     };
 
-    window.electronAPI.onVoiceChunk(handleChunk);
-    window.electronAPI.onVoiceDone(handleDone);
-    window.electronAPI.onVoiceAudio((d) => {
+    const unsubChunk = window.electronAPI.onVoiceChunk(handleChunk);
+    const unsubDone = window.electronAPI.onVoiceDone(handleDone);
+    const unsubAudio = window.electronAPI.onVoiceAudio((d) => {
       handleAudio(d).catch(console.error);
     });
 
     return () => {
-      window.electronAPI.removeAllListeners("coach:voiceChunk");
-      window.electronAPI.removeAllListeners("coach:voiceDone");
-      window.electronAPI.removeAllListeners("coach:voiceAudio");
+      unsubChunk();
+      unsubDone();
+      unsubAudio();
     };
   }, [enabled, azureTtsEnabled, resetToIdle]);
 
   // Global input trigger from main process — handles keyboard shortcut.
   useEffect(() => {
     if (!enabled) return;
-    window.electronAPI.onInputTrigger(triggerListening);
-    return () => {
-      window.electronAPI.removeAllListeners("input:trigger");
-    };
+    const unsubInput = window.electronAPI.onInputTrigger(triggerListening);
+    return () => { unsubInput(); };
   }, [enabled, triggerListening]);
 
   // Gamepad trigger — poll navigator.getGamepads() in the renderer.

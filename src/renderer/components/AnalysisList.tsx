@@ -1,7 +1,7 @@
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
-import { use, useEffect, useRef, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import {
   Accordion,
   AccordionContext,
@@ -71,6 +71,15 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
   const analyses = useSessionStore((s) => s.analyses);
   const deleteAnalysis = useSessionStore((s) => s.deleteAnalysis);
 
+  const renderedAnalyses = useMemo(
+    () => analyses.map((a) => ({ id: a.id, html: renderMd(a.template_v3) })),
+    [analyses],
+  );
+  const renderedById = useMemo(
+    () => new Map(renderedAnalyses.map((r) => [r.id, r.html])),
+    [renderedAnalyses],
+  );
+
   const [activeKeys, setActiveKeys] = useState<string[]>(() => {
     if (startClosed || analyses.length === 0) return [];
     return [`v${analyses[analyses.length - 1].version}`];
@@ -125,7 +134,11 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
     <>
       <Accordion
         activeKey={activeKeys}
-        onSelect={(keys) => setActiveKeys((keys as string[]) ?? [])}
+        onSelect={(keys) => {
+          if (Array.isArray(keys)) setActiveKeys(keys);
+          else if (typeof keys === "string") setActiveKeys([keys]);
+          else setActiveKeys([]);
+        }}
         className="analysis-accordion"
       >
         {analyses.map((a) => (
@@ -140,7 +153,7 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
               <div
                 className="deb-content"
                 // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
-                dangerouslySetInnerHTML={{ __html: renderMd(a.template_v3) }}
+                dangerouslySetInnerHTML={{ __html: renderedById.get(a.id) ?? "" }}
               />
             </Accordion.Body>
           </Accordion.Item>

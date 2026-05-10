@@ -13,7 +13,7 @@ import {
   faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Button, Container, Form, Modal } from "react-bootstrap";
 import { formatLapTime } from "../../shared/format";
 import type { GameSource, SessionRow } from "../../shared/types";
@@ -78,7 +78,7 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
   type DeleteTarget = { type: "single"; session: SessionRow } | { type: "all" };
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const loadSessions = (): void => {
+  const loadSessions = useCallback((): void => {
     if (!window.electronAPI) return;
     setLoading(true);
     window.electronAPI
@@ -90,11 +90,11 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
         /* ignore */
       })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
     loadSessions();
-  }, []);
+  }, [loadSessions]);
 
   useEffect(() => {
     setPage(1);

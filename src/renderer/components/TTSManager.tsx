@@ -177,12 +177,16 @@ const TTSManager = ({
           const raw = await window.electronAPI.ttsSynthesize(welcomeText);
           const arrayBuffer = toArrayBuffer(raw);
           const ctx = new AudioContext();
+          audioCtxRef.current = ctx;
           const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
           const source = ctx.createBufferSource();
           source.buffer = audioBuffer;
           source.connect(ctx.destination);
           source.start(0);
-          source.onended = () => ctx.close();
+          source.onended = () => {
+            ctx.close();
+            audioCtxRef.current = null;
+          };
           return;
         } catch {
           // Fall through to Web Speech
