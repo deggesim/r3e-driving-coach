@@ -153,7 +153,7 @@ const R3eSetupPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
 
         {!params ? (
           <Form.Group>
-            <Form.Label className="text-dim" style={{ fontSize: 14 }}>
+            <Form.Label className="text-muted" style={{ fontSize: 14 }}>
               Incolla il JSON esportato da RaceRoom (CTRL+C nella schermata del
               setup)
             </Form.Label>
@@ -177,7 +177,7 @@ const R3eSetupPicker = ({ show, expectedCar, onClose, onConfirm }: Props) => {
         ) : (
           <>
             <Form.Group className="mb-3" style={{ maxWidth: 360 }}>
-              <Form.Label className="text-dim" style={{ fontSize: 14 }}>
+              <Form.Label className="text-muted" style={{ fontSize: 14 }}>
                 Nome setup <span className="text-danger">*</span>
               </Form.Label>
               <Form.Control

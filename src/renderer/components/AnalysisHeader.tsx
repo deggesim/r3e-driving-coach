@@ -55,11 +55,11 @@ const AnalysisHeader = ({
       {session ? (
         <>
           <span className="deb-car fw-bold">{currentCar}</span>
-          <span className="deb-sep">·</span>
-          <span className="deb-track">
+          <span className="text-muted">·</span>
+          <span className="text-muted">
             {currentTrack} {session.layout_name ?? session.layout}
           </span>
-          <span className="deb-sep">·</span>
+          <span className="text-muted">·</span>
           <Badge
             bg={session.game === "ace" ? "info" : "secondary"}
             className="ms-1"
@@ -69,7 +69,7 @@ const AnalysisHeader = ({
           <Badge bg={sessionActive ? "success" : "secondary"}>
             {sessionActive ? "Attiva" : "Chiusa"}
           </Badge>
-          <span className="deb-sep">·</span>
+          <span className="text-muted">·</span>
           <span className="text-muted">
             {laps.length} giri
             {session.best_lap != null &&
@@ -77,7 +77,7 @@ const AnalysisHeader = ({
           </span>
         </>
       ) : (
-        <span className="deb-placeholder">
+        <span className="text-muted fst-italic">
           {isLive ? "Nessuna sessione aperta" : "Caricamento sessione…"}
         </span>
       )}

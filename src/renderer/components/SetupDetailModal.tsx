@@ -52,7 +52,7 @@ export const SetupDetailModal = ({
               <tbody>
                 {row.setup.params.map((p) => (
                   <tr key={`${p.category}__${p.parameter}`}>
-                    <td className="text-dim">{p.category}</td>
+                    <td className="text-muted">{p.category}</td>
                     <td>{p.parameter}</td>
                     <td className="setup-value">{p.value}</td>
                   </tr>

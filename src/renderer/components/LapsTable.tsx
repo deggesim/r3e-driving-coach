@@ -275,7 +275,7 @@ const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => 
             >
               ‹ Prec
             </Button>
-            <div className="sh-page-numbers d-flex gap-1">
+            <div className="d-flex gap-1">
               {buildPageWindow(page, pageCount).map((entry, i, arr) =>
                 entry === "…" ? (
                   <span

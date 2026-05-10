@@ -208,7 +208,7 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
   return (
     <Container fluid className="session-history p-4">
       <h2 className="fs-5 fw-bold mb-4">Elenco sessioni</h2>
-      <div className="sh-filter-bar flex-shrink-0">
+      <div className="sh-filter-bar d-flex gap-2 align-items-center flex-shrink-0">
         <Form.Select
           size="sm"
           className="sh-filter-select"
@@ -400,7 +400,7 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
               >
                 ‹ Prec
               </Button>
-              <div className="sh-page-numbers d-flex gap-1">
+              <div className="d-flex gap-1">
                 {buildPageWindow(page, totalPages).map((entry, i, arr) =>
                   entry === "…" ? (
                     <span

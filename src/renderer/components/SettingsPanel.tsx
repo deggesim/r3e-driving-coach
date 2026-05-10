@@ -339,7 +339,7 @@ const SettingsPanel = () => {
   }, [isCapturingKey, setKeyboardVoiceKey, setGamepadButton, setCapturingVoiceInput, configSet, showSaved]);
 
   return (
-    <Container fluid className="settings-panel p-4">
+    <Container fluid className="settings-panel h-100 p-4">
       <h2 className="fs-5 fw-bold mb-4">Impostazioni</h2>
 
       {/* Row 1: API Key + Azure TTS */}

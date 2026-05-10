@@ -166,21 +166,9 @@ body {
   padding: 10px 16px;
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
-  font-size: 14px;
 }
 .deb-car {
-  font-weight: 600;
   color: var(--accent);
-}
-.deb-sep {
-  color: var(--text-dim);
-}
-.deb-track {
-  color: var(--text-dim);
-}
-.deb-placeholder {
-  color: var(--text-dim);
-  font-style: italic;
 }
 
 /* Bootstrap Accordion — dark theme overrides */
@@ -280,17 +268,6 @@ body {
 .session-history {
   background: var(--bg);
 }
-.sh-list {
-  min-width: 320px;
-  max-width: 420px;
-  width: 380px;
-  flex-shrink: 0;
-  background: var(--bg);
-}
-.sh-title {
-  font-weight: 700;
-  font-size: 14px;
-}
 .sh-table {
   width: 100%;
   border-collapse: collapse;
@@ -334,9 +311,6 @@ body {
 }
 /* ── Filter / sort bar ── */
 .sh-filter-bar {
-  display: flex;
-  gap: 8px;
-  align-items: center;
   padding: 6px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--bg2);
@@ -379,10 +353,6 @@ body {
   opacity: 0.3;
   pointer-events: none;
 }
-.sh-page-numbers {
-  display: flex;
-  gap: 2px;
-}
 .sh-page-num {
   background: none;
   border: 1px solid var(--border);
@@ -413,9 +383,6 @@ body {
 }
 
 /* ── R3E Setup Tabs ── */
-.setup-tabs-container {
-  font-size: 14px;
-}
 .setup-nav-tabs {
   border-bottom-color: var(--border);
   gap: 2px;
@@ -466,10 +433,6 @@ body {
 .setup-tab-table tr:nth-child(even) td {
   background: var(--bg2);
 }
-.setup-axle-columns {
-  display: flex;
-  gap: 8px;
-}
 .setup-axle-col {
   flex: 1;
   min-width: 0;
@@ -500,9 +463,6 @@ body {
   color: var(--yellow);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-}
-.text-dim {
-  color: var(--text-dim);
 }
 
 /* ── Delete Confirm Modal ── */
@@ -693,7 +653,6 @@ body {
 /* ── Settings ── */
 .settings-panel {
   overflow-y: auto;
-  height: 100%;
 }
 
 /* Bootstrap Form.Text override — default #6c757d is too dark on dark bg */
@@ -740,11 +699,6 @@ body {
   flex-shrink: 0;
   font-size: 14px;
   color: var(--text-dim);
-}
-.status-connection {
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
 .status-badge {
   font-size: 12px;

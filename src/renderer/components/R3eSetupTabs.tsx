@@ -75,7 +75,7 @@ function ParamTable({ rows }: { rows: Array<{ label: string; value: string }> })
       <tbody>
         {rows.map((r, i) => (
           <tr key={i}>
-            <td className="text-dim">{r.label}</td>
+            <td className="text-muted">{r.label}</td>
             <td className="setup-value">{r.value}</td>
           </tr>
         ))}
@@ -101,7 +101,7 @@ function AxleTab({ params, axle }: { params: SetupParam[]; axle: "Anteriore" | "
           <ParamTable rows={shared.map((p) => ({ label: cleanLabel(p.parameter, "shared"), value: p.value }))} />
         </div>
       )}
-      <div className="setup-axle-columns">
+      <div className="d-flex gap-2">
         {left.length > 0 && (
           <div className="setup-axle-col">
             <div className="setup-subsection-title">{prefix} Sinistra</div>
@@ -142,7 +142,7 @@ function ElettronicaTab({ params }: { params: SetupParam[] }) {
     <div>
       {(absF.length > 0 || absR.length > 0) && (
         absBoth ? (
-          <div className="setup-axle-columns mb-2">
+          <div className="d-flex gap-2 mb-2">
             <div className="setup-axle-col">
               <Section title="ABS Anteriore" rows={absF.map((p) => ({ label: cleanLabel(p.parameter, "abs_front"), value: p.value }))} />
             </div>
@@ -166,7 +166,7 @@ function ElettronicaTab({ params }: { params: SetupParam[] }) {
       ) : tcTypeCount > 1 ? (
         <>
           {(tcCut.length > 0 || tcSlip.length > 0) && (
-            <div className="setup-axle-columns mb-2">
+            <div className="d-flex gap-2 mb-2">
               {tcCut.length > 0 && (
                 <div className="setup-axle-col">
                   <Section title="TC Cut" rows={tcCut.map((p) => ({ label: cleanLabel(p.parameter, "tc_cut"), value: p.value }))} />
@@ -180,7 +180,7 @@ function ElettronicaTab({ params }: { params: SetupParam[] }) {
             </div>
           )}
           {tcLat.length > 0 && (
-            <div className="setup-axle-columns mb-2">
+            <div className="d-flex gap-2 mb-2">
               <div className="setup-axle-col">
                 <Section title="TC Laterale" rows={tcLat.map((p) => ({ label: cleanLabel(p.parameter, "tc_lat"), value: p.value }))} />
               </div>
@@ -242,7 +242,7 @@ const R3eSetupTabs = ({ params }: { params: SetupParam[] }) => {
   if (available.length === 0) return null;
 
   return (
-    <div className="setup-tabs-container">
+    <div>
       <Nav
         variant="tabs"
         className="setup-nav-tabs mb-2"

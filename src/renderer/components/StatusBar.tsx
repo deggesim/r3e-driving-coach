@@ -25,7 +25,7 @@ const StatusBar = ({ status }: StatusBarProps) => {
   return (
     <div className="status-bar">
       {/* Connection — one badge per game */}
-      <div className="status-connection">
+      <div className="d-flex align-items-center gap-1">
         <Badge
           bg={status.r3eConnected ? "success" : "secondary"}
           className="status-badge"
