@@ -279,8 +279,9 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
         return;
       }
 
-      // Re-read static if track length not yet known (game may have been in menus at connect)
-      if (cachedTrackLength === 0 && staView) {
+      // Re-read static if track/layout/length not yet known (StaticEvo may not be
+      // populated yet when ACE writes the SHM pages before the session fully loads).
+      if ((cachedTrackLength === 0 || cachedTrack === "" || cachedLayout === "") && staView) {
         const staBuf2 = decodeBuffer(staView, ACE_STATIC_BUF);
         readStatic(staBuf2);
       }

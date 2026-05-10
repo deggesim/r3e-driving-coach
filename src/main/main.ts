@@ -630,11 +630,23 @@ const setupPipeline = (): void => {
   });
 
   aceReader.on("ace:frame", (frame: GameFrame) => {
-    // Update car from the first valid AC_LIVE frame; also re-sync if it was
-    // previously set to "0" or another placeholder before the car was loaded.
+    // Update car/track/layout from every AC_LIVE frame, re-syncing when StaticEvo
+    // was not yet populated at connect time (app launched before ACE session loads).
     const info = aceReader.getSessionInfo();
+    let statusDirty = false;
     if (info.car && info.car !== currentCar) {
       currentCar = info.car;
+      statusDirty = true;
+    }
+    if (info.track && info.track !== currentTrack) {
+      currentTrack = info.track;
+      statusDirty = true;
+    }
+    if (info.layout && info.layout !== currentLayout) {
+      currentLayout = info.layout;
+      statusDirty = true;
+    }
+    if (statusDirty) {
       pushStatus();
     }
     if (currentSessionId) {
