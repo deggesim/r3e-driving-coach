@@ -191,10 +191,6 @@ const initSchema = (db: Database.Database): void => {
 
   seedR3ECorners(db);
 
-  // Clear all ACE corner entries on every startup so the new exact-match seeder
-  // starts fresh (removes any "Curva N" rows from the old braking-zone approach).
-  db.exec(`DELETE FROM corner_names WHERE game = 'ace'`);
-
   // Migration: invalidate R3E laps where any sector was stored as 0 (not counted by the sim).
   // Zero sectors indicate an incomplete lap recorded before R3E populated the SHM sector fields.
   db.exec(`
