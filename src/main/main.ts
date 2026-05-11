@@ -610,9 +610,20 @@ const setupPipeline = (): void => {
   });
 
   r3eReader.on("r3e:frame", (frame: R3EFrame) => {
-    if (frame.carModelId > 0) currentCar = String(frame.carModelId);
-    if (frame.trackId > 0) currentTrack = String(frame.trackId);
-    if (frame.layoutId > 0) currentLayout = String(frame.layoutId);
+    let statusDirty = false;
+    if (frame.carModelId > 0 && String(frame.carModelId) !== currentCar) {
+      currentCar = String(frame.carModelId);
+      statusDirty = true;
+    }
+    if (frame.trackId > 0 && String(frame.trackId) !== currentTrack) {
+      currentTrack = String(frame.trackId);
+      statusDirty = true;
+    }
+    if (frame.layoutId > 0 && String(frame.layoutId) !== currentLayout) {
+      currentLayout = String(frame.layoutId);
+      statusDirty = true;
+    }
+    if (statusDirty) pushStatus();
 
     if (telemetryEnabled && activeGame === "r3e") {
       if (!telemetryStream && frame.carModelId > 0 && frame.trackId > 0) {
