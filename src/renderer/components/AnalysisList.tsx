@@ -40,10 +40,10 @@ const AnalysisAccordionHeader = ({
     : activeEventKey === eventKey;
 
   return (
-    <h2 className="accordion-header d-flex align-items-stretch">
+    <h2 className="accordion-header dark-header d-flex align-items-stretch">
       <button
         type="button"
-        className="btn btn-link btn-sm text-danger accordion-button-delete p-0 px-3"
+        className="btn btn-link btn-sm text-danger p-0 px-3"
         title="Elimina analisi"
         onClick={onDelete}
         style={{ lineHeight: 1 }}
