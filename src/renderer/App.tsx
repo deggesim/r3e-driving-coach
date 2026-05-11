@@ -4,7 +4,7 @@
  * TTSManager and VoiceCoachOverlay are headless/overlay — mounted globally.
  */
 
-import { useEffect, useState } from "react";
+import { Suspense, use, useEffect, useState } from "react";
 import RealtimeAnalysis from "./components/RealtimeAnalysis";
 import SessionHistory from "./components/SessionHistory";
 import SettingsPanel from "./components/SettingsPanel";
@@ -12,11 +12,12 @@ import StatusBar from "./components/StatusBar";
 import TitleBar from "./components/TitleBar";
 import TTSManager from "./components/TTSManager";
 import VoiceCoachOverlay from "./components/VoiceCoachOverlay";
-import { useConfig, useIPC } from "./hooks/useIPC";
+import { useIPC } from "./hooks/useIPC";
 import { useVoiceCoach } from "./hooks/useVoiceCoach";
 import { useIPCStore } from "./store/ipcStore";
 import { subscribeSessionIPC } from "./store/sessionStore";
 import { useSettingsStore } from "./store/settingsStore";
+import { settingsLoaderPromise } from "./loaders/settingsLoader";
 
 type Tab = "current-session" | "session-list" | "settings";
 
@@ -29,33 +30,25 @@ const App = () => {
     subscribeSessionIPC();
   }, []);
 
+  // Suspend until all settings are loaded from SQLite via IPC.
+  // settingsLoaderPromise is a stable module-level Promise — safe to pass to use().
+  // The parent <Suspense> boundary in main.tsx handles the loading state.
+  use(settingsLoaderPromise);
+
   // Read IPC state from store
   const status = useIPCStore((s) => s.status);
 
-  // Settings state from Zustand store
+  // Settings state from Zustand store (populated by settingsLoaderPromise above)
   const {
     assistantName,
-    setAssistantName,
     gamepadButton,
-    setGamepadButton,
-    keyboardVoiceKey,
-    setKeyboardVoiceKey,
     capturingVoiceInput,
     ttsEnabled,
     azureTtsEnabled,
-    setAzureTtsEnabled,
-    setApiKey,
-    setAnthropicModel,
-    setAzureSpeechKey,
-    setAzureRegion,
-    setAzureVoiceName,
-    setTelemetryLogEnabled,
-    setAceSetupsPath,
+    settingsLoaded,
   } = useSettingsStore();
 
-  const { get: configGet } = useConfig();
   const [tab, setTab] = useState<Tab>("current-session");
-  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Voice coach hook
   const {
@@ -67,52 +60,6 @@ const App = () => {
     enabled: ttsEnabled && !capturingVoiceInput,
     azureTtsEnabled,
   });
-
-  // Load all settings from config on mount
-  useEffect(() => {
-    const load = async () => {
-      const [ak, az, key, region, voice, name, button, model, telLog, kbKey, acePath] =
-        await Promise.all([
-          configGet("anthropicApiKey"),
-          configGet("azureTtsEnabled"),
-          configGet("azureSpeechKey"),
-          configGet("azureRegion"),
-          configGet("azureVoiceName"),
-          configGet("assistantName"),
-          configGet("gamepadTriggerButton"),
-          configGet("anthropicModel"),
-          configGet("telemetryLogEnabled"),
-          configGet("keyboardVoiceKey"),
-          configGet("aceSetupsPath"),
-        ]);
-      if (ak) setApiKey(ak);
-      if (az) setAzureTtsEnabled(az === "true");
-      if (key) setAzureSpeechKey(key);
-      if (region) setAzureRegion(region);
-      if (voice) setAzureVoiceName(voice);
-      if (name) setAssistantName(name);
-      setGamepadButton(button ? Number(button) : null);
-      if (model) setAnthropicModel(model);
-      if (telLog) setTelemetryLogEnabled(telLog === "true");
-      setKeyboardVoiceKey(kbKey || null);
-      if (acePath) setAceSetupsPath(acePath);
-      setSettingsLoaded(true);
-    };
-    load().catch(console.error);
-  }, [
-    configGet,
-    setApiKey,
-    setAzureTtsEnabled,
-    setAzureSpeechKey,
-    setAzureRegion,
-    setAzureVoiceName,
-    setAssistantName,
-    setGamepadButton,
-    setAnthropicModel,
-    setTelemetryLogEnabled,
-    setKeyboardVoiceKey,
-    setAceSetupsPath,
-  ]);
 
   return (
     <div className="app">
@@ -137,8 +84,14 @@ const App = () => {
 
       {/* Main content */}
       <div className="main-content">
-        {tab === "current-session" && <RealtimeAnalysis />}
-        {tab === "session-list" && <SessionHistory onSwitchToLive={() => setTab("current-session")} />}
+        {tab === "current-session" && (
+          <Suspense fallback={<div className="flex-grow-1" />}>
+            <RealtimeAnalysis />
+          </Suspense>
+        )}
+        {tab === "session-list" && (
+          <SessionHistory onSwitchToLive={() => setTab("current-session")} />
+        )}
         {tab === "settings" && <SettingsPanel />}
       </div>
 

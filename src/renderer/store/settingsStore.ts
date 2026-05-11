@@ -31,6 +31,9 @@ type SettingsStore = {
   // ACE
   aceSetupsPath: string;
 
+  // Loaded flag — true after initFromConfig resolves
+  settingsLoaded: boolean;
+
   // Setters
   setApiKey: (v: string) => void;
   setAssistantName: (v: string) => void;
@@ -48,6 +51,24 @@ type SettingsStore = {
   setAceSetupsPath: (v: string) => void;
   showSaved: (key: string) => void;
   clearSaved: () => void;
+
+  /**
+   * Bulk-apply all persisted config values loaded from SQLite at startup.
+   * Called once by the module-level settings loader promise; not from component render.
+   */
+  initFromConfig: (values: {
+    apiKey: string | null;
+    azureTtsEnabled: string | null;
+    azureSpeechKey: string | null;
+    azureRegion: string | null;
+    azureVoiceName: string | null;
+    assistantName: string | null;
+    gamepadButton: string | null;
+    anthropicModel: string | null;
+    telemetryLogEnabled: string | null;
+    keyboardVoiceKey: string | null;
+    aceSetupsPath: string | null;
+  }) => void;
 };
 
 export const useSettingsStore = create<SettingsStore>((set) => ({
@@ -66,6 +87,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   mockHistoryMode: false,
   telemetryLogEnabled: false,
   aceSetupsPath: "",
+  settingsLoaded: false,
 
   setApiKey: (apiKey) => set({ apiKey }),
   setAssistantName: (assistantName) => set({ assistantName }),
@@ -86,4 +108,31 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
     setTimeout(() => set({ settingSaved: null }), 2000);
   },
   clearSaved: () => set({ settingSaved: null }),
+
+  initFromConfig: (values) => {
+    set({
+      ...(values.apiKey ? { apiKey: values.apiKey } : {}),
+      ...(values.azureTtsEnabled
+        ? { azureTtsEnabled: values.azureTtsEnabled === "true" }
+        : {}),
+      ...(values.azureSpeechKey
+        ? { azureSpeechKey: values.azureSpeechKey }
+        : {}),
+      ...(values.azureRegion ? { azureRegion: values.azureRegion } : {}),
+      ...(values.azureVoiceName
+        ? { azureVoiceName: values.azureVoiceName }
+        : {}),
+      ...(values.assistantName ? { assistantName: values.assistantName } : {}),
+      gamepadButton: values.gamepadButton ? Number(values.gamepadButton) : null,
+      ...(values.anthropicModel
+        ? { anthropicModel: values.anthropicModel }
+        : {}),
+      ...(values.telemetryLogEnabled
+        ? { telemetryLogEnabled: values.telemetryLogEnabled === "true" }
+        : {}),
+      keyboardVoiceKey: values.keyboardVoiceKey ?? null,
+      ...(values.aceSetupsPath ? { aceSetupsPath: values.aceSetupsPath } : {}),
+      settingsLoaded: true,
+    });
+  },
 }));

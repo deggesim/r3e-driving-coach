@@ -1,7 +1,14 @@
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import {
+  use,
+  useActionState,
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+} from "react";
 import {
   Accordion,
   AccordionContext,
@@ -13,7 +20,7 @@ import {
 import { useSessionStore } from "../store/sessionStore";
 
 type StreamingVersion = { sessionId: number; version: number; text: string };
-type PendingDelete = { id: number; version: number };
+type PendingDelete = { id: number; version: number } | null;
 
 const AnalysisAccordionHeader = ({
   eventKey,
@@ -80,38 +87,51 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
     [renderedAnalyses],
   );
 
-  const [activeKeys, setActiveKeys] = useState<string[]>(() => {
-    if (startClosed || analyses.length === 0) return [];
-    return [`v${analyses[analyses.length - 1].version}`];
+  // User-controlled open key (persisted across streaming transitions).
+  // Streaming key is NOT stored here — it's computed at render time (see effectiveActiveKey).
+  const [userActiveKey, setUserActiveKey] = useState<string | null>(() => {
+    if (startClosed || analyses.length === 0) return null;
+    return `v${analyses[analyses.length - 1].version}`;
   });
-  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
-    null,
+
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
+
+  // Track the last known streaming version number so we know which completed
+  // accordion panel to open when streaming finishes.
+  const lastStreamingVersionRef = useRef<number | null>(
+    streamingVersion?.version ?? null,
   );
 
-  // Open the streaming accordion as soon as a new streaming version starts.
+  // When streaming transitions from active → null, open the completed panel.
+  // We only need to track the version number (no analyses array comparison needed).
   useEffect(() => {
-    if (!streamingVersion) return;
-    const key = `streaming-${streamingVersion.version}`;
-    setActiveKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+    const prev = lastStreamingVersionRef.current;
+    lastStreamingVersionRef.current = streamingVersion?.version ?? null;
+
+    if (streamingVersion !== null || prev === null) return;
+
+    // Streaming just finished for version `prev` — open its completed accordion key.
+    setUserActiveKey(`v${prev}`);
   }, [streamingVersion]);
 
-  // Open the completed accordion when streaming finishes (new analysis landed).
-  // Using a ref to track previous analyses avoids the React 18 batching issue where
-  // streaming→null and analyses update land in the same render, never letting us observe
-  // the streaming→non-null state in an effect.
-  const prevAnalysesRef = useRef(analyses);
-  useEffect(() => {
-    const prev = prevAnalysesRef.current;
-    prevAnalysesRef.current = analyses;
+  // Merge user-controlled key with the streaming key (derived, never stored in state).
+  // Streaming panel takes priority while active; otherwise use the user-selected key.
+  const effectiveActiveKey = useMemo<string | null>(() => {
+    if (!streamingVersion) return userActiveKey;
+    return `streaming-${streamingVersion.version}`;
+  }, [userActiveKey, streamingVersion]);
 
-    if (streamingVersion) return; // still in progress — don't open yet
-
-    const newAnalysis = analyses.find((a) => !prev.some((p) => p.id === a.id));
-    if (newAnalysis) {
-      const key = `v${newAnalysis.version}`;
-      setActiveKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
-    }
-  }, [analyses, streamingVersion]);
+  // useActionState for delete: manages async lifecycle (pending state for free)
+  // and keeps the action co-located with the confirmation UI.
+  const [, deleteAction, isDeleting] = useActionState(
+    async (_prev: null, payload: PendingDelete): Promise<null> => {
+      if (!payload) return null;
+      await deleteAnalysis(payload.id);
+      setUserActiveKey((k) => (k === `v${payload.version}` ? null : k));
+      return null;
+    },
+    null,
+  );
 
   const handleDeleteClick = (
     e: React.MouseEvent,
@@ -122,23 +142,22 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
     setPendingDelete({ id, version });
   };
 
-  const handleDeleteConfirm = async () => {
-    if (!pendingDelete) return;
-    const { id, version } = pendingDelete;
+  const handleDeleteConfirm = () => {
+    const payload = pendingDelete;
     setPendingDelete(null);
-    await deleteAnalysis(id);
-    setActiveKeys((prev) => prev.filter((k) => k !== `v${version}`));
+    deleteAction(payload);
+  };
+
+  const handleSelect = (key: string | string[] | null | undefined) => {
+    const k = Array.isArray(key) ? (key[0] ?? null) : (key ?? null);
+    setUserActiveKey(k);
   };
 
   return (
     <>
       <Accordion
-        activeKey={activeKeys}
-        onSelect={(keys) => {
-          if (Array.isArray(keys)) setActiveKeys(keys);
-          else if (typeof keys === "string") setActiveKeys([keys]);
-          else setActiveKeys([]);
-        }}
+        activeKey={effectiveActiveKey}
+        onSelect={handleSelect}
         className="analysis-accordion"
       >
         {analyses.map((a) => (
@@ -153,7 +172,9 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
               <div
                 className="deb-content"
                 // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
-                dangerouslySetInnerHTML={{ __html: renderedById.get(a.id) ?? "" }}
+                dangerouslySetInnerHTML={{
+                  __html: renderedById.get(a.id) ?? "",
+                }}
               />
             </Accordion.Body>
           </Accordion.Item>
@@ -191,10 +212,19 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
           è irreversibile.
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setPendingDelete(null)}>
+          <Button
+            variant="secondary"
+            onClick={() => setPendingDelete(null)}
+            disabled={isDeleting}
+          >
             Annulla
           </Button>
-          <Button variant="danger" onClick={handleDeleteConfirm}>
+          <Button
+            variant="danger"
+            onClick={handleDeleteConfirm}
+            disabled={isDeleting}
+          >
+            {isDeleting ? <Spinner size="sm" className="me-1" /> : null}
             Elimina
           </Button>
         </Modal.Footer>

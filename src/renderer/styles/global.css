@@ -180,6 +180,7 @@ body {
   background: var(--bg3);
   color: var(--text);
   box-shadow: none;
+  border-top-left-radius: 0 !important ;
 }
 .accordion-button:not(.collapsed) {
   background: var(--bg3);
@@ -195,6 +196,9 @@ body {
 }
 .accordion-button-delete {
   background: var(--bg3);
+  border-top-right-radius: 0 !important ;
+  border-bottom-left-radius: 0 !important ;
+  border-bottom-right-radius: 0 !important ;
 }
 .accordion-body {
   background: var(--bg2);

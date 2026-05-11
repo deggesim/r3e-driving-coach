@@ -10,7 +10,7 @@
  * lifecycle; analyze + export PDF still enabled).
  */
 
-import { useEffect } from "react";
+import { use, useMemo } from "react";
 import { Alert } from "react-bootstrap";
 import { useIPCStore } from "../store/ipcStore";
 import { useSessionStore } from "../store/sessionStore";
@@ -35,9 +35,12 @@ const RealtimeAnalysis = () => {
 
   const { flash, setFlash, showFlash } = useFlash();
   const {
-    showPicker, setShowPicker,
-    showSetupSelection, setShowSetupSelection,
-    pickerLap, setPickerLap,
+    showPicker,
+    setShowPicker,
+    showSetupSelection,
+    setShowSetupSelection,
+    pickerLap,
+    setPickerLap,
     setPendingLapId,
     setupById,
     handleSetupConfirm,
@@ -45,9 +48,11 @@ const RealtimeAnalysis = () => {
     handleLapReuseSetup,
   } = useSetupPicker({ session, setups, assignLapSetup, showFlash });
 
-  useEffect(() => {
-    void loadCurrent();
-  }, [loadCurrent]);
+  // Load current session data on mount. useMemo creates the Promise once per
+  // component mount (empty deps), use() suspends until it resolves. The parent
+  // Suspense boundary in App.tsx handles the loading state.
+  const loadPromise = useMemo(() => loadCurrent(), []);
+  use(loadPromise);
 
   const isLive = true;
   const sessionActive = !!session && !session.ended_at;
@@ -69,7 +74,10 @@ const RealtimeAnalysis = () => {
     showFlash("secondary", "Sessione chiusa.");
   };
 
-  const handleAnalyze = async (flags: { leaderboardMode: boolean; fixedSetup: boolean }): Promise<void> => {
+  const handleAnalyze = async (flags: {
+    leaderboardMode: boolean;
+    fixedSetup: boolean;
+  }): Promise<void> => {
     if (!session) return;
     const res = await window.electronAPI.sessionAnalyze({ ...flags });
     if (!res.ok) showFlash("danger", res.reason ?? "Errore durante l'analisi");
@@ -123,12 +131,18 @@ const RealtimeAnalysis = () => {
       )}
 
       {/* Body: laps table (fixed height) + analyses section (scrollable) */}
-      <div className="flex-grow-1 overflow-hidden p-3 d-flex flex-column" style={{ minHeight: 0 }}>
+      <div
+        className="flex-grow-1 overflow-hidden p-3 d-flex flex-column"
+        style={{ minHeight: 0 }}
+      >
         <div className="flex-shrink-0">
           <LapsTable setupById={setupById} live onPickSetup={setPickerLap} />
         </div>
 
-        <div className="flex-grow-1 d-flex flex-column overflow-hidden mt-3" style={{ minHeight: 0 }}>
+        <div
+          className="flex-grow-1 d-flex flex-column overflow-hidden mt-3"
+          style={{ minHeight: 0 }}
+        >
           <h6 className="text-uppercase flex-shrink-0">Analisi</h6>
           {analyses.length === 0 && !streamingVersion && (
             <p>Nessuna analisi ancora generata.</p>
