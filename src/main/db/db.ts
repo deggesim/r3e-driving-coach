@@ -218,6 +218,25 @@ const initSchema = (db: Database.Database): void => {
   `);
 
   seedR3ECorners(db);
+
+  // Migration: copy data from the old unified track_maps table (pre-6c73b79) to game-specific tables
+  const oldTrackMaps = db.prepare(
+    `SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='track_maps'`,
+  ).get() as { n: number };
+  if (oldTrackMaps.n > 0) {
+    try {
+      db.exec(`
+        INSERT OR IGNORE INTO track_maps_ace (car, track, layout, geometry, created_at)
+        SELECT car, track, layout, geometry, created_at FROM track_maps WHERE game = 'ace';
+
+        INSERT OR IGNORE INTO track_maps_r3e (car, track, layout, geometry, created_at)
+        SELECT CAST(car AS INTEGER), CAST(track AS INTEGER), CAST(layout AS INTEGER), geometry, created_at FROM track_maps WHERE game = 'r3e';
+      `);
+      console.log('[DB] Migrated track_maps → track_maps_r3e / track_maps_ace');
+    } catch (err) {
+      console.error('[DB] track_maps migration error:', err);
+    }
+  }
 };
 
 export const getDb = (userDataPath: string): Database.Database => {

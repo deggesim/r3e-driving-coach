@@ -436,6 +436,7 @@ export type ElectronAPI = {
   // Lap telemetry frames (on demand)
   lapGetFrames: (params: { id: number; game: GameSource }) => Promise<CompactFrame[]>;
   lapAssignSetup: (params: { lapId: number; setupId: number | null; game: GameSource }) => Promise<void>;
+  lapDelete: (params: { id: number; game: GameSource }) => Promise<void>;
 
   // Track map geometry (cached per game/car/track/layout)
   trackMapGet: (params: {

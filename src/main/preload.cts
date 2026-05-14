@@ -117,6 +117,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("lap:getFrames", params),
   lapAssignSetup: (params: { lapId: number; setupId: number | null; game: string }) =>
     ipcRenderer.invoke("lap:assignSetup", params),
+  lapDelete: (params: { id: number; game: string }) =>
+    ipcRenderer.invoke("lap:delete", params),
 
   // Track map geometry (cached per game/car/track/layout)
   trackMapGet: (params: {

@@ -147,6 +147,9 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
   let prevNpos = -1;
   let prevCurrentLapTimeMs = 0;
   let prevIsValidLap = true;
+  // True if the car was in the pit lane at any point since the last lap crossing.
+  // Used to mark outlaps (and drive-through laps) as invalid regardless of ACE's own flag.
+  let lapExitedPit = false;
   // Cumulative world-space distance: makes CompactFrame.d consistent with wx/wz
   // so the telemetry chart cursor and track map marker are perfectly aligned.
   let cumulativeDist = 0;
@@ -188,6 +191,7 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       prevNpos = -1;
       prevCurrentLapTimeMs = 0;
       prevIsValidLap = true;
+      lapExitedPit = false;
       prevTcActive = -1;
       prevAbsActive = -1;
       telemetryPollCounter = 0;
@@ -435,6 +439,9 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       lastFrameWx = playerWx;
       lastFrameWz = playerWz;
 
+      // Track pit lane presence for outlap/drive-through detection.
+      if (isInPitLane) lapExitedPit = true;
+
       // Accumulate CompactFrame (exclude pit lane frames)
       if (!isInPitLane) {
         lapFrames.push({
@@ -472,9 +479,11 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
             : lastLaptimeMs > 0
               ? lastLaptimeMs / 1000
               : 0;
+        const effectiveValid = prevIsValidLap && !lapExitedPit;
         console.log(
           `[AceReader] lapComplete — lap=${ownLapCount} lapTime=${lapTime.toFixed(3)}s ` +
-            `valid=${prevIsValidLap} car="${cachedCarModel}" track="${cachedTrack}" ` +
+            `valid=${effectiveValid} (aceValid=${prevIsValidLap} exitedPit=${lapExitedPit}) ` +
+            `car="${cachedCarModel}" track="${cachedTrack}" ` +
             `layout="${cachedLayout}" length=${cachedTrackLength}m frames=${lapFrames.length}`,
         );
         const lapData = {
@@ -486,12 +495,13 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
           track: cachedTrack,
           layout: cachedLayout,
           layoutLength: cachedTrackLength,
-          valid: prevIsValidLap,
+          valid: effectiveValid,
         };
         lapFrames = [];
         cumulativeDist = 0;
         lastFrameWx = undefined;
         lastFrameWz = undefined;
+        lapExitedPit = false;
         emitter.emit("lapComplete", lapData);
       }
       prevNpos = npos;

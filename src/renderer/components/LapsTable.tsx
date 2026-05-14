@@ -4,6 +4,7 @@ import {
   faEye,
   faEyeSlash,
   faPen,
+  faTrash,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -43,7 +44,9 @@ type LapsTableProps = {
 
 const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => {
   const laps = useSessionStore((s) => s.laps);
+  const deleteLap = useSessionStore((s) => s.deleteLap);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const [hideInvalid, setHideInvalid] = useState(true);
   const [trackedLapCount, setTrackedLapCount] = useState(0);
@@ -81,12 +84,26 @@ const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => 
   const goToPage = (p: number) => {
     setPage(p);
     setExpandedId(null);
+    setConfirmDeleteId(null);
   };
 
   const toggleHideInvalid = () => {
     setHideInvalid((v) => !v);
     setPage(1);
     setExpandedId(null);
+    setConfirmDeleteId(null);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, lapId: number) => {
+    e.stopPropagation();
+    setConfirmDeleteId((cur) => (cur === lapId ? null : lapId));
+    setExpandedId(null);
+  };
+
+  const handleDeleteConfirm = async (e: React.MouseEvent, lapId: number) => {
+    e.stopPropagation();
+    setConfirmDeleteId(null);
+    await deleteLap(lapId);
   };
 
   const pageLaps = visibleLaps.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -132,12 +149,13 @@ const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => 
             <th>Valido</th>
             <th>Setup</th>
             <th>Data</th>
+            <th style={{ width: 32 }}></th>
           </tr>
         </thead>
         <tbody>
           {laps.length === 0 && (
             <tr>
-              <td colSpan={9} className="text-center text-muted">
+              <td colSpan={10} className="text-center text-muted">
                 Nessun giro
               </td>
             </tr>
@@ -233,10 +251,41 @@ const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => 
                   <td style={isBest ? { color: "#ffc107" } : undefined}>
                     {parseLocalDate(l.recorded_at).toLocaleString("it-IT")}
                   </td>
+                  <td onClick={(e) => e.stopPropagation()} style={{ padding: "2px 4px" }}>
+                    {confirmDeleteId === l.id ? (
+                      <div className="d-flex gap-1">
+                        <button
+                          className="text-danger"
+                          title="Conferma eliminazione"
+                          onClick={(e) => handleDeleteConfirm(e, l.id)}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12 }}
+                        >
+                          <FontAwesomeIcon icon={faCheck} />
+                        </button>
+                        <button
+                          className="text-muted"
+                          title="Annulla"
+                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12 }}
+                        >
+                          <FontAwesomeIcon icon={faXmark} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className="text-muted"
+                        title="Elimina giro"
+                        onClick={(e) => handleDeleteClick(e, l.id)}
+                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, opacity: 0.4 }}
+                      >
+                        <FontAwesomeIcon icon={faTrash} />
+                      </button>
+                    )}
+                  </td>
                 </tr>
                 <tr className="lap-telemetry-row">
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     style={{ padding: 0, background: "var(--bg2)" }}
                   >
                     <div

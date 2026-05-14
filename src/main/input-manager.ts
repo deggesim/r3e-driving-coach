@@ -1,25 +1,40 @@
 import { globalShortcut } from "electron";
 
+const MODIFIER_PREFIXES = ["Ctrl", "Alt", "Shift", "Meta"];
+
+const mapKeyPart = (key: string): string => {
+  switch (key) {
+    case " ":          return "Space";
+    case "+":          return "Plus";
+    case "ArrowUp":    return "Up";
+    case "ArrowDown":  return "Down";
+    case "ArrowLeft":  return "Left";
+    case "ArrowRight": return "Right";
+    case "Enter":      return "Return";
+    default:
+      return key.length === 1 ? key.toUpperCase() : key;
+  }
+};
+
 // Converts the stored key format (JS event.key + modifier prefixes joined by "+")
-// to an Electron accelerator string.
+// to an Electron accelerator string. Parses modifiers greedily to avoid ambiguity
+// when the actual key character is "+".
 const toAccelerator = (key: string): string => {
-  const parts = key.split("+");
-  const lastIdx = parts.length - 1;
-  return parts
-    .map((part, i) => {
-      if (i < lastIdx) return part; // modifier prefix: Ctrl, Alt, Shift — unchanged
-      switch (part) {
-        case " ":         return "Space";
-        case "ArrowUp":   return "Up";
-        case "ArrowDown": return "Down";
-        case "ArrowLeft": return "Left";
-        case "ArrowRight":return "Right";
-        case "Enter":     return "Return";
-        default:
-          return part.length === 1 ? part.toUpperCase() : part;
+  const modifiers: string[] = [];
+  let remaining = key;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const mod of MODIFIER_PREFIXES) {
+      if (remaining.startsWith(mod + "+")) {
+        modifiers.push(mod);
+        remaining = remaining.slice(mod.length + 1);
+        changed = true;
+        break;
       }
-    })
-    .join("+");
+    }
+  }
+  return [...modifiers, mapKeyPart(remaining)].join("+");
 };
 
 export type InputManager = {

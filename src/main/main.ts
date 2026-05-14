@@ -349,6 +349,10 @@ const setupPipeline = (): void => {
   let currentSessionGame: GameSource = "r3e";
   let currentSetupId: number | null = null;
   let currentLapNumber = 0;
+  // Session-level sequential lap counter. Incremented by saveLap() so that
+  // lap_number in DB is always monotonically increasing within a session,
+  // regardless of the game's own lap counter resetting after a pit stop.
+  let sessionLapSeq = 0;
   let lastDeviations: Deviation[] | null = null;
 
   const lookupCorner = (dist: number): string | null => {
@@ -532,7 +536,7 @@ const setupPipeline = (): void => {
         .run(
           sessionId,
           currentSetupId,
-          lap.lapNumber,
+          ++sessionLapSeq,
           lap.lapTime,
           lap.sectorTimes[0] > 0 ? lap.sectorTimes[0] : null,
           lap.sectorTimes[1] > 0 ? lap.sectorTimes[1] : null,
@@ -714,13 +718,22 @@ const setupPipeline = (): void => {
         .get(currentSessionId) as
         | { car: string; track: string; layout: string }
         | undefined;
-      if (
-        sessionRow &&
-        (sessionRow.car !== lapData.car ||
+      if (sessionRow) {
+        // For ACE sessions started before StaticEvo populated layout, the stored
+        // layout may be "". Treat it as a pending fill-in rather than a mismatch.
+        const aceLayoutPending =
+          game === "ace" && sessionRow.layout === "" && lapData.layout !== "";
+        if (
+          sessionRow.car !== lapData.car ||
           sessionRow.track !== lapData.track ||
-          sessionRow.layout !== lapData.layout)
-      ) {
-        closeSession("car/track changed");
+          (!aceLayoutPending && sessionRow.layout !== lapData.layout)
+        ) {
+          closeSession("car/track changed");
+        } else if (aceLayoutPending) {
+          db.prepare(
+            `UPDATE ${t("sessions", currentSessionGame)} SET layout = ? WHERE id = ?`,
+          ).run(lapData.layout, currentSessionId);
+        }
       }
     }
 
@@ -756,7 +769,7 @@ const setupPipeline = (): void => {
         layoutName: names.layoutName,
       };
 
-      currentLapNumber = lap.lapNumber;
+      currentLapNumber = sessionLapSeq;
       pushToRenderer("lapComplete", lapWithNames);
       pushStatus();
 
@@ -789,13 +802,25 @@ const setupPipeline = (): void => {
         }
       }
 
+      // Patch zones_json: handleLapComplete saves the lap before the recorder
+      // builds zones (ACE reader emits lapComplete without zones). Update in-place.
+      if (currentSessionId && lap.zones.length > 0) {
+        try {
+          db.prepare(
+            `UPDATE ${t("laps", currentSessionGame)} SET zones_json = ? WHERE session_id = ? AND lap_number = ?`,
+          ).run(JSON.stringify(lap.zones), currentSessionId, sessionLapSeq);
+        } catch (err) {
+          console.error("[Main] zones_json update error:", err);
+        }
+      }
+
       const deviations = baseline.ingestLap(
         lap.zones,
-        lap.lapNumber,
+        sessionLapSeq,
         calibrating,
       );
       if (currentSessionId && deviations && deviations.length > 0) {
-        ruleEngine.processLapDeviations(deviations, lap.lapNumber);
+        ruleEngine.processLapDeviations(deviations, sessionLapSeq);
       }
       lastDeviations = deviations;
 
@@ -860,6 +885,7 @@ const setupPipeline = (): void => {
       currentSessionId = Number(result.lastInsertRowid);
       currentSessionGame = activeGame;
       currentSetupId = null;
+      sessionLapSeq = 0;
       sessionAlerts.length = 0;
 
 
@@ -1005,6 +1031,27 @@ const setupPipeline = (): void => {
     (_event, { lapId, setupId, game }: { lapId: number; setupId: number | null; game: GameSource }) => {
       const lapsTable = `laps_${game === "ace" ? "ace" : "r3e"}`;
       db.prepare(`UPDATE ${lapsTable} SET setup_id = ? WHERE id = ?`).run(setupId ?? null, lapId);
+    },
+  );
+
+  ipcMain.handle(
+    "lap:delete",
+    (_event, { id, game }: { id: number; game: GameSource }) => {
+      const lapsTable = t("laps", game);
+      const sessionsTable = t("sessions", game);
+      const lap = db
+        .prepare(`SELECT session_id FROM ${lapsTable} WHERE id = ?`)
+        .get(id) as { session_id: number } | undefined;
+      if (!lap) return;
+      db.transaction(() => {
+        db.prepare(`DELETE FROM ${lapsTable} WHERE id = ?`).run(id);
+        db.prepare(
+          `UPDATE ${sessionsTable} SET
+             lap_count = (SELECT COUNT(*) FROM ${lapsTable} WHERE session_id = ?),
+             best_lap  = (SELECT MIN(lap_time) FROM ${lapsTable} WHERE session_id = ? AND valid = 1)
+           WHERE id = ?`,
+        ).run(lap.session_id, lap.session_id, lap.session_id);
+      })();
     },
   );
 
@@ -1194,6 +1241,12 @@ const setupPipeline = (): void => {
       currentSessionId = id;
       currentSessionGame = game;
       sessionAlerts.length = 0;
+
+      // Resume sequential lap counter from existing laps in the session
+      const lapCountRow = db
+        .prepare(`SELECT COUNT(*) AS cnt FROM ${t("laps", game)} WHERE session_id = ?`)
+        .get(id) as { cnt: number };
+      sessionLapSeq = lapCountRow.cnt;
 
       // Restore last loaded setup
       const lastSetupRow = db
