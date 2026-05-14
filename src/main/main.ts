@@ -52,6 +52,7 @@ import {
   type VoiceCoachEngine,
 } from "./coach/voice-coach.js";
 import {
+  closeDb,
   getCornerName,
   getDb,
   getTrackMap,
@@ -1591,6 +1592,7 @@ const setupPipeline = (): void => {
     inputManager?.destroy();
     r3eReader.stop();
     aceReader.stop();
+    closeDb();
   });
 
   // Start both readers
