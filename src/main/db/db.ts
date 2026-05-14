@@ -219,6 +219,39 @@ const initSchema = (db: Database.Database): void => {
 
   seedR3ECorners(db);
 
+  // Migration: renumber lap_number sequentially per session (ordered by recorded_at, id).
+  // Fixes historical sessions where the game's own counter reset after each pit stop.
+  const lapSeqMigrationDone = (
+    db.prepare(`SELECT value FROM app_config WHERE key = 'migration_lap_seq_v1'`).get() as
+      | { value: string }
+      | undefined
+  )?.value === '1';
+  if (!lapSeqMigrationDone) {
+    const renumberLaps = (lapsTable: string, sessionsTable: string): void => {
+      const sessionIds = db
+        .prepare(`SELECT id FROM ${sessionsTable} ORDER BY id`)
+        .all() as { id: number }[];
+      const updateLap = db.prepare(`UPDATE ${lapsTable} SET lap_number = ? WHERE id = ?`);
+      for (const { id: sessionId } of sessionIds) {
+        const laps = db
+          .prepare(
+            `SELECT id FROM ${lapsTable} WHERE session_id = ? ORDER BY recorded_at ASC, id ASC`,
+          )
+          .all(sessionId) as { id: number }[];
+        let seq = 0;
+        for (const lap of laps) {
+          updateLap.run(++seq, lap.id);
+        }
+      }
+    };
+    db.transaction(() => {
+      renumberLaps('laps_r3e', 'sessions_r3e');
+      renumberLaps('laps_ace', 'sessions_ace');
+      db.prepare(`INSERT OR REPLACE INTO app_config (key, value) VALUES ('migration_lap_seq_v1', '1')`).run();
+    })();
+    console.log('[DB] Migration lap_seq_v1: lap numbers renumbered sequentially per session');
+  }
+
   // Migration: copy data from the old unified track_maps table (pre-6c73b79) to game-specific tables
   const oldTrackMaps = db.prepare(
     `SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='track_maps'`,
