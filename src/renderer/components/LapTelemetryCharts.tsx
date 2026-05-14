@@ -273,7 +273,6 @@ const LapTelemetryCharts = ({ lap }: Props) => {
     window.electronAPI
       .trackMapGet({
         game,
-        car: sessionCar,
         track: sessionTrack,
         layout: sessionLayout,
       })

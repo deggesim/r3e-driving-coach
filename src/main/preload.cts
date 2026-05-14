@@ -120,10 +120,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   lapDelete: (params: { id: number; game: string }) =>
     ipcRenderer.invoke("lap:delete", params),
 
-  // Track map geometry (cached per game/car/track/layout)
+  // Track map geometry (cached per game/track/layout — global across cars)
   trackMapGet: (params: {
     game: string;
-    car: string;
     track: string;
     layout: string;
   }) => ipcRenderer.invoke("trackMap:get", params),

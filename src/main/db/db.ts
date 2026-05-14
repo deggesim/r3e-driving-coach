@@ -11,7 +11,9 @@ let _db: Database.Database | null = null;
 
 const seedR3ECorners = (db: Database.Database): void => {
   const count = (
-    db.prepare(`SELECT COUNT(*) as n FROM corner_names_r3e`).get() as { n: number }
+    db.prepare(`SELECT COUNT(*) as n FROM corner_names_r3e`).get() as {
+      n: number;
+    }
   ).n;
   if (count > 0) return;
   const insert = db.prepare(
@@ -199,77 +201,23 @@ const initSchema = (db: Database.Database): void => {
     );
 
     CREATE TABLE IF NOT EXISTS track_maps_r3e (
-      car        INTEGER NOT NULL,
       track      INTEGER NOT NULL,
       layout     INTEGER NOT NULL,
       geometry   TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (car, track, layout)
+      PRIMARY KEY (track, layout)
     );
 
     CREATE TABLE IF NOT EXISTS track_maps_ace (
-      car        TEXT NOT NULL,
       track      TEXT NOT NULL,
       layout     TEXT NOT NULL,
       geometry   TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      PRIMARY KEY (car, track, layout)
+      PRIMARY KEY (track, layout)
     );
   `);
 
   seedR3ECorners(db);
-
-  // Migration: renumber lap_number sequentially per session (ordered by recorded_at, id).
-  // Fixes historical sessions where the game's own counter reset after each pit stop.
-  const lapSeqMigrationDone = (
-    db.prepare(`SELECT value FROM app_config WHERE key = 'migration_lap_seq_v1'`).get() as
-      | { value: string }
-      | undefined
-  )?.value === '1';
-  if (!lapSeqMigrationDone) {
-    const renumberLaps = (lapsTable: string, sessionsTable: string): void => {
-      const sessionIds = db
-        .prepare(`SELECT id FROM ${sessionsTable} ORDER BY id`)
-        .all() as { id: number }[];
-      const updateLap = db.prepare(`UPDATE ${lapsTable} SET lap_number = ? WHERE id = ?`);
-      for (const { id: sessionId } of sessionIds) {
-        const laps = db
-          .prepare(
-            `SELECT id FROM ${lapsTable} WHERE session_id = ? ORDER BY recorded_at ASC, id ASC`,
-          )
-          .all(sessionId) as { id: number }[];
-        let seq = 0;
-        for (const lap of laps) {
-          updateLap.run(++seq, lap.id);
-        }
-      }
-    };
-    db.transaction(() => {
-      renumberLaps('laps_r3e', 'sessions_r3e');
-      renumberLaps('laps_ace', 'sessions_ace');
-      db.prepare(`INSERT OR REPLACE INTO app_config (key, value) VALUES ('migration_lap_seq_v1', '1')`).run();
-    })();
-    console.log('[DB] Migration lap_seq_v1: lap numbers renumbered sequentially per session');
-  }
-
-  // Migration: copy data from the old unified track_maps table (pre-6c73b79) to game-specific tables
-  const oldTrackMaps = db.prepare(
-    `SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND name='track_maps'`,
-  ).get() as { n: number };
-  if (oldTrackMaps.n > 0) {
-    try {
-      db.exec(`
-        INSERT OR IGNORE INTO track_maps_ace (car, track, layout, geometry, created_at)
-        SELECT car, track, layout, geometry, created_at FROM track_maps WHERE game = 'ace';
-
-        INSERT OR IGNORE INTO track_maps_r3e (car, track, layout, geometry, created_at)
-        SELECT CAST(car AS INTEGER), CAST(track AS INTEGER), CAST(layout AS INTEGER), geometry, created_at FROM track_maps WHERE game = 'r3e';
-      `);
-      console.log('[DB] Migrated track_maps → track_maps_r3e / track_maps_ace');
-    } catch (err) {
-      console.error('[DB] track_maps migration error:', err);
-    }
-  }
 };
 
 export const getDb = (userDataPath: string): Database.Database => {
@@ -282,22 +230,6 @@ export const getDb = (userDataPath: string): Database.Database => {
 
   initSchema(_db);
   return _db;
-};
-
-/**
- * Seeds corner names for an ACE session from R3E_CORNERS using exact track+layout match.
- * No mapping table — only writes rows when ACE track and layout strings match exactly.
- * No-op if corners are already present or if no exact match exists in R3E_CORNERS.
- */
-export const seedAceCornersFromR3E = (
-  db: Database.Database,
-  aceTrack: string,
-  aceLayout: string,
-): void => {
-  if (hasCornerNames(db, "ace", aceTrack, aceLayout)) return;
-
-  // R3E_CORNERS now uses numeric IDs — ACE matching is not possible via this path.
-  // ACE corner names are seeded via seedCornersFromLap instead.
 };
 
 /**
@@ -395,21 +327,18 @@ export const seedCornersFromLap = (
 };
 
 /**
- * Track map persistence (one geometry per game/car/track/layout).
+ * Track map persistence (one geometry per game/track/layout — global across cars).
  */
 export const getTrackMap = (
   db: Database.Database,
   game: GameSource,
-  car: number | string,
   track: number | string,
   layout: number | string,
 ): TrackMapGeometry | null => {
   const table = game === "r3e" ? "track_maps_r3e" : "track_maps_ace";
   const row = db
-    .prepare(
-      `SELECT geometry FROM ${table} WHERE car = ? AND track = ? AND layout = ?`,
-    )
-    .get(car, track, layout) as { geometry: string } | undefined;
+    .prepare(`SELECT geometry FROM ${table} WHERE track = ? AND layout = ?`)
+    .get(track, layout) as { geometry: string } | undefined;
   if (!row) return null;
   try {
     return JSON.parse(row.geometry) as TrackMapGeometry;
@@ -421,16 +350,15 @@ export const getTrackMap = (
 export const saveTrackMap = (
   db: Database.Database,
   game: GameSource,
-  car: number | string,
   track: number | string,
   layout: number | string,
   geometry: TrackMapGeometry,
 ): void => {
   const table = game === "r3e" ? "track_maps_r3e" : "track_maps_ace";
   db.prepare(
-    `INSERT OR REPLACE INTO ${table} (car, track, layout, geometry, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-  ).run(car, track, layout, JSON.stringify(geometry), new Date().toISOString());
+    `INSERT OR REPLACE INTO ${table} (track, layout, geometry, created_at)
+     VALUES (?, ?, ?, ?)`,
+  ).run(track, layout, JSON.stringify(geometry), new Date().toISOString());
 };
 
 export const closeDb = (): void => {

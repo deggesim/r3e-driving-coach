@@ -784,19 +784,17 @@ const setupPipeline = (): void => {
       if (lap.valid) {
         const geometry = buildTrackMap(lap.frames, lap.layoutLength);
         if (geometry) {
-          const tmCar    = activeGame === "r3e" ? Number(lap.car)    : lap.car;
           const tmTrack  = activeGame === "r3e" ? Number(lap.track)  : lap.track;
           const tmLayout = activeGame === "r3e" ? Number(lap.layout) : lap.layout;
           saveTrackMap(
             db,
             activeGame,
-            tmCar,
             tmTrack,
             tmLayout,
             geometry,
           );
           console.log(
-            `[Main] trackMap saved — game=${activeGame} car=${lap.car} ` +
+            `[Main] trackMap saved — game=${activeGame} ` +
               `track=${lap.track} layout=${lap.layout} samples=${geometry.sampleCount}`,
           );
         }
@@ -1014,15 +1012,13 @@ const setupPipeline = (): void => {
       _event,
       {
         game,
-        car,
         track,
         layout,
-      }: { game: GameSource; car: string; track: string; layout: string },
+      }: { game: GameSource; track: string; layout: string },
     ) => {
-      const tmCar    = game === "r3e" ? Number(car)    : car;
       const tmTrack  = game === "r3e" ? Number(track)  : track;
       const tmLayout = game === "r3e" ? Number(layout) : layout;
-      return getTrackMap(db, game, tmCar, tmTrack, tmLayout);
+      return getTrackMap(db, game, tmTrack, tmLayout);
     },
   );
 

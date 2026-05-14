@@ -109,7 +109,6 @@ export type TrackMapGeometry = {
 
 export type TrackMapRow = {
   game: GameSource;
-  car: string;
   track: string;
   layout: string;
   geometry: TrackMapGeometry;
@@ -438,10 +437,9 @@ export type ElectronAPI = {
   lapAssignSetup: (params: { lapId: number; setupId: number | null; game: GameSource }) => Promise<void>;
   lapDelete: (params: { id: number; game: GameSource }) => Promise<void>;
 
-  // Track map geometry (cached per game/car/track/layout)
+  // Track map geometry (cached per game/track/layout — global across cars)
   trackMapGet: (params: {
     game: GameSource;
-    car: string;
     track: string;
     layout: string;
   }) => Promise<TrackMapGeometry | null>;

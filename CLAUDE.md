@@ -175,7 +175,8 @@ baseline             (game, car, track, zone_id, data JSON, updated_at)  -- PK: 
 baseline_tc_zones    (game, car, track, zone_id)
 baseline_abs_zones   (game, car, track, zone_id)
 corner_names         (track, layout, dist_min PK, dist_max, name)
-track_maps           (game, car, track, layout PK, geometry JSON, created_at)
+track_maps_r3e       (track, layout PK, geometry JSON, created_at)
+track_maps_ace       (track, layout PK, geometry JSON, created_at)
 app_config           (key PK, value)
 ```
 
