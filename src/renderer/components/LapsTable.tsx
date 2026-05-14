@@ -9,7 +9,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Fragment, useEffect, useState } from "react";
-import { Badge, Button, Table } from "react-bootstrap";
+import { Badge, Button, Modal, Table } from "react-bootstrap";
 import { formatLapTime } from "../../shared/format";
 import type { LapRow, SessionSetupRow } from "../../shared/types";
 import { useSessionStore } from "../store/sessionStore";
@@ -42,11 +42,16 @@ type LapsTableProps = {
   onPickSetup?: (lap: LapRow) => void;
 };
 
-const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => {
+const LapsTable = ({
+  setupById,
+  live = false,
+  onPickSetup,
+}: LapsTableProps) => {
   const laps = useSessionStore((s) => s.laps);
   const deleteLap = useSessionStore((s) => s.deleteLap);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [page, setPage] = useState(1);
   const [hideInvalid, setHideInvalid] = useState(true);
   const [trackedLapCount, setTrackedLapCount] = useState(0);
@@ -85,6 +90,7 @@ const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => 
     setPage(p);
     setExpandedId(null);
     setConfirmDeleteId(null);
+    setShowDeleteModal(false);
   };
 
   const toggleHideInvalid = () => {
@@ -92,18 +98,26 @@ const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => 
     setPage(1);
     setExpandedId(null);
     setConfirmDeleteId(null);
+    setShowDeleteModal(false);
   };
 
   const handleDeleteClick = (e: React.MouseEvent, lapId: number) => {
     e.stopPropagation();
-    setConfirmDeleteId((cur) => (cur === lapId ? null : lapId));
+    setConfirmDeleteId(lapId);
+    setShowDeleteModal(true);
     setExpandedId(null);
   };
 
-  const handleDeleteConfirm = async (e: React.MouseEvent, lapId: number) => {
-    e.stopPropagation();
+  const handleDeleteConfirm = async () => {
+    if (confirmDeleteId === null) return;
+    setShowDeleteModal(false);
+    await deleteLap(confirmDeleteId);
     setConfirmDeleteId(null);
-    await deleteLap(lapId);
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setConfirmDeleteId(null);
   };
 
   const pageLaps = visibleLaps.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -241,46 +255,41 @@ const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => 
                       <button
                         className="text-muted"
                         title="Assegna setup"
-                        onClick={(e) => { e.stopPropagation(); onPickSetup?.(l); }}
-                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPickSetup?.(l);
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                          fontSize: 12,
+                        }}
                       >
-                        <FontAwesomeIcon icon={faPen} style={{ opacity: 0.4 }} />
+                        <FontAwesomeIcon
+                          icon={faPen}
+                          style={{ opacity: 0.4 }}
+                        />
                       </button>
                     )}
                   </td>
                   <td style={isBest ? { color: "#ffc107" } : undefined}>
                     {parseLocalDate(l.recorded_at).toLocaleString("it-IT")}
                   </td>
-                  <td onClick={(e) => e.stopPropagation()} style={{ padding: "2px 4px" }}>
-                    {confirmDeleteId === l.id ? (
-                      <div className="d-flex gap-1">
-                        <button
-                          className="text-danger"
-                          title="Conferma eliminazione"
-                          onClick={(e) => handleDeleteConfirm(e, l.id)}
-                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12 }}
-                        >
-                          <FontAwesomeIcon icon={faCheck} />
-                        </button>
-                        <button
-                          className="text-muted"
-                          title="Annulla"
-                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
-                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12 }}
-                        >
-                          <FontAwesomeIcon icon={faXmark} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        className="text-muted"
-                        title="Elimina giro"
-                        onClick={(e) => handleDeleteClick(e, l.id)}
-                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, opacity: 0.4 }}
-                      >
-                        <FontAwesomeIcon icon={faTrash} />
-                      </button>
-                    )}
+                  <td
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ padding: "2px 4px" }}
+                  >
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-danger"
+                      title="Elimina giro"
+                      onClick={(e) => handleDeleteClick(e, l.id)}
+                    >
+                      <FontAwesomeIcon icon={faTrash} />
+                    </Button>
                   </td>
                 </tr>
                 <tr className="lap-telemetry-row">
@@ -303,6 +312,43 @@ const LapsTable = ({ setupById, live = false, onPickSetup }: LapsTableProps) => 
           })}
         </tbody>
       </Table>
+
+      <Modal
+        show={showDeleteModal}
+        onHide={handleDeleteCancel}
+        centered
+        size="sm"
+        className="delete-confirm-modal"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title style={{ fontSize: 16 }}>
+            Conferma eliminazione
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="mb-0">
+            Stai per eliminare il giro{" "}
+            <strong>
+              #
+              {confirmDeleteId !== null
+                ? (laps.find((l) => l.id === confirmDeleteId)?.lap_number ??
+                  "—")
+                : "—"}
+            </strong>
+            .
+            <br />
+            <span className="text-danger">L'operazione è irreversibile.</span>
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" size="sm" onClick={handleDeleteCancel}>
+            Annulla
+          </Button>
+          <Button variant="danger" size="sm" onClick={handleDeleteConfirm}>
+            Elimina
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       <div className="sh-pagination d-flex align-items-center gap-2 px-0 py-1">
         <span
