@@ -313,7 +313,14 @@ const SettingsPanel = () => {
       }
     }, 50);
     return () => clearInterval(id);
-  }, [isCapturingButton, setGamepadButton, setKeyboardVoiceKey, setCapturingVoiceInput, configSet, showSaved]);
+  }, [
+    isCapturingButton,
+    setGamepadButton,
+    setKeyboardVoiceKey,
+    setCapturingVoiceInput,
+    configSet,
+    showSaved,
+  ]);
 
   useEffect(() => {
     if (!isCapturingKey) return;
@@ -323,8 +330,15 @@ const SettingsPanel = () => {
       const parts: string[] = [];
       if (e.ctrlKey) parts.push("Ctrl");
       if (e.altKey) parts.push("Alt");
-      if (e.shiftKey) parts.push("Shift");
+      // For single characters (e.g. "+", "@"), the character itself already
+      // encodes the Shift state. Including "Shift" would produce combos like
+      // "Shift++" which Electron's globalShortcut cannot register. Only add
+      // the Shift modifier for named keys (e.g. "F1", "ArrowUp", "Enter").
+      if (e.shiftKey && e.key.length > 1) parts.push("Shift");
       parts.push(e.key);
+      console.log(
+        `[SettingsPanel] Captured keyboard combo: ${parts.join("+")}`,
+      );
       const combo = parts.join("+");
       setKeyboardVoiceKey(combo);
       configSet("keyboardVoiceKey", combo).catch(console.error);
@@ -336,7 +350,14 @@ const SettingsPanel = () => {
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isCapturingKey, setKeyboardVoiceKey, setGamepadButton, setCapturingVoiceInput, configSet, showSaved]);
+  }, [
+    isCapturingKey,
+    setKeyboardVoiceKey,
+    setGamepadButton,
+    setCapturingVoiceInput,
+    configSet,
+    showSaved,
+  ]);
 
   return (
     <Container fluid className="settings-panel h-100 p-4">
@@ -590,7 +611,10 @@ const SettingsPanel = () => {
                     </span>
                     <Button
                       variant="secondary"
-                      onClick={() => { setIsCapturingButton(false); setCapturingVoiceInput(false); }}
+                      onClick={() => {
+                        setIsCapturingButton(false);
+                        setCapturingVoiceInput(false);
+                      }}
                     >
                       Annulla
                     </Button>
@@ -604,7 +628,10 @@ const SettingsPanel = () => {
                     </Badge>
                     <Button
                       variant="outline-light"
-                      onClick={() => { setIsCapturingButton(true); setCapturingVoiceInput(true); }}
+                      onClick={() => {
+                        setIsCapturingButton(true);
+                        setCapturingVoiceInput(true);
+                      }}
                     >
                       Assegna
                     </Button>
@@ -653,7 +680,10 @@ const SettingsPanel = () => {
                     </span>
                     <Button
                       variant="secondary"
-                      onClick={() => { setIsCapturingKey(false); setCapturingVoiceInput(false); }}
+                      onClick={() => {
+                        setIsCapturingKey(false);
+                        setCapturingVoiceInput(false);
+                      }}
                     >
                       Annulla
                     </Button>
@@ -667,7 +697,10 @@ const SettingsPanel = () => {
                     )}
                     <Button
                       variant="outline-light"
-                      onClick={() => { setIsCapturingKey(true); setCapturingVoiceInput(true); }}
+                      onClick={() => {
+                        setIsCapturingKey(true);
+                        setCapturingVoiceInput(true);
+                      }}
                     >
                       Assegna
                     </Button>
