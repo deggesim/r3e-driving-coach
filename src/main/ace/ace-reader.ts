@@ -153,6 +153,23 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
   let prevNpos = -1;
   let prevCurrentLapTimeMs = 0;
   let prevIsValidLap = true;
+  // ACE updates lastLaptimeMs an unpredictable number of frames after the npos
+  // crossing (especially online). We defer emitting lapComplete until lastLaptimeMs
+  // actually changes from the value it held during the in-progress lap. If it
+  // hasn't changed within ~500ms (32 polls) we fall back to prevCurrentLapTimeMs.
+  let pendingLapComplete: {
+    lapNumber: number;
+    frames: CompactFrame[];
+    car: string;
+    track: string;
+    layout: string;
+    layoutLength: number;
+    valid: boolean;
+    fallbackTimeS: number;
+    lastLaptimeMsBaseline: number; // lastLaptimeMs value at the moment of crossing
+    pollsWaited: number;
+  } | null = null;
+  const PENDING_LAP_TIMEOUT_POLLS = 32; // ~512ms at 16ms/poll
   // True if the car was in the pit lane at any point since the last lap crossing.
   // Used to mark outlaps (and drive-through laps) as invalid regardless of ACE's own flag.
   let lapExitedPit = false;
@@ -198,6 +215,7 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       prevCurrentLapTimeMs = 0;
       prevIsValidLap = true;
       lapExitedPit = false;
+      pendingLapComplete = null;
       prevTcActive = -1;
       prevAbsActive = -1;
       telemetryPollCounter = 0;
@@ -502,44 +520,66 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
         });
       }
 
-      // Lap completion: npos crosses start/finish (0.85→1.0 → 0.0→0.15).
-      // This is more reliable than totalLapCount whose SHM offset is uncertain.
+      // Lap crossing: npos crosses start/finish (0.85→1.0 → 0.0→0.15).
+      // We save the lap data here but defer the event until lastLaptimeMs changes,
+      // because ACE updates it an unpredictable number of frames after the crossing.
       if (prevNpos > 0.85 && npos < 0.15 && prevNpos >= 0) {
         ownLapCount++;
-        // Prefer lastLaptimeMs (ACE's own authoritative lap time) over
-        // prevCurrentLapTimeMs (our timer reading one poll before the crossing,
-        // which can be off by up to ~16ms in either direction).
-        const lapTime =
-          lastLaptimeMs > 0
-            ? lastLaptimeMs / 1000
-            : prevCurrentLapTimeMs > 0
-              ? prevCurrentLapTimeMs / 1000
-              : 0;
         const effectiveValid = prevIsValidLap && !lapExitedPit;
-        console.log(
-          `[AceReader] lapComplete — lap=${ownLapCount} lapTime=${lapTime.toFixed(3)}s ` +
-            `valid=${effectiveValid} (aceValid=${prevIsValidLap} exitedPit=${lapExitedPit}) ` +
-            `car="${cachedCarModel}" track="${cachedTrack}" ` +
-            `layout="${cachedLayout}" length=${cachedTrackLength}m frames=${lapFrames.length}`,
-        );
-        const lapData = {
+        pendingLapComplete = {
           lapNumber: ownLapCount,
-          lapTime,
-          sectorTimes: [-1, -1, -1] as [number, number, number],
           frames: [...lapFrames],
           car: cachedCarModel,
           track: cachedTrack,
           layout: cachedLayout,
           layoutLength: cachedTrackLength,
           valid: effectiveValid,
+          fallbackTimeS: prevCurrentLapTimeMs > 0 ? prevCurrentLapTimeMs / 1000 : 0,
+          lastLaptimeMsBaseline: lastLaptimeMs,
+          pollsWaited: 0,
         };
         lapFrames = [];
         cumulativeDist = 0;
         lastFrameWx = undefined;
         lastFrameWz = undefined;
         lapExitedPit = false;
-        emitter.emit("lapComplete", lapData);
       }
+
+      // Emit pending lap once lastLaptimeMs changes from its crossing-frame value
+      // (meaning ACE has written the authoritative time), or after timeout.
+      if (pendingLapComplete) {
+        const updated =
+          lastLaptimeMs > 0 &&
+          lastLaptimeMs !== pendingLapComplete.lastLaptimeMsBaseline;
+        const timedOut =
+          ++pendingLapComplete.pollsWaited >= PENDING_LAP_TIMEOUT_POLLS;
+
+        if (updated || timedOut) {
+          const lapTime = updated
+            ? lastLaptimeMs / 1000
+            : pendingLapComplete.fallbackTimeS;
+          console.log(
+            `[AceReader] lapComplete — lap=${pendingLapComplete.lapNumber} lapTime=${lapTime.toFixed(3)}s ` +
+              `source=${updated ? "lastLaptimeMs" : "fallback"} polls=${pendingLapComplete.pollsWaited} ` +
+              `valid=${pendingLapComplete.valid} car="${pendingLapComplete.car}" ` +
+              `track="${pendingLapComplete.track}" length=${pendingLapComplete.layoutLength}m ` +
+              `frames=${pendingLapComplete.frames.length}`,
+          );
+          emitter.emit("lapComplete", {
+            lapNumber: pendingLapComplete.lapNumber,
+            lapTime,
+            sectorTimes: [-1, -1, -1] as [number, number, number],
+            frames: pendingLapComplete.frames,
+            car: pendingLapComplete.car,
+            track: pendingLapComplete.track,
+            layout: pendingLapComplete.layout,
+            layoutLength: pendingLapComplete.layoutLength,
+            valid: pendingLapComplete.valid,
+          });
+          pendingLapComplete = null;
+        }
+      }
+
       prevNpos = npos;
       prevCurrentLapTimeMs = currentLapTimeMs;
       prevIsValidLap = isValidLap;
