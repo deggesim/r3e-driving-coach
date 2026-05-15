@@ -86,7 +86,7 @@ const App = () => {
       <div className="main-content">
         {tab === "current-session" && (
           <Suspense fallback={<div className="flex-grow-1" />}>
-            <RealtimeAnalysis />
+            <RealtimeAnalysis onSessionClosed={() => setTab("session-list")} />
           </Suspense>
         )}
         {tab === "session-list" && (

@@ -121,6 +121,12 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
   let prevTcActive = -1;
   let prevAbsActive = -1;
 
+  // Stale-write detection: if ACE exits but the SHM survives (held by launcher/Steam),
+  // status stays frozen at AC_LIVE. packetId stops incrementing when ACE stops writing.
+  let lastSeenPacketId = -1;
+  let stalePacketCount = 0;
+  const STALE_PACKET_LIMIT = 120; // ~2 seconds at 16ms poll
+
   const openTelemetryLog = (): void => {
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
     telemetryLogPath = path.join(os.tmpdir(), `ace-telemetry-${ts}.jsonl`);
@@ -195,6 +201,8 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       prevTcActive = -1;
       prevAbsActive = -1;
       telemetryPollCounter = 0;
+      lastSeenPacketId = -1;
+      stalePacketCount = 0;
       emitter.emit("disconnected");
     }
   };
@@ -258,6 +266,31 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
     try {
       const gfxBuf = decodeBuffer(gfxView, ACE_GRAPHIC_BUF);
       const status = readInt32(gfxBuf, GFX.status);
+
+      // Detect stale SHM: ACE increments packetId every frame while AC_LIVE.
+      // If it stops changing during live play, ACE has exited but the SHM survives
+      // (held open by the launcher or Steam). Only count stale polls during AC_LIVE
+      // to avoid false disconnects when the game is paused (packetId may freeze
+      // during AC_PAUSE depending on ACE's internal scheduler).
+      const currentPacketId = readInt32(gfxBuf, GFX.packetId);
+      if (status === AC_LIVE) {
+        if (currentPacketId === lastSeenPacketId) {
+          if (++stalePacketCount >= STALE_PACKET_LIMIT) {
+            console.log(`[AceReader] packetId frozen at ${currentPacketId} for ${stalePacketCount} polls — ACE not writing, disconnecting`);
+            cleanup();
+            scheduleReconnect();
+            return;
+          }
+        } else {
+          lastSeenPacketId = currentPacketId;
+          stalePacketCount = 0;
+        }
+      } else {
+        // Not AC_LIVE (paused, menu, replay): reset stale counter and update baseline
+        // so we don't accumulate stale ticks across a pause/unpause cycle.
+        lastSeenPacketId = currentPacketId;
+        stalePacketCount = 0;
+      }
 
       // Car model is readable even when paused — update cache opportunistically.
       // Require length > 1 to reject single-char placeholders like "0" that ACE
@@ -473,11 +506,14 @@ export const createAceReader = (options: AceReaderOptions = {}): AceReader => {
       // This is more reliable than totalLapCount whose SHM offset is uncertain.
       if (prevNpos > 0.85 && npos < 0.15 && prevNpos >= 0) {
         ownLapCount++;
+        // Prefer lastLaptimeMs (ACE's own authoritative lap time) over
+        // prevCurrentLapTimeMs (our timer reading one poll before the crossing,
+        // which can be off by up to ~16ms in either direction).
         const lapTime =
-          prevCurrentLapTimeMs > 0
-            ? prevCurrentLapTimeMs / 1000
-            : lastLaptimeMs > 0
-              ? lastLaptimeMs / 1000
+          lastLaptimeMs > 0
+            ? lastLaptimeMs / 1000
+            : prevCurrentLapTimeMs > 0
+              ? prevCurrentLapTimeMs / 1000
               : 0;
         const effectiveValid = prevIsValidLap && !lapExitedPit;
         console.log(
