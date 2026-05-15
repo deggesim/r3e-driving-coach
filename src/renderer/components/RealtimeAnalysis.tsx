@@ -23,7 +23,7 @@ import LapsTable from "./LapsTable";
 import R3eSetupPicker from "./R3eSetupPicker";
 import SetupSelectionModal from "./SetupSelectionModal";
 
-const RealtimeAnalysis = () => {
+const RealtimeAnalysis = ({ onSessionClosed }: { onSessionClosed?: () => void }) => {
   const status = useIPCStore((s) => s.status);
 
   const session = useSessionStore((s) => s.session);
@@ -71,7 +71,7 @@ const RealtimeAnalysis = () => {
 
   const handleEnd = async (): Promise<void> => {
     await window.electronAPI.sessionEnd();
-    showFlash("secondary", "Sessione chiusa.");
+    onSessionClosed?.();
   };
 
   const handleAnalyze = async (flags: {
