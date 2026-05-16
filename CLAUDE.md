@@ -261,6 +261,26 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 - **Voice queries**: Keyboard shortcut hold → Azure STT → Claude streaming → Azure TTS. Max 3-4 sentences, radio tone, Italian, no bullet points
 - **Mock mode**: `mockHistoryMode` in settingsStore injects `MOCK_SESSIONS` and `MOCK_DETAILS` from `mockData.ts` into the session list (negative IDs). Used to test SessionHistory and SessionDetail without a live session
 
+## Workflow di sviluppo — Skill e Agenti
+
+Prima di iniziare qualsiasi task di sviluppo, invocare la skill corrispondente tramite il tool `Skill`. Le skill guidano il processo; gli agenti specializzati vanno usati per lavoro esplorativo o review parallela.
+
+| Task | Skill (invocare per prima) | Agente specializzato |
+|------|---------------------------|----------------------|
+| Nuova feature | `superpowers:brainstorming` → `feature-dev:feature-dev` | `feature-dev:code-architect` (design) / `feature-dev:code-explorer` (esplorazione) |
+| Bug fix | `superpowers:systematic-debugging` | `voltagent-qa-sec:debugger` o `voltagent-qa-sec:error-detective` |
+| Code review | `superpowers:requesting-code-review` | `feature-dev:code-reviewer` |
+| Refactoring TypeScript / tipi avanzati | `typescript-advanced-types` | `voltagent-lang:typescript-pro` |
+| Componente React / hook / store | `react-vite-best-practices` | `voltagent-lang:react-specialist` |
+| Electron (IPC, sicurezza, packaging) | `electron-best-practices` | `voltagent-core-dev:electron-pro` |
+| SQLite / query / schema | `sqlite-database-expert` | `voltagent-data-ai:database-optimizer` |
+| Claude API / Anthropic SDK | `claude-api` | `voltagent-data-ai:ai-engineer` |
+| Fine branch / PR / commit | `superpowers:finishing-a-development-branch` | — |
+| Task paralleli indipendenti | `superpowers:dispatching-parallel-agents` | (definiti caso per caso) |
+| Verifica prima di completare | `superpowers:verification-before-completion` | — |
+
+**Regola**: se il task rientra in più categorie (es. nuova feature React con IPC Electron), invocare la skill del livello architetturale più alto (`feature-dev:feature-dev`) e poi usare le skill di dominio durante l'implementazione.
+
 ## Struct Offset Debugging
 
 If `npm run test:reader` shows all zeros or -1: struct offset mismatch. Check:
