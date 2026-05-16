@@ -169,10 +169,15 @@ npm run build:electron
 
 Quando ricevi un task di sviluppo, seleziona skill e agente in base alla tabella seguente. Nei runner che supportano le skill (Claude Code), invocare la skill tramite il tool `Skill` **prima** di qualsiasi altra azione.
 
-| Task | Skill (Claude Code) | Agente specializzato |
-|------|---------------------|----------------------|
-| Nuova feature | `superpowers:brainstorming` → `feature-dev:feature-dev` | `feature-dev:code-architect` / `feature-dev:code-explorer` |
-| Bug fix | `superpowers:systematic-debugging` | `voltagent-qa-sec:debugger` |
+**Legenda:**
+- `→` nella colonna Skill = passi sequenziali nell'ordine indicato
+- `|` nella colonna Agente = alternative, scegliere quella pertinente al sottocompito
+- Gli agenti vengono spawnati dopo le skill, non in parallelo ad esse. Il parallelismo tra agenti si usa solo con `superpowers:dispatching-parallel-agents` per sottocompiti davvero indipendenti.
+
+| Task | Skill (nell'ordine) | Agente (uno, in base al bisogno) |
+|------|---------------------|----------------------------------|
+| Nuova feature | 1. `superpowers:brainstorming` → 2. `feature-dev:feature-dev` | `feature-dev:code-architect` (nuovo design) \| `feature-dev:code-explorer` (esplorazione codebase) |
+| Bug fix | `superpowers:systematic-debugging` | `voltagent-qa-sec:debugger` (crash) \| `voltagent-qa-sec:error-detective` (correlazione errori) |
 | Code review | `superpowers:requesting-code-review` | `feature-dev:code-reviewer` |
 | Refactoring TypeScript | `typescript-advanced-types` | `voltagent-lang:typescript-pro` |
 | Componente React / hook / store Zustand | `react-vite-best-practices` | `voltagent-lang:react-specialist` |
@@ -180,9 +185,9 @@ Quando ricevi un task di sviluppo, seleziona skill e agente in base alla tabella
 | SQLite / schema / query | `sqlite-database-expert` | `voltagent-data-ai:database-optimizer` |
 | Claude API / Anthropic SDK | `claude-api` | `voltagent-data-ai:ai-engineer` |
 | Fine branch / PR | `superpowers:finishing-a-development-branch` | — |
-| Task paralleli indipendenti | `superpowers:dispatching-parallel-agents` | — |
+| Sottocompiti indipendenti in parallelo | `superpowers:dispatching-parallel-agents` | due o più agenti `Explore` simultanei |
 
-Per task che coprono più domini (es. nuova feature React + IPC Electron), usare la skill di livello architetturale più alto e applicare le skill di dominio durante l'implementazione.
+**Regola multi-dominio**: per task che coprono più aree (es. nuova feature React + IPC Electron), iniziare con `superpowers:brainstorming`, poi applicare le skill di dominio durante l'implementazione.
 
 ## Common Gotchas
 

@@ -263,23 +263,28 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 
 ## Workflow di sviluppo — Skill e Agenti
 
-Prima di iniziare qualsiasi task di sviluppo, invocare la skill corrispondente tramite il tool `Skill`. Le skill guidano il processo; gli agenti specializzati vanno usati per lavoro esplorativo o review parallela.
+Prima di iniziare qualsiasi task di sviluppo, invocare la skill corrispondente tramite il tool `Skill`.
 
-| Task | Skill (invocare per prima) | Agente specializzato |
-|------|---------------------------|----------------------|
-| Nuova feature | `superpowers:brainstorming` → `feature-dev:feature-dev` | `feature-dev:code-architect` (design) / `feature-dev:code-explorer` (esplorazione) |
-| Bug fix | `superpowers:systematic-debugging` | `voltagent-qa-sec:debugger` o `voltagent-qa-sec:error-detective` |
+**Legenda colonne:**
+- **Skill** — sequenza da invocare nell'ordine indicato (`→` = passo successivo)
+- **Agente** — sottoagente da spawnare per quel sottocompito specifico (`|` = alternativa, scegliere uno)
+- Gli agenti sono sempre sequenziali rispetto alle skill. Il parallelismo tra agenti si attiva solo con `superpowers:dispatching-parallel-agents` quando i sottocompiti sono davvero indipendenti.
+
+| Task | Skill (nell'ordine) | Agente (uno, in base al bisogno) |
+|------|---------------------|----------------------------------|
+| Nuova feature | 1. `superpowers:brainstorming` (concordare design) → 2. `feature-dev:feature-dev` (implementazione) | `feature-dev:code-architect` se serve progettare nuovi layer/file \| `feature-dev:code-explorer` se serve esplorare il codebase esistente |
+| Bug fix | `superpowers:systematic-debugging` | `voltagent-qa-sec:debugger` (crash/eccezioni) \| `voltagent-qa-sec:error-detective` (correlazione errori tra moduli) |
 | Code review | `superpowers:requesting-code-review` | `feature-dev:code-reviewer` |
 | Refactoring TypeScript / tipi avanzati | `typescript-advanced-types` | `voltagent-lang:typescript-pro` |
-| Componente React / hook / store | `react-vite-best-practices` | `voltagent-lang:react-specialist` |
+| Componente React / hook / store Zustand | `react-vite-best-practices` | `voltagent-lang:react-specialist` |
 | Electron (IPC, sicurezza, packaging) | `electron-best-practices` | `voltagent-core-dev:electron-pro` |
 | SQLite / query / schema | `sqlite-database-expert` | `voltagent-data-ai:database-optimizer` |
 | Claude API / Anthropic SDK | `claude-api` | `voltagent-data-ai:ai-engineer` |
 | Fine branch / PR / commit | `superpowers:finishing-a-development-branch` | — |
-| Task paralleli indipendenti | `superpowers:dispatching-parallel-agents` | (definiti caso per caso) |
+| Sottocompiti indipendenti in parallelo | `superpowers:dispatching-parallel-agents` | due o più agenti `Explore` simultanei (es. analisi R3E e ACE in parallelo) |
 | Verifica prima di completare | `superpowers:verification-before-completion` | — |
 
-**Regola**: se il task rientra in più categorie (es. nuova feature React con IPC Electron), invocare la skill del livello architetturale più alto (`feature-dev:feature-dev`) e poi usare le skill di dominio durante l'implementazione.
+**Regola multi-dominio**: se il task copre più aree (es. nuova feature React + IPC Electron), invocare prima `superpowers:brainstorming`, poi usare le skill di dominio durante l'implementazione (`react-vite-best-practices`, `electron-best-practices`).
 
 ## Struct Offset Debugging
 
