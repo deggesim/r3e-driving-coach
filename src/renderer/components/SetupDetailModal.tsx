@@ -2,6 +2,7 @@ import { Button, Modal } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
 import type { GameSource, SessionSetupRow } from "../../shared/types";
+import AceSetupTabs from "./AceSetupTabs";
 import R3eSetupTabs from "./R3eSetupTabs";
 
 export type SetupDetailModalProps = {
@@ -41,24 +42,7 @@ export const SetupDetailModal = ({
       <Modal.Body className="setup-detail-body">
         {row.setup.params.length > 0 ? (
           game === "ace" ? (
-            <table className="setup-table w-100">
-              <thead>
-                <tr>
-                  <th>Categoria</th>
-                  <th>Parametro</th>
-                  <th>Valore</th>
-                </tr>
-              </thead>
-              <tbody>
-                {row.setup.params.map((p) => (
-                  <tr key={`${p.category}__${p.parameter}`}>
-                    <td className="text-muted">{p.category}</td>
-                    <td>{p.parameter}</td>
-                    <td className="setup-value">{p.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <AceSetupTabs params={row.setup.params} />
           ) : (
             <R3eSetupTabs params={row.setup.params} />
           )
