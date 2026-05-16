@@ -627,7 +627,7 @@ const SettingsPanel = () => {
                         : "Nessun tasto assegnato"}
                     </Badge>
                     <Button
-                      variant="outline-light"
+                      variant="light"
                       onClick={() => {
                         setIsCapturingButton(true);
                         setCapturingVoiceInput(true);
@@ -637,7 +637,7 @@ const SettingsPanel = () => {
                     </Button>
                     {gamepadButton !== null && (
                       <Button
-                        variant="outline-danger"
+                        variant="danger"
                         onClick={() => {
                           setGamepadButton(null);
                           configSet("gamepadTriggerButton", "").catch(
@@ -696,7 +696,7 @@ const SettingsPanel = () => {
                       <Badge bg="secondary">Nessun tasto assegnato</Badge>
                     )}
                     <Button
-                      variant="outline-light"
+                      variant="light"
                       onClick={() => {
                         setIsCapturingKey(true);
                         setCapturingVoiceInput(true);
@@ -706,7 +706,7 @@ const SettingsPanel = () => {
                     </Button>
                     {keyboardVoiceKey && (
                       <Button
-                        variant="outline-danger"
+                        variant="danger"
                         onClick={() => {
                           setKeyboardVoiceKey(null);
                           configSet("keyboardVoiceKey", "").catch(
@@ -806,7 +806,7 @@ const SettingsPanel = () => {
               </Form.Label>
               <Col sm={9} className="d-flex align-items-center gap-2">
                 <Button
-                  variant={mockHistoryMode ? "warning" : "outline-secondary"}
+                  variant={mockHistoryMode ? "warning" : "secondary"}
                   onClick={() => setMockHistoryMode(!mockHistoryMode)}
                 >
                   {mockHistoryMode ? "Mock attivo" : "Mock disattivo"}

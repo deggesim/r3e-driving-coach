@@ -68,7 +68,7 @@ export const SetupDetailModal = ({
       </Modal.Body>
       {onUse && (
         <Modal.Footer>
-          <Button size="sm" variant="outline-primary" onClick={onUse}>
+          <Button size="sm" variant="primary" onClick={onUse}>
             <FontAwesomeIcon icon={faCheck} className="me-1" />
             Usa questo setup
           </Button>

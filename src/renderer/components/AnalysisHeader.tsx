@@ -110,12 +110,12 @@ const AnalysisHeader = ({
           </Button>
         )}
         {isLive && sessionActive && (
-          <Button size="sm" variant="outline-secondary" onClick={onEnd}>
+          <Button size="sm" variant="secondary" onClick={onEnd}>
             <FontAwesomeIcon icon={faStop} className="me-1" /> Chiudi sessione
           </Button>
         )}
         {session && (isLive ? sessionActive : true) && (
-          <Button size="sm" variant="outline-primary" onClick={onOpenPicker}>
+          <Button size="sm" variant="primary" onClick={onOpenPicker}>
             <FontAwesomeIcon icon={faGear} className="me-1" /> Carica setup
             {setups.length > 0 && ` (${setups.length})`}
           </Button>
@@ -130,20 +130,20 @@ const AnalysisHeader = ({
         </Button>
         <Button
           size="sm"
-          variant="outline-secondary"
+          variant="secondary"
           onClick={onExportPdf}
           disabled={!session || analyses.length === 0}
         >
           <FontAwesomeIcon icon={faFilePdf} className="me-1" /> Esporta PDF
         </Button>
         {!isLive && session && !sessionActive && onReopen && (
-          <Button size="sm" variant="outline-success" onClick={onReopen}>
+          <Button size="sm" variant="success" onClick={onReopen}>
             <FontAwesomeIcon icon={faRotateRight} className="me-1" />
             Riapri sessione
           </Button>
         )}
         {!isLive && onBack && (
-          <Button size="sm" variant="outline-primary" onClick={onBack}>
+          <Button size="sm" variant="primary" onClick={onBack}>
             <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
             Indietro
           </Button>

@@ -131,7 +131,7 @@ const SetupSelectionModal = ({
           )}
 
           <Button
-            variant="outline-secondary"
+            variant="secondary"
             onClick={onJsonPicker}
             className="w-100"
           >

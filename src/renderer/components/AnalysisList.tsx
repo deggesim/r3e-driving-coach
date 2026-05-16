@@ -41,15 +41,16 @@ const AnalysisAccordionHeader = ({
 
   return (
     <h2 className="accordion-header dark-header d-flex align-items-stretch">
-      <button
+      <Button
         type="button"
-        className="btn btn-link btn-sm text-danger p-0 px-3"
+        variant="danger"
+        size="sm"
+        className="p-0 px-3 rounded-0"
         title="Elimina analisi"
         onClick={onDelete}
-        style={{ lineHeight: 1 }}
       >
         <FontAwesomeIcon icon={faTrash} />
-      </button>
+      </Button>
       <button
         type="button"
         className={`accordion-button flex-grow-1${isOpen ? "" : " collapsed"}`}

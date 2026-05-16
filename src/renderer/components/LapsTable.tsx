@@ -133,7 +133,7 @@ const LapsTable = ({
         <h6 className="text-uppercase mb-1">Giri</h6>
         {laps.length > 0 && (
           <Button
-            variant={hideInvalid ? "secondary" : "outline-secondary"}
+            variant="secondary"
             style={{ fontSize: 12 }}
             onClick={toggleHideInvalid}
           >
@@ -252,26 +252,22 @@ const LapsTable = ({
                           `#${l.setup_id}`}
                       </Badge>
                     ) : (
-                      <button
-                        className="text-muted"
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-muted p-0"
                         title="Assegna setup"
                         onClick={(e) => {
                           e.stopPropagation();
                           onPickSetup?.(l);
                         }}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          padding: 0,
-                          cursor: "pointer",
-                          fontSize: 12,
-                        }}
+                        style={{ fontSize: 12 }}
                       >
                         <FontAwesomeIcon
                           icon={faPen}
                           style={{ opacity: 0.4 }}
                         />
-                      </button>
+                      </Button>
                     )}
                   </td>
                   <td style={isBest ? { color: "#ffc107" } : undefined}>

@@ -252,7 +252,7 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
         </Form.Select>
 
         <Button
-          variant="outline-secondary"
+          variant="secondary"
           size="sm"
           className="sh-filter-select ms-auto d-flex align-items-center gap-1"
           onClick={() => setSort((s) => (s === "desc" ? "asc" : "desc"))}
@@ -266,7 +266,7 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
 
         {filtered.length > 0 && (
           <Button
-            variant="outline-danger"
+            variant="danger"
             size="sm"
             className="sh-filter-select"
             onClick={() => setDeleteTarget({ type: "all" })}
