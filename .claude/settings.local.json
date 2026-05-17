@@ -10,15 +10,13 @@
       "mcp__plugin_chrome-devtools-mcp_chrome-devtools__navigate_page",
       "mcp__plugin_chrome-devtools-mcp_chrome-devtools__take_screenshot",
       "mcp__plugin_chrome-devtools-mcp_chrome-devtools__evaluate_script",
-      "Skill(update-config)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__query-docs",
+      "Skill(update-config)",
       "Skill(superpowers:writing-plans)",
       "Skill(superpowers:subagent-driven-development)"
     ],
-    "additionalDirectories": [
-      "C:\\Users\\simon\\AppData\\Local\\Temp"
-    ]
+    "additionalDirectories": ["C:\\Users\\simon\\AppData\\Local\\Temp"]
   },
   "hooks": {
     "PostToolUse": [
@@ -30,6 +28,12 @@
             "command": "npm run lint 2>&1",
             "timeout": 60,
             "statusMessage": "Running ESLint..."
+          },
+          {
+            "type": "command",
+            "command": "node .claude/scripts/style-check.mjs",
+            "timeout": 10,
+            "statusMessage": "Checking CODE_STYLE.md..."
           }
         ]
       }
