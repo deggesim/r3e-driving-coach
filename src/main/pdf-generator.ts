@@ -42,7 +42,7 @@ const GAME_LABELS: Record<GameSource, { short: string; full: string }> = {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtTime(s: number | null): string {
+const fmtTime = (s: number | null): string => {
   if (!s || s <= 0) return "--:--";
   const m = Math.floor(s / 60);
   const sec = s % 60;
@@ -51,7 +51,7 @@ function fmtTime(s: number | null): string {
     : `${sec.toFixed(3)}s`;
 }
 
-function escapeHtml(str: string): string {
+const escapeHtml = (str: string): string => {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -66,7 +66,7 @@ function escapeHtml(str: string): string {
  * - ✗ → red
  * - "In sessione" / "Tra sessioni" hint text coloring
  */
-function postProcess(html: string): string {
+const postProcess = (html: string): string => {
   html = html.replace(/@(\d+m)/g, '<span class="dist-marker">@$1</span>');
   html = html.replace(/✔/g, '<span class="avail-yes">✔</span>');
   html = html.replace(/✗/g, '<span class="avail-no">✗</span>');
@@ -78,7 +78,7 @@ function postProcess(html: string): string {
 /**
  * Parses templateV3 markdown into section blocks and returns their HTML.
  */
-function buildSectionsHtml(templateV3: string): string {
+const buildSectionsHtml = (templateV3: string): string => {
   // Split on [N] markers, keeping the delimiter
   const parts = templateV3.split(/(?=\[\d\])/);
   return parts
@@ -100,9 +100,9 @@ function buildSectionsHtml(templateV3: string): string {
 /**
  * Builds the structured Setup table HTML (shown after analysis sections).
  */
-function buildSetupTableHtml(
+const buildSetupTableHtml = (
   params: Array<{ category: string; parameter: string; value: string }>,
-): string {
+): string => {
   const rows = params
     .map(
       (p, i) => `
@@ -130,7 +130,7 @@ function buildSetupTableHtml(
 
 // ── HTML Builder ──────────────────────────────────────────────────────────────
 
-export function buildPdfHtml(data: PdfData): string {
+export const buildPdfHtml = (data: PdfData): string => {
   const lapTimeStr = fmtTime(data.lapTime);
   const s1 = fmtTime(data.sector1);
   const s2 = fmtTime(data.sector2);
@@ -351,7 +351,7 @@ ${setupHtml}
  * Renders the HTML to a PDF buffer using a hidden Electron BrowserWindow.
  * The window is always closed (and the temp file deleted) even on error.
  */
-export async function generatePdfBuffer(data: PdfData): Promise<Buffer> {
+export const generatePdfBuffer = async (data: PdfData): Promise<Buffer> => {
   const html = buildPdfHtml(data);
   const tmpFile = path.join(
     os.tmpdir(),
@@ -389,7 +389,7 @@ export async function generatePdfBuffer(data: PdfData): Promise<Buffer> {
 
 // ── Session PDF ───────────────────────────────────────────────────────────────
 
-function buildSessionHtml(detail: SessionDetail): string {
+const buildSessionHtml = (detail: SessionDetail): string => {
   const { session, laps, setups, analyses } = detail;
   const gameLabel = GAME_LABELS[session.game];
   const startedAt = new Date(session.started_at).toLocaleString("it-IT");
@@ -478,9 +478,9 @@ ${analyses.length > 0 ? analysesHtml : "<h2>Analisi</h2><p>Nessuna analisi gener
 </body></html>`;
 }
 
-export async function generateSessionPdfBuffer(
+export const generateSessionPdfBuffer = async (
   detail: SessionDetail,
-): Promise<Buffer> {
+): Promise<Buffer> => {
   const html = buildSessionHtml(detail);
   const tmpFile = path.join(
     os.tmpdir(),

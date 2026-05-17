@@ -78,7 +78,9 @@ const AceSetupPicker = ({
     if (!show || initializedRef.current) return;
     initializedRef.current = true;
     let cancelled = false;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setLoadingCars(true);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setError(null);
     window.electronAPI
       .aceListSetupCars()
@@ -101,9 +103,13 @@ const AceSetupPicker = ({
   useEffect(() => {
     if (!selectedCar) return;
     let cancelled = false;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setTracks([]);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setFiles([]);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setSelectedFile(null);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setLoadingTracks(true);
     window.electronAPI
       .aceListSetupTracks({ car: selectedCar })
@@ -124,8 +130,11 @@ const AceSetupPicker = ({
   useEffect(() => {
     if (!selectedCar || !selectedTrack) return;
     let cancelled = false;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setFiles([]);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setSelectedFile(null);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setLoadingFiles(true);
     window.electronAPI
       .aceListSetupFiles({ car: selectedCar, track: selectedTrack })

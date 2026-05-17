@@ -15,7 +15,7 @@ import type { AzureVoice } from "../../shared/types.js";
 // ---------------------------------------------------------------------------
 
 /** Convert an integer (0-9999) to Italian words. */
-function numberToItalian(n: number): string {
+const numberToItalian = (n: number): string => {
   if (n === 0) return "zero";
 
   const ones = [
@@ -83,9 +83,9 @@ function numberToItalian(n: number): string {
  * Trailing zeros are stripped first to determine the natural unit:
  *   "20" → "2" → decimi, "34" → "34" → centesimi, "567" → "567" → millesimi
  */
-function decPartInfo(
+const decPartInfo = (
   decStr: string | undefined,
-): { numStr: string; unit: string; unitPlural: string; digits: number } | null {
+): { numStr: string; unit: string; unitPlural: string; digits: number } | null => {
   if (!decStr) return null;
   const trimmed = decStr.replace(/0+$/, "");
   if (!trimmed) return null;
@@ -106,7 +106,7 @@ function decPartInfo(
 }
 
 /** Format a generic duration in seconds to Italian (no "al giro" suffix). */
-function singleSecondsPhrase(secStr: string, decStr: string | undefined): string {
+const singleSecondsPhrase = (secStr: string, decStr: string | undefined): string => {
   const sec = parseInt(secStr, 10);
   const dec = decPartInfo(decStr);
   if (!dec) {
@@ -118,12 +118,12 @@ function singleSecondsPhrase(secStr: string, decStr: string | undefined): string
 }
 
 /** Format a range "X.Y–X.Z s" to Italian using "o" as conjunction. */
-function rangeSecondsPhrase(
+const rangeSecondsPhrase = (
   sec1Str: string,
   dec1Str: string | undefined,
   sec2Str: string,
   dec2Str: string | undefined,
-): string {
+): string => {
   const sec1 = parseInt(sec1Str, 10);
   const sec2 = parseInt(sec2Str, 10);
   const dec1 = decPartInfo(dec1Str);
@@ -138,10 +138,10 @@ function rangeSecondsPhrase(
 }
 
 /** Convert a single "Xs/giro" or "X.Ys/giro" to Italian with "al giro". */
-function singleLapDeltaPhrase(
+const singleLapDeltaPhrase = (
   secStr: string,
   decStr: string | undefined,
-): string {
+): string => {
   const sec = parseInt(secStr, 10);
   const dec = decPartInfo(decStr);
   if (!dec) {
@@ -158,12 +158,12 @@ function singleLapDeltaPhrase(
 }
 
 /** Convert a range "X.Ys–X.Zs/giro" (en-dash or hyphen) to Italian. */
-function rangeLapDeltaPhrase(
+const rangeLapDeltaPhrase = (
   sec1Str: string,
   dec1Str: string | undefined,
   sec2Str: string,
   dec2Str: string | undefined,
-): string {
+): string => {
   const sec1 = parseInt(sec1Str, 10);
   const sec2 = parseInt(sec2Str, 10);
   const dec1 = decPartInfo(dec1Str);
@@ -193,11 +193,11 @@ function rangeLapDeltaPhrase(
 }
 
 /** Convert a parsed lap time to spoken Italian. Minutes omitted when zero. */
-function lapTimeToItalian(
+const lapTimeToItalian = (
   minutes: number,
   seconds: number,
   millis: number,
-): string {
+): string => {
   const parts: string[] = [];
 
   if (minutes > 0) {
@@ -230,7 +230,7 @@ function lapTimeToItalian(
  *   1.3s        →  "un secondo e tre decimi"
  *   2.0s        →  "due secondi"
  */
-function preprocessTTSText(text: string): string {
+const preprocessTTSText = (text: string): string => {
   // Track position: @<meters>m
   text = text.replace(/@(\d+)m\b/g, (_m, digits) => {
     return numberToItalian(parseInt(digits, 10)) + " metri";

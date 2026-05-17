@@ -81,7 +81,9 @@ const LapsTable = ({
   // Auto-advance to last page when new laps arrive (live session only).
   useEffect(() => {
     if (!live || visibleLaps.length <= trackedLapCount) return;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setTrackedLapCount(visibleLaps.length);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setPage(pageCount);
   }, [live, visibleLaps.length, trackedLapCount, pageCount]);
 

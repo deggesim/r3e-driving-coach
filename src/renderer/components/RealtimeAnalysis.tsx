@@ -51,6 +51,7 @@ const RealtimeAnalysis = ({ onSessionClosed }: { onSessionClosed?: () => void })
   // Load current session data on mount. useMemo creates the Promise once per
   // component mount (empty deps), use() suspends until it resolves. The parent
   // Suspense boundary in App.tsx handles the loading state.
+  // eslint-disable-next-line @eslint-react/exhaustive-deps
   const loadPromise = useMemo(() => loadCurrent(), []);
   use(loadPromise);
 

@@ -21,7 +21,7 @@ type R3ESetupItem = {
   disabled: boolean;
 };
 
-function categorize(id: string): string {
+const categorize = (id: string): string => {
   if (/^Brake/.test(id)) return "Freni";
   if (/^Fuel/.test(id)) return "Carburante";
   if (/^Tyre/.test(id)) return "Gomme";
@@ -40,7 +40,7 @@ function categorize(id: string): string {
   return "Altro";
 }
 
-function idToLabel(id: string): string {
+const idToLabel = (id: string): string => {
   return id
     .replace(/Toein/g, "Toe In")
     .replace(/([a-z])([A-Z])/g, "$1 $2")
@@ -54,7 +54,7 @@ const TYRE_COMPOUNDS: Record<number, string> = {
   2: "Soft",
 };
 
-function formatValue(item: R3ESetupItem): string {
+const formatValue = (item: R3ESetupItem): string => {
   const val = item.minValue + item.currentStep * item.stepSize;
   const rounded = Math.round(val * 1000) / 1000;
 
@@ -80,7 +80,7 @@ function formatValue(item: R3ESetupItem): string {
   return suffix ? `${rounded} ${suffix}` : String(rounded);
 }
 
-function parseR3EJson(text: string): SetupParam[] {
+const parseR3EJson = (text: string): SetupParam[] => {
   const parsed = JSON.parse(text) as { values?: R3ESetupItem[] };
   if (!parsed.values || !Array.isArray(parsed.values)) {
     throw new Error("Formato JSON non valido: manca il campo 'values'");

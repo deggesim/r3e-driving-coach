@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 
 export type FlashState = { variant: string; text: string };
 
-export function useFlash() {
+export const useFlash = () => {
   const [flash, setFlash] = useState<FlashState | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

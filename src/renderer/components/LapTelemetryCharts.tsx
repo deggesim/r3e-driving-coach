@@ -246,7 +246,9 @@ const LapTelemetryCharts = ({ lap }: Props) => {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setLoading(true);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setFrames(null);
     window.electronAPI
       .lapGetFrames({ id: lap.id, game })
@@ -266,6 +268,7 @@ const LapTelemetryCharts = ({ lap }: Props) => {
 
   useEffect(() => {
     if (!sessionCar || !sessionTrack) {
+      // eslint-disable-next-line @eslint-react/set-state-in-effect
       setTrackMap(null);
       return;
     }

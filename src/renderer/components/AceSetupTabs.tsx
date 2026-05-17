@@ -22,7 +22,7 @@ const WHEEL_LABELS: Record<WheelKey, string> = {
   RR: "Post. Destro",
 };
 
-function getAceTab(p: SetupParam): AceTabId {
+const getAceTab = (p: SetupParam): AceTabId => {
   switch (p.category) {
     case "Pneumatici":
     case "Geometria":
@@ -44,25 +44,24 @@ function getAceTab(p: SetupParam): AceTabId {
     default:
       return "Aerodinamica";
   }
-}
+};
 
-function getWheelKey(parameter: string): WheelKey | null {
+const getWheelKey = (parameter: string): WheelKey | null => {
   for (const key of WHEEL_KEYS) {
     if (new RegExp(`\\s${key}(\\s|$)`).test(parameter)) return key;
   }
   return null;
-}
+};
 
-function stripWheelSuffix(parameter: string): string {
-  return parameter.replace(/\s+(FL|FR|RL|RR)(?=\s|$)/, "").trim();
-}
+const stripWheelSuffix = (parameter: string): string =>
+  parameter.replace(/\s+(FL|FR|RL|RR)(?=\s|$)/, "").trim();
 
-function ParamTable({ rows }: { rows: Array<{ label: string; value: string }> }) {
+const ParamTable = ({ rows }: { rows: Array<{ label: string; value: string }> }) => {
   return (
     <table className="setup-tab-table w-100">
       <tbody>
-        {rows.map((r, i) => (
-          <tr key={i}>
+        {rows.map((r) => (
+          <tr key={r.label}>
             <td className="text-muted">{r.label}</td>
             <td className="setup-value">{r.value}</td>
           </tr>
@@ -72,7 +71,7 @@ function ParamTable({ rows }: { rows: Array<{ label: string; value: string }> })
   );
 }
 
-function FourCornerGrid({ params }: { params: SetupParam[] }) {
+const FourCornerGrid = ({ params }: { params: SetupParam[] }) => {
   const byWheel: Partial<Record<WheelKey, SetupParam[]>> = {};
   const shared: SetupParam[] = [];
 
@@ -117,7 +116,7 @@ function FourCornerGrid({ params }: { params: SetupParam[] }) {
   );
 }
 
-function SuspensionTab({ params }: { params: SetupParam[] }) {
+const SuspensionTab = ({ params }: { params: SetupParam[] }) => {
   const firstCornerIdx = params.findIndex((p) => getWheelKey(p.parameter) !== null);
   const lastCornerIdx = params.reduce(
     (acc, p, i) => (getWheelKey(p.parameter) !== null ? i : acc),

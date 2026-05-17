@@ -10,7 +10,7 @@ type Options = {
   explicit?: boolean;
 };
 
-export function useSetupPicker({ session, setups, assignLapSetup, showFlash, explicit }: Options) {
+export const useSetupPicker = ({ session, setups, assignLapSetup, showFlash, explicit }: Options) => {
   const [showPicker, setShowPicker] = useState(false);
   const [showSetupSelection, setShowSetupSelection] = useState(false);
   const [pickerLap, setPickerLap] = useState<LapRow | null>(null);

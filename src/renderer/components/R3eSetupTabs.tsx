@@ -11,7 +11,7 @@ type Section =
   | "engine" | "gears" | "diff" | "hybrid"
   | "default";
 
-function getTab(p: SetupParam): TabId {
+const getTab = (p: SetupParam): TabId => {
   const { category, parameter } = p;
   if (category === "Sterzo") return "Volante";
   if (category === "ABS" || category === "Controllo Trazione") return "Elettronica";
@@ -25,7 +25,7 @@ function getTab(p: SetupParam): TabId {
   return "Generale";
 }
 
-function getSection(p: SetupParam, tab: TabId): Section {
+const getSection = (p: SetupParam, tab: TabId): Section => {
   const { category, parameter } = p;
   if (tab === "Anteriore" || tab === "Posteriore") {
     if (/Left/.test(parameter)) return "left";
@@ -48,7 +48,7 @@ function getSection(p: SetupParam, tab: TabId): Section {
   return "default";
 }
 
-function cleanLabel(parameter: string, section: Section): string {
+const cleanLabel = (parameter: string, section: Section): string => {
   switch (section) {
     case "left":
     case "right":
@@ -69,12 +69,12 @@ function cleanLabel(parameter: string, section: Section): string {
   }
 }
 
-function ParamTable({ rows }: { rows: Array<{ label: string; value: string }> }) {
+const ParamTable = ({ rows }: { rows: Array<{ label: string; value: string }> }) => {
   return (
     <table className="setup-tab-table w-100">
       <tbody>
-        {rows.map((r, i) => (
-          <tr key={i}>
+        {rows.map((r) => (
+          <tr key={r.label}>
             <td className="text-muted">{r.label}</td>
             <td className="setup-value">{r.value}</td>
           </tr>
@@ -82,13 +82,13 @@ function ParamTable({ rows }: { rows: Array<{ label: string; value: string }> })
       </tbody>
     </table>
   );
-}
+};
 
-function SimpleTab({ params }: { params: SetupParam[] }) {
+const SimpleTab = ({ params }: { params: SetupParam[] }) => {
   return <ParamTable rows={params.map((p) => ({ label: p.parameter, value: p.value }))} />;
-}
+};
 
-function AxleTab({ params, axle }: { params: SetupParam[]; axle: "Anteriore" | "Posteriore" }) {
+const AxleTab = ({ params, axle }: { params: SetupParam[]; axle: "Anteriore" | "Posteriore" }) => {
   const prefix = axle === "Anteriore" ? "Ant." : "Post.";
   const shared = params.filter((p) => getSection(p, axle) === "shared");
   const left = params.filter((p) => getSection(p, axle) === "left");
@@ -119,7 +119,7 @@ function AxleTab({ params, axle }: { params: SetupParam[]; axle: "Anteriore" | "
   );
 }
 
-function Section({ title, rows }: { title: string; rows: Array<{ label: string; value: string }> }) {
+const Section = ({ title, rows }: { title: string; rows: Array<{ label: string; value: string }> }) => {
   return (
     <>
       <div className="setup-subsection-title">{title}</div>
@@ -128,7 +128,7 @@ function Section({ title, rows }: { title: string; rows: Array<{ label: string; 
   );
 }
 
-function ElettronicaTab({ params }: { params: SetupParam[] }) {
+const ElettronicaTab = ({ params }: { params: SetupParam[] }) => {
   const absF = params.filter((p) => getSection(p, "Elettronica") === "abs_front");
   const absR = params.filter((p) => getSection(p, "Elettronica") === "abs_rear");
   const tcCut = params.filter((p) => getSection(p, "Elettronica") === "tc_cut");
@@ -193,7 +193,7 @@ function ElettronicaTab({ params }: { params: SetupParam[] }) {
   );
 }
 
-function TrasmissioneTab({ params }: { params: SetupParam[] }) {
+const TrasmissioneTab = ({ params }: { params: SetupParam[] }) => {
   const engine = params.filter((p) => getSection(p, "Trasmissione") === "engine");
   const gears = params.filter((p) => getSection(p, "Trasmissione") === "gears");
   const diff = params.filter((p) => getSection(p, "Trasmissione") === "diff");

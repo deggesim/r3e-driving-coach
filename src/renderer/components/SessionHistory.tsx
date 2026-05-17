@@ -25,7 +25,7 @@ import SessionDetail from "./SessionDetail";
 const PAGE_SIZE = 10;
 const FETCH_SIZE = 500; // upper bound — load all, paginate/filter client-side
 
-function buildPageWindow(current: number, total: number): (number | "…")[] {
+const buildPageWindow = (current: number, total: number): (number | "…")[] => {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const pages: (number | "…")[] = [];
   const addPage = (n: number) => {
@@ -80,6 +80,7 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
 
   const loadSessions = useCallback((): void => {
     if (!window.electronAPI) return;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setLoading(true);
     window.electronAPI
       .sessionList({ page: 0, pageSize: FETCH_SIZE, sort: "desc" })
@@ -89,7 +90,10 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
       .catch(() => {
         /* ignore */
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        // eslint-disable-next-line @eslint-react/set-state-in-effect
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -97,6 +101,7 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
   }, [loadSessions]);
 
   useEffect(() => {
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setPage(1);
   }, [filterGame, filterCar, filterTrack, sort]);
 

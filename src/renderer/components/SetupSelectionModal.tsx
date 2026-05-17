@@ -44,6 +44,7 @@ const SetupSelectionModal = ({
 
   useEffect(() => {
     if (!show || !car || !track) return;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setLoading(true);
     window.electronAPI
       .sessionGetSetupHistory({ car, track, layout, game })

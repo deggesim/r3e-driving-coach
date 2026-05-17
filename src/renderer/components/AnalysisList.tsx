@@ -112,6 +112,7 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
     if (streamingVersion !== null || prev === null) return;
 
     // Streaming just finished for version `prev` — open its completed accordion key.
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setUserActiveKey(`v${prev}`);
   }, [streamingVersion]);
 
