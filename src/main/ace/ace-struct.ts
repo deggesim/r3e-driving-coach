@@ -6,8 +6,11 @@
  *   Local\ACEVOGraphic   — HUD + session state,  ~18 KB, every rendered frame
  *   Local\ACEVOStatic    — static session metadata, ~1 KB, written once
  *
- * API revision: 2026-03-31
- * Source: Steam Community Guide id=3707421508 (Rwaggy505Games)
+ * API revision: 2026-04-01
+ * Source: https://docs.google.com/document/d/1WzqMLkW2o_C0LGcvdMRelAV31ZIifux0CSHD9k6ddz0/edit?tab=t.0
+ * Changelog:
+ *   2026-04-01  added car_ids[60][2] to SPageFileGraphicEvo (offset 3940, 960 bytes)
+ *   2026-03-31  display_current_page_index is now int8[16] (was [9]); struct sizes fixed
  *
  * ⚠️  OFFSET NOTES
  *  - Physics offsets are computed from the documented field sequence with Pack=4
@@ -32,9 +35,9 @@ export const ACE_SHM_STATIC = "Local\\acevo_pmf_static";
 // Read buffer sizes — must not exceed the actual SHM region size created by the
 // game, otherwise koffi.decode will access violation. Values derived from the
 // documented field sequences above; do NOT add a "generous margin" here.
-export const ACE_PHYSICS_BUF = 800; // documented total: 800 bytes
-export const ACE_GRAPHIC_BUF = 3940; // documented total: 3937 bytes, rounded to 4
-export const ACE_STATIC_BUF = 256; // documented total: 208 bytes, rounded up
+export const ACE_PHYSICS_BUF = 800;  // documented total: 800 bytes
+export const ACE_GRAPHIC_BUF = 4900; // documented total: 4900 bytes (car_ids[60][2] added 2026-04-01)
+export const ACE_STATIC_BUF = 256;   // documented total: 208 bytes, rounded up
 
 // ── ACEVO_STATUS enum ────────────────────────────────────────────────────────
 
@@ -174,7 +177,8 @@ export const PHY = {
 //  - uint64_t with Pack=4 → aligned to 4 bytes
 //  - short = 2 bytes; padding inserted before short after odd-byte sequences
 //  - Sub-struct sizes used: TyreState=256, DamageState=128, PitInfo=64,
-//    Instrumentation=128, Electronics=128, SessionState=256, TimingState=256
+//    Instrumentation=128 (display_current_page_index is int8[16] since 2026-03-31, was [9]),
+//    Electronics=128, SessionState=256, TimingState=256
 //
 //   0  packetId                 int32   4
 //   4  status                   int32   4   ← ACEVO_STATUS
@@ -316,6 +320,9 @@ export const PHY = {
 //3928  max_fuel                 float   4
 //3932  max_turbo_boost          float   4
 //3936  use_single_compound      bool    1
+//3937  [pad 3]
+//3940  car_ids[60][2]           uint64  960   ← added 2026-04-01; car UID→index mapping for car_coordinates
+// Total documented: 4900 bytes
 
 export const GFX = {
   packetId: 0,
@@ -332,6 +339,7 @@ export const GFX = {
   isInPitLane: 3120, // bool (uint8)
   isValidLap: 3121, // bool (uint8)
   carCoordinates: 3124, // float[60][3] — player at index 0 in singleplayer
+  carIds: 3940,         // uint64[60][2] — UID↔index map for car_coordinates (added 2026-04-01, unused)
 } as const;
 
 // ── SPageFileStaticEvo offsets (Pack=4) ──────────────────────────────────────
