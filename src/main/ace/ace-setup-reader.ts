@@ -138,16 +138,37 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
   const topFields = parseFields(buf);
 
   // ── f1 — Globali ──────────────────────────────────────────────────────────
+  // ARB Posteriore e Precarico differenziale vengono pushati DOPO i parametri
+  // per ruota (f2) così SuspensionTab li mostra in sharedBottom.
+
+  let deferredArbPost: string | undefined;
+  let deferredPrecarico: string | undefined;
+  let deferredCoast: string | undefined;
+  let deferredPower: string | undefined;
 
   const f1Field = getFirst(topFields, 1);
   if (f1Field?.lenVal) {
     const f1 = parseFields(f1Field.lenVal);
 
-    // f1.f1 — ARB anteriore + posteriore (raw bytes: 2× float32 LE)
+    // f1.f1 — ARB anteriore (subito) + posteriore (differito)
     const f1f1 = getFirst(f1, 1);
     if (f1f1?.lenVal && f1f1.lenVal.length >= 8) {
-      push('Sospensioni', 'ARB Anteriore (N/m)', f1f1.lenVal.readFloatLE(0).toFixed(0));
-      push('Sospensioni', 'ARB Posteriore (N/m)', f1f1.lenVal.readFloatLE(4).toFixed(0));
+      push('Sospensioni', 'Barra Stabilizzatrice Anteriore (N/m)', f1f1.lenVal.readFloatLE(0).toFixed(0));
+      deferredArbPost = f1f1.lenVal.readFloatLE(4).toFixed(0);
+    }
+
+    // f1.f3 — Freni sub-block (ordine: Pressione Max, poi Ripartizione)
+    const f1f3 = getFirst(f1, 3);
+    if (f1f3?.lenVal) {
+      const brakeFields = parseFields(f1f3.lenVal);
+      const brakePressMax = getFloat(brakeFields, 2);
+      if (brakePressMax !== undefined) {
+        push('Freni', 'Moltiplicatore Coppia Frenante (%)', brakePressMax.toFixed(1));
+      }
+      const brakeBias = getFloat(brakeFields, 1);
+      if (brakeBias !== undefined) {
+        push('Freni', 'Ripartizione Frenata Anteriore %', brakeBias.toFixed(1));
+      }
     }
 
     // f1.f2 — Rapporto Sterzo (float)
@@ -156,35 +177,21 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
       push('Sterzo', 'Rapporto Sterzo', steeringRatio.toFixed(1));
     }
 
-    // f1.f3 — Freni sub-block (LEN)
-    const f1f3 = getFirst(f1, 3);
-    if (f1f3?.lenVal) {
-      const brakeFields = parseFields(f1f3.lenVal);
-      const brakeBias = getFloat(brakeFields, 1);
-      if (brakeBias !== undefined) {
-        push('Freni', 'Ripartizione Freno Anteriore %', brakeBias.toFixed(1));
-      }
-      const brakePressMax = getFloat(brakeFields, 2);
-      if (brakePressMax !== undefined) {
-        push('Freni', 'Pressione Freni Max (%)', brakePressMax.toFixed(1));
-      }
-    }
-
     // f1.f4 — Differenziale sub-block (LEN)
     const f1f4 = getFirst(f1, 4);
     if (f1f4?.lenVal) {
       const diffFields = parseFields(f1f4.lenVal);
       const diffCoast = getFloat(diffFields, 1);
       if (diffCoast !== undefined) {
-        push('Differenziale', 'Coast Locking (0–1)', diffCoast.toFixed(2));
+        deferredCoast = diffCoast.toFixed(2);
       }
       const diffPower = getFloat(diffFields, 2);
       if (diffPower !== undefined) {
-        push('Differenziale', 'Power Locking (0–1)', diffPower.toFixed(2));
+        deferredPower = diffPower.toFixed(2);
       }
       const diffPreload = getFloat(diffFields, 3);
       if (diffPreload !== undefined) {
-        push('Differenziale', 'Preload (Nm)', diffPreload.toFixed(1));
+        deferredPrecarico = diffPreload.toFixed(1);
       }
     }
   }
@@ -200,7 +207,7 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
 
     const spring = getFloat(sub, 1);
     if (spring !== undefined) {
-      push('Sospensioni', `Molla ${label} (N/m)`, spring.toFixed(0));
+      push('Sospensioni', `Rigidità delle Sospensioni ${label} (N/m)`, spring.toFixed(0));
     }
 
     // f2.f2 — Bump-stop
@@ -213,7 +220,7 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
       }
       const bsRigidita = getFloat(bs, 2);
       if (bsRigidita !== undefined) {
-        push('Sospensioni', `Bump-Stop Rigidità ${label} (N)`, bsRigidita.toFixed(0));
+        push('Sospensioni', `Rigidità Bumpstop ${label} (N)`, bsRigidita.toFixed(0));
       }
     }
 
@@ -241,6 +248,20 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
     }
   });
 
+  // Parametri differiti: vanno in sharedBottom (dopo i parametri per ruota)
+  if (deferredArbPost !== undefined) {
+    push('Sospensioni', 'Barra Stabilizzatrice Posteriore (N/m)', deferredArbPost);
+  }
+  if (deferredPrecarico !== undefined) {
+    push('Sospensioni', 'Precarico differenziale (Nm)', deferredPrecarico);
+  }
+  if (deferredCoast !== undefined) {
+    push('Sospensioni', 'Coast Locking (0–1)', deferredCoast);
+  }
+  if (deferredPower !== undefined) {
+    push('Sospensioni', 'Power Locking (0–1)', deferredPower);
+  }
+
   // ── f3 — Ammortizzatori (×4: FL, FR, RL, RR) ─────────────────────────────
 
   const f3Fields = getAll(topFields, 3);
@@ -251,19 +272,19 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
 
     const bumpSlow = getFloat(damp, 1);
     if (bumpSlow !== undefined) {
-      push('Ammortizzatori', `Compressione Lenta ${label} (Ns/m)`, bumpSlow.toFixed(0));
-    }
-    const bumpFast = getFloat(damp, 2);
-    if (bumpFast !== undefined) {
-      push('Ammortizzatori', `Compressione Veloce ${label} (Ns/m)`, bumpFast.toFixed(0));
+      push('Ammortizzatori', `Ammortizzatore Lento In Compressione ${label} (Ns/m)`, bumpSlow.toFixed(0));
     }
     const rebSlow = getFloat(damp, 3);
     if (rebSlow !== undefined) {
-      push('Ammortizzatori', `Estensione Lenta ${label} (Ns/m)`, rebSlow.toFixed(0));
+      push('Ammortizzatori', `Ammortizzatore Lento In Estensione ${label} (Ns/m)`, rebSlow.toFixed(0));
+    }
+    const bumpFast = getFloat(damp, 2);
+    if (bumpFast !== undefined) {
+      push('Ammortizzatori', `Ammortizzatore Veloce In Compressione ${label} (Ns/m)`, bumpFast.toFixed(0));
     }
     const rebFast = getFloat(damp, 4);
     if (rebFast !== undefined) {
-      push('Ammortizzatori', `Estensione Veloce ${label} (Ns/m)`, rebFast.toFixed(0));
+      push('Ammortizzatori', `Ammortizzatore Veloce In Estensione ${label} (Ns/m)`, rebFast.toFixed(0));
     }
   });
 
@@ -280,13 +301,13 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
     if (pressure !== undefined) {
       push('Pneumatici', `Pressione ${label} (PSI)`, pressure.toFixed(1));
     }
-    const camber = getFloat(geo, 2);
-    if (camber !== undefined) {
-      push('Geometria', `Campanatura ${label} (°)`, camber.toFixed(2));
-    }
     const toe = getFloat(geo, 3);
     if (toe !== undefined) {
       push('Geometria', `Convergenza ${label} (°)`, toe.toFixed(3));
+    }
+    const camber = getFloat(geo, 2);
+    if (camber !== undefined) {
+      push('Geometria', `Campanatura ${label} (°)`, camber.toFixed(2));
     }
     const caster = getFloat(geo, 4);
     if (caster !== undefined) {
@@ -303,7 +324,7 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
   });
 
   if (mescolaVal !== undefined) {
-    push('Pneumatici', 'Mescola', mescolaName(mescolaVal));
+    push('Carburante', 'Mescola', mescolaName(mescolaVal));
   }
 
   // ── f5 — Elettronica ───────────────────────────────────────────────────────
@@ -375,9 +396,6 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
   let presetId = '';
   if (f9Field?.lenVal) {
     presetId = f9Field.lenVal.toString('ascii').replace(/\0/g, '').trim();
-    if (presetId.length > 0) {
-      push('Identificazione', 'Preset ID', presetId);
-    }
   }
 
   const setupText = [
