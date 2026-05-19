@@ -19,14 +19,28 @@ npm run rebuild:native
 # Development (Vite + Electron concurrently)
 npm run dev
 
+# Renderer only — no Electron (fast UI iteration)
+npm run dev:vite
+
 # Test shared memory reader standalone (requires R3E running)
 npm run test:reader
 
+# Type-check without emitting (run before committing)
+npm run typecheck
+
+# Lint
+npm run lint
+
 # Production build
 npm run build
+
+# Full distributable build (electron-builder)
+npm run build:electron
 ```
 
 Post-install native rebuild is required because `better-sqlite3` needs compilation against Electron's Node version. `koffi` (shared memory FFI) does **not** need rebuilding.
+
+**Note**: `npm run dev` pre-compiles the main process via `tsc -p tsconfig.node.json` before starting. TypeScript errors in main will prevent startup — run `npm run typecheck` first if dev refuses to launch.
 
 ## Architecture
 
@@ -101,6 +115,8 @@ Gamepad button held (or keyboard shortcut via InputManager)
 #### `db/`
 
 - **db.ts** — `better-sqlite3` wrapper. Schema has separate tables for each game (see Database Schema below). Exposes `seedCornersFromLap()` (auto-generates "Curva N" corner names from braking zones), `getTrackMap()` / `saveTrackMap()` (track-map geometry cache)
+- **r3e-corners.ts** — Auto-generated corner seed data for R3E tracks (sourced from sealhud). Do not edit manually. Used by `db.ts` to seed `corner_names`
+- **setup-row.ts** — Shared DB helpers: `tableFor(game, base)` resolves game-specific table names; `parseSetupRow()` deserializes `setup_json`. Used by `main.ts`, `session-coach.ts`, `voice-coach.ts`
 
 #### `pdf-generator.ts`
 
@@ -124,6 +140,7 @@ Gamepad button held (or keyboard shortcut via InputManager)
 - **VoiceCoachOverlay.tsx** — Fixed overlay showing voice interaction state: idle (hidden), listening (pulsing mic), processing (spinner + transcript), speaking (streaming answer)
 - **R3eSetupPicker.tsx** — R3E only. Modal to paste the JSON exported by RaceRoom (CTRL+C in the setup screen). Parses JSON into categorised `SetupParam[]` (Italian labels), previews via `R3eSetupTabs`, then saves as `SetupData`
 - **R3eSetupTabs.tsx** — Tabbed display of R3E `SetupParam[]` grouped by category (Freni, Gomme, Sospensioni, etc.). Used inside `R3eSetupPicker` and `SetupDetailModal`
+- **AceSetupTabs.tsx** — Tabbed display of ACE `SetupParam[]` grouped by category (Pneumatici, Elettronica, Carburante e Strategia, Sospensioni, Ammortizzatori, Aerodinamica) with per-wheel value breakdowns. Used inside `AceSetupPicker` and `SetupDetailModal`
 - **SetupSelectionModal.tsx** — Modal for loading a setup. Offers two tabs: (1) browse setup history for the current car/track (`sessionGetSetupHistory` IPC → reuse via `sessionReuseSetup`); (2) open the game-specific picker (`R3eSetupPicker` or `AceSetupPicker`). Shows `SetupDetailModal` for preview
 - **SetupDetailModal.tsx** — Read-only modal showing all parameters of a `SessionSetupRow` via `R3eSetupTabs`. Optionally shows a "Usa" button to reuse the setup
 - **AceSetupPicker.tsx** — ACE only. Modal to browse `D:\Salvataggi\ACE\Car Setups\` via 3-step flow: car dropdown → track dropdown → .carsetup file list. IPC calls: `aceListSetupCars`, `aceListSetupTracks`, `aceListSetupFiles`, `aceReadSetup`. Shows a validation badge when the selected car/track doesn't match `expectedCar`/`expectedTrack`
@@ -135,11 +152,15 @@ Gamepad button held (or keyboard shortcut via InputManager)
 - **useSetupPicker.ts** — Manages setup selection UI state (open/close, selected game-specific picker, reuse flow)
 - **useFlash.ts** — Returns a boolean that briefly becomes `true` when triggered (used for visual flash animation on new lap)
 
+#### `loaders/`
+
+- **settingsLoader.ts** — Module-level Promise (`settingsLoaderPromise`) that bulk-loads all config keys from SQLite via IPC at startup and writes them to `settingsStore` in a single `initFromConfig()` call. Stable reference — safe for React 19's `use()` hook to avoid re-suspension
+
 #### `store/`
 
 - **ipcStore.ts** — Zustand store for real-time IPC push state (frame, lastAlert, lastLap, status)
 - **sessionStore.ts** — Zustand store for the active or selected session. Subscribes to `session:*` push channels via `subscribeSessionIPC()` (called once from `App.tsx`). State: `{ mode, session, laps, setups, analyses, streaming, loading, error }`. Methods: `loadCurrent()`, `loadById(id, game)`, `setDetail()`, `reset()`. Internal `_apply*` handlers for each push event
-- **settingsStore.ts** — Zustand store for all user settings: `apiKey`, `anthropicModel`, `assistantName`, `gamepadButton`, `activeGame` ("r3e" | "ace"), `ttsEnabled`, `azureTtsEnabled`, `azureSpeechKey`, `azureRegion`, `azureVoiceName`, `mockHistoryMode`
+- **settingsStore.ts** — Zustand store for all user settings: `apiKey`, `anthropicModel`, `assistantName`, `gamepadButton` (config key: `gamepadTriggerButton`), `activeGame` ("r3e" | "ace"), `ttsEnabled`, `azureTtsEnabled`, `azureSpeechKey`, `azureRegion`, `azureVoiceName`, `mockHistoryMode`, `telemetryLogEnabled`, `keyboardVoiceKey`, `aceSetupsPath`
 
 #### `mocks/`
 
@@ -245,7 +266,7 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 - **Alert priorities**: P1 (safety, immediate, interrupts), P2 (TC/ABS anomaly, immediate, queued), P3 (technique, post-corner, max 1 per zone per lap)
 - **Anti-spam**: Max 1 alert per (zone × type) per lap, 4s silence window, no P3 within 3s of zone entry
 - **Adaptive thresholds**: Auto-calibrate over first 2 laps (skip if baseline exists in DB)
-- **Coach model**: `claude-haiku-4-5-20251001` for session analysis. `claude-sonnet-4-6` for voice queries. Model overridable via `anthropicModel` config key
+- **Coach model**: `claude-haiku-4-5-20251001` for both session analysis and voice queries. Model overridable via `anthropicModel` config key (applies to both engines)
 - **Zones**: 50m segments along track distance
 - **Brake temp window**: ideal 550°C ±137.5°C (413-688°C). Skip if value is -1 (unavailable)
 - **Qualification/Leaderboard**: Tire temps fixed at 85°C — do not flag as issue
