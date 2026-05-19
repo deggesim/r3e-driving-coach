@@ -2,7 +2,7 @@
   "name": "sim-driving-coach",
   "version": "0.2.0",
   "author": "Simone De Gennaro",
-  "description": "Sim Racing Voice Coach — real-time driving coach for Sim racing games, starting with RaceRoom Racing Experience (R3E) and Assetto Corsa EVO, with support for more games in the future. Provides real-time feedback on driving performance, including braking, throttle control, racing lines, and more, using natural language insights powered by AI.",
+  "description": "Sim Racing Driving Coach — real-time driving coach for Sim racing games, supports RaceRoom Racing Experience (R3E) and Assetto Corsa EVO.",
   "type": "module",
   "main": "dist/main/main.js",
   "scripts": {
