@@ -131,8 +131,15 @@ const mescolaName = (val: number): string => {
 
 export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
   const params: SetupParam[] = [];
-  const push = (category: string, parameter: string, value: string): void => {
-    params.push({ category, parameter, value });
+
+  /** Format a number removing non-significant trailing zeros. */
+  const fmt = (val: number, decimals: number): string => {
+    if (decimals === 0) return val.toFixed(0);
+    return parseFloat(val.toFixed(decimals)).toString();
+  };
+
+  const push = (category: string, parameter: string, value: string, unit?: string): void => {
+    params.push({ category, parameter, value: unit ? `${value} ${unit}` : value });
   };
 
   const topFields = parseFields(buf);
@@ -153,8 +160,8 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
     // f1.f1 — ARB anteriore (subito) + posteriore (differito)
     const f1f1 = getFirst(f1, 1);
     if (f1f1?.lenVal && f1f1.lenVal.length >= 8) {
-      push('Sospensioni', 'Barra Stabilizzatrice Anteriore (N/m)', f1f1.lenVal.readFloatLE(0).toFixed(0));
-      deferredArbPost = f1f1.lenVal.readFloatLE(4).toFixed(0);
+      push('Sospensioni', 'Barra Stabilizzatrice Anteriore', fmt(f1f1.lenVal.readFloatLE(0), 0), 'N/m');
+      deferredArbPost = fmt(f1f1.lenVal.readFloatLE(4), 0);
     }
 
     // f1.f3 — Freni sub-block (ordine: Pressione Max, poi Ripartizione)
@@ -163,18 +170,18 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
       const brakeFields = parseFields(f1f3.lenVal);
       const brakePressMax = getFloat(brakeFields, 2);
       if (brakePressMax !== undefined) {
-        push('Freni', 'Moltiplicatore Coppia Frenante (%)', brakePressMax.toFixed(1));
+        push('Freni', 'Moltiplicatore Coppia Frenante', fmt(brakePressMax, 1), '%');
       }
       const brakeBias = getFloat(brakeFields, 1);
       if (brakeBias !== undefined) {
-        push('Freni', 'Ripartizione Frenata Anteriore %', brakeBias.toFixed(1));
+        push('Freni', 'Ripartizione Frenata Anteriore', fmt(brakeBias, 1), '%');
       }
     }
 
     // f1.f2 — Rapporto Sterzo (float)
     const steeringRatio = getFloat(f1, 2);
     if (steeringRatio !== undefined) {
-      push('Sterzo', 'Rapporto Sterzo', steeringRatio.toFixed(1));
+      push('Sterzo', 'Rapporto Sterzo', fmt(steeringRatio, 1));
     }
 
     // f1.f4 — Differenziale sub-block (LEN)
@@ -183,15 +190,15 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
       const diffFields = parseFields(f1f4.lenVal);
       const diffCoast = getFloat(diffFields, 1);
       if (diffCoast !== undefined) {
-        deferredCoast = diffCoast.toFixed(2);
+        deferredCoast = fmt(diffCoast, 2);
       }
       const diffPower = getFloat(diffFields, 2);
       if (diffPower !== undefined) {
-        deferredPower = diffPower.toFixed(2);
+        deferredPower = fmt(diffPower, 2);
       }
       const diffPreload = getFloat(diffFields, 3);
       if (diffPreload !== undefined) {
-        deferredPrecarico = diffPreload.toFixed(1);
+        deferredPrecarico = fmt(diffPreload, 1);
       }
     }
   }
@@ -207,7 +214,7 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
 
     const spring = getFloat(sub, 1);
     if (spring !== undefined) {
-      push('Sospensioni', `Rigidità delle Sospensioni ${label} (N/m)`, spring.toFixed(0));
+      push('Sospensioni', `Rigidità Molla ${label}`, fmt(spring, 0), 'N/m');
     }
 
     // f2.f2 — Bump-stop
@@ -216,11 +223,11 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
       const bs = parseFields(bumpStopBlock.lenVal);
       const bsEscursione = getFloat(bs, 1);
       if (bsEscursione !== undefined) {
-        push('Sospensioni', `Bump-Stop Escursione ${label}`, bsEscursione.toFixed(4));
+        push('Sospensioni', `Bump-Stop Escursione ${label}`, fmt(bsEscursione, 4));
       }
       const bsRigidita = getFloat(bs, 2);
       if (bsRigidita !== undefined) {
-        push('Sospensioni', `Rigidità Bumpstop ${label} (N)`, bsRigidita.toFixed(0));
+        push('Sospensioni', `Rigidità Bumpstop ${label}`, fmt(bsRigidita, 0), 'N');
       }
     }
 
@@ -230,30 +237,30 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
       const corsa = parseFields(corsaBlock.lenVal);
       const corsa2 = getFloat(corsa, 1);
       if (corsa2 !== undefined) {
-        push('Sospensioni', `Corsa 2 ${label}`, corsa2.toFixed(4));
+        push('Sospensioni', `Corsa 2 ${label}`, fmt(corsa2, 4));
       }
       const corsaMain = getFloat(corsa, 2);
       if (corsaMain !== undefined) {
-        push('Sospensioni', `Corsa ${label} (mm)`, corsaMain.toFixed(1));
+        push('Sospensioni', `Corsa ${label}`, fmt(corsaMain, 1), 'mm');
       }
     }
 
     const mollaAux = getFloat(sub, 4);
     if (mollaAux !== undefined) {
-      push('Sospensioni', `Molla Aux ${label}`, mollaAux.toFixed(4));
+      push('Sospensioni', `Molla Aux ${label}`, fmt(mollaAux, 4));
     }
     const mollaAux2 = getFloat(sub, 5);
     if (mollaAux2 !== undefined) {
-      push('Sospensioni', `Molla Aux2 ${label}`, mollaAux2.toFixed(4));
+      push('Sospensioni', `Molla Aux2 ${label}`, fmt(mollaAux2, 4));
     }
   });
 
   // Parametri differiti: vanno in sharedBottom (dopo i parametri per ruota)
   if (deferredArbPost !== undefined) {
-    push('Sospensioni', 'Barra Stabilizzatrice Posteriore (N/m)', deferredArbPost);
+    push('Sospensioni', 'Barra Stabilizzatrice Posteriore', deferredArbPost, 'N/m');
   }
   if (deferredPrecarico !== undefined) {
-    push('Sospensioni', 'Precarico differenziale (Nm)', deferredPrecarico);
+    push('Sospensioni', 'Precarico Differenziale', deferredPrecarico, 'Nm');
   }
   if (deferredCoast !== undefined) {
     push('Sospensioni', 'Coast Locking (0–1)', deferredCoast);
@@ -272,19 +279,19 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
 
     const bumpSlow = getFloat(damp, 1);
     if (bumpSlow !== undefined) {
-      push('Ammortizzatori', `Ammortizzatore Lento In Compressione ${label} (Ns/m)`, bumpSlow.toFixed(0));
+      push('Ammortizzatori', `Lento Compressione ${label}`, fmt(bumpSlow, 0), 'Ns/m');
     }
     const rebSlow = getFloat(damp, 3);
     if (rebSlow !== undefined) {
-      push('Ammortizzatori', `Ammortizzatore Lento In Estensione ${label} (Ns/m)`, rebSlow.toFixed(0));
+      push('Ammortizzatori', `Lento Estensione ${label}`, fmt(rebSlow, 0), 'Ns/m');
     }
     const bumpFast = getFloat(damp, 2);
     if (bumpFast !== undefined) {
-      push('Ammortizzatori', `Ammortizzatore Veloce In Compressione ${label} (Ns/m)`, bumpFast.toFixed(0));
+      push('Ammortizzatori', `Veloce Compressione ${label}`, fmt(bumpFast, 0), 'Ns/m');
     }
     const rebFast = getFloat(damp, 4);
     if (rebFast !== undefined) {
-      push('Ammortizzatori', `Ammortizzatore Veloce In Estensione ${label} (Ns/m)`, rebFast.toFixed(0));
+      push('Ammortizzatori', `Veloce Estensione ${label}`, fmt(rebFast, 0), 'Ns/m');
     }
   });
 
@@ -299,23 +306,23 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
 
     const pressure = getFloat(geo, 1);
     if (pressure !== undefined) {
-      push('Pneumatici', `Pressione ${label} (PSI)`, pressure.toFixed(1));
+      push('Pneumatici', `Pressione ${label}`, fmt(pressure, 1), 'PSI');
     }
     const toe = getFloat(geo, 3);
     if (toe !== undefined) {
-      push('Geometria', `Convergenza ${label} (°)`, toe.toFixed(3));
+      push('Geometria', `Convergenza ${label}`, fmt(toe, 3), '°');
     }
     const camber = getFloat(geo, 2);
     if (camber !== undefined) {
-      push('Geometria', `Campanatura ${label} (°)`, camber.toFixed(2));
+      push('Geometria', `Campanatura ${label}`, fmt(camber, 2), '°');
     }
     const caster = getFloat(geo, 4);
     if (caster !== undefined) {
-      push('Geometria', `Caster ${label}`, caster.toFixed(4));
+      push('Geometria', `Caster ${label}`, fmt(caster, 4));
     }
     const camberEff = getFloat(geo, 5);
     if (camberEff !== undefined) {
-      push('Geometria', `Campanatura Effettiva ${label} (°)`, camberEff.toFixed(2));
+      push('Geometria', `Campanatura Effettiva ${label}`, fmt(camberEff, 2), '°');
     }
     // f4.f7 — mescola: letto dalla prima ruota che lo contiene
     if (mescolaVal === undefined) {
@@ -334,19 +341,19 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
     const elec = parseFields(f5Field.lenVal);
     const tc1 = getFloat(elec, 1);
     if (tc1 !== undefined) {
-      push('Elettronica', 'TC1 (click)', tc1.toFixed(0));
+      push('Elettronica', 'TC1', fmt(tc1, 0), 'click');
     }
     const tc2 = getFloat(elec, 2);
     if (tc2 !== undefined) {
-      push('Elettronica', 'TC2 (click)', tc2.toFixed(0));
+      push('Elettronica', 'TC2', fmt(tc2, 0), 'click');
     }
     const abs = getFloat(elec, 3);
     if (abs !== undefined) {
-      push('Elettronica', 'ABS (click)', abs.toFixed(0));
+      push('Elettronica', 'ABS', fmt(abs, 0), 'click');
     }
     const telemetry = getFloat(elec, 5);
     if (telemetry !== undefined) {
-      push('Elettronica', 'Registrazione Telemetria (Giri)', telemetry.toFixed(0));
+      push('Elettronica', 'Registrazione Telemetria', fmt(telemetry, 0), 'giri');
     }
   }
 
@@ -361,21 +368,21 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
     if (f6f1?.lenVal && f6f1.lenVal.length === 16) {
       wheelLabels.forEach((wLabel, j) => {
         const press = f6f1.lenVal!.readFloatLE(j * 4);
-        push('Pneumatici', `Pressione Set ${wLabel} (incerta)`, press.toFixed(1));
+        push('Pneumatici', `Pressione Set ${wLabel} (incerta)`, fmt(press, 1), 'PSI');
       });
     }
 
     const rhFront = getFloat(aero, 2);
     if (rhFront !== undefined) {
-      push('Assetto', 'Altezza da Terra Anteriore (mm)', rhFront.toFixed(1));
+      push('Assetto', 'Altezza da Terra Anteriore', fmt(rhFront, 1), 'mm');
     }
     const rhRear = getFloat(aero, 3);
     if (rhRear !== undefined) {
-      push('Assetto', 'Altezza da Terra Posteriore (mm)', rhRear.toFixed(1));
+      push('Assetto', 'Altezza da Terra Posteriore', fmt(rhRear, 1), 'mm');
     }
     const wing = getFloat(aero, 5);
     if (wing !== undefined) {
-      push('Aerodinamica', 'Ala Posteriore (click)', wing.toFixed(0));
+      push('Aerodinamica', 'Ala Posteriore', fmt(wing, 0), 'click');
     }
   }
 
@@ -386,7 +393,7 @@ export const decodeCarSetup = (buf: Buffer, carId: string): SetupData => {
     const fuel = parseFields(f7Field.lenVal);
     const fuelLitres = getFloat(fuel, 1);
     if (fuelLitres !== undefined) {
-      push('Carburante', 'Carburante (litri)', fuelLitres.toFixed(1));
+      push('Carburante', 'Carburante', fmt(fuelLitres, 1), 'L');
     }
   }
 
