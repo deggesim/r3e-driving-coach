@@ -307,6 +307,8 @@ Prima di iniziare qualsiasi task di sviluppo, invocare la skill corrispondente t
 
 **Regola multi-dominio**: se il task copre più aree (es. nuova feature React + IPC Electron), invocare prima `superpowers:brainstorming`, poi usare le skill di dominio durante l'implementazione (`react-vite-best-practices`, `electron-best-practices`).
 
+**Regola subagent-driven-development**: quando si usa `superpowers:subagent-driven-development`, includere nel prompt di ogni implementer subagent la skill di dominio rilevante (dalla tabella sopra). Non usare solo `general-purpose` senza indicare la skill — ogni subagent deve invocarla prima di implementare.
+
 ## Struct Offset Debugging
 
 If `npm run test:reader` shows all zeros or -1: struct offset mismatch. Check:
