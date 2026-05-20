@@ -220,6 +220,22 @@ const initSchema = (db: Database.Database): void => {
   seedR3ECorners(db);
 };
 
+const migrateSchema = (db: Database.Database): void => {
+  const migrations: string[] = [
+    `ALTER TABLE sessions_r3e ADD COLUMN leaderboard_mode INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE sessions_r3e ADD COLUMN fixed_setup      INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE sessions_ace ADD COLUMN leaderboard_mode INTEGER NOT NULL DEFAULT 1`,
+    `ALTER TABLE sessions_ace ADD COLUMN fixed_setup      INTEGER NOT NULL DEFAULT 1`,
+  ];
+  for (const sql of migrations) {
+    try {
+      db.prepare(sql).run();
+    } catch {
+      // Colonna già esistente — ignorato
+    }
+  }
+};
+
 export const getDb = (userDataPath: string): Database.Database => {
   if (_db) return _db;
 
@@ -229,6 +245,7 @@ export const getDb = (userDataPath: string): Database.Database => {
   _db.pragma("foreign_keys = ON");
 
   initSchema(_db);
+  migrateSchema(_db);
   return _db;
 };
 
