@@ -77,6 +77,10 @@ import {
   synthesizeAzure,
   transcribeAzure,
 } from "./tts/azure-tts.js";
+import {
+  buildAnthropicErrorMessage,
+  isCreditOrQuotaError,
+} from "./coach/session-coach.js";
 import { createZoneTracker } from "./zone-tracker.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -194,6 +198,18 @@ const pushToRenderer = (channel: string, data: unknown): void => {
   mainWindow?.webContents.send(channel, data);
 };
 
+const pushAppError = (message: string): void => {
+  pushToRenderer("app:error", { message });
+};
+
+const buildAzureErrorMessage = (err: unknown): string => {
+  const msg = err instanceof Error ? err.message.toLowerCase() : "";
+  if (msg.includes("429") || msg.includes("too many") || msg.includes("rate")) {
+    return "Azure TTS: limite di frequenza superato. Riprova tra qualche istante.";
+  }
+  return "Azure TTS: credito insufficiente o quota esaurita. Verifica la sottoscrizione Cognitive Services.";
+};
+
 // ──────────────────────────────────────────────
 // Name resolution helpers (R3E numeric IDs → names; ACE: passthrough)
 // ──────────────────────────────────────────────
@@ -255,6 +271,10 @@ const enrichSession = (
     car_class_name: names.carClassName,
     analysis_count:
       typeof row.analysis_count === "number" ? row.analysis_count : undefined,
+    leaderboard_mode:
+      typeof row.leaderboard_mode === "number" ? row.leaderboard_mode : 1,
+    fixed_setup:
+      typeof row.fixed_setup === "number" ? row.fixed_setup : 1,
   };
 };
 
@@ -432,6 +452,7 @@ const setupPipeline = (): void => {
     model: getAnthropicModel(),
     onChunk: (data) => pushToRenderer("session:analysisChunk", data),
     onDone: (data) => pushToRenderer("session:analysisDone", data),
+    onError: (message) => pushAppError(message),
   });
   const analyzingInProgress = new Set<string>();
 
@@ -985,6 +1006,10 @@ const setupPipeline = (): void => {
         sessionId === currentSessionId ? [...sessionAlerts] : undefined;
       const flags = { leaderboardMode: params.leaderboardMode, fixedSetup: params.fixedSetup };
 
+      db.prepare(
+        `UPDATE ${t("sessions", game)} SET leaderboard_mode = ?, fixed_setup = ? WHERE id = ?`,
+      ).run(params.leaderboardMode ? 1 : 0, params.fixedSetup ? 1 : 0, sessionId);
+
       analyzingInProgress.add(analyzeKey);
       sessionCoach
         .analyzeSession(sessionId, game, resolved, alertsForSession, flags)
@@ -1322,7 +1347,12 @@ const setupPipeline = (): void => {
     const region = getConfig("azureRegion");
     const voice = getConfig("azureVoiceName");
     if (!key || !region || !voice) throw new Error("Azure TTS non completamente configurato");
-    return synthesizeAzure(text, key, region, voice);
+    try {
+      return await synthesizeAzure(text, key, region, voice);
+    } catch (err) {
+      if (isCreditOrQuotaError(err)) pushAppError(buildAzureErrorMessage(err));
+      throw err;
+    }
   });
 
   ipcMain.handle("tts:test", async (_event, voiceName: string) => {
@@ -1388,6 +1418,7 @@ const setupPipeline = (): void => {
       pushToRenderer("coach:voiceAudio", { audio });
     } catch (err) {
       console.error("[VoiceCoach] TTS synthesis error:", err);
+      if (isCreditOrQuotaError(err)) pushAppError(buildAzureErrorMessage(err));
     }
   };
 
@@ -1486,6 +1517,7 @@ const setupPipeline = (): void => {
       });
     } catch (err) {
       console.error("[VoiceCoach] Error:", err);
+      if (isCreditOrQuotaError(err)) pushAppError(buildAnthropicErrorMessage(err));
     }
     await speakText(fullAnswer);
   });
