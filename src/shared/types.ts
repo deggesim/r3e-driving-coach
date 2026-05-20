@@ -204,6 +204,8 @@ export type SessionRow = {
   layout_name?: string;
   car_class_name?: string;
   analysis_count?: number;
+  leaderboard_mode?: number;
+  fixed_setup?: number;
 };
 
 export type LapRow = {
@@ -403,6 +405,7 @@ export type ElectronAPI = {
   onVoiceChunk: (callback: (data: { token: string }) => void) => () => void;
   onVoiceDone: (callback: (data: { answer: string }) => void) => () => void;
   onVoiceAudio: (callback: (data: unknown) => void) => () => void;
+  onAppError: (callback: (data: { message: string }) => void) => () => void;
 
   // Session push channels
   onSessionStarted: (callback: (data: SessionRow) => void) => () => void;
