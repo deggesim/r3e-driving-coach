@@ -22,6 +22,33 @@ import type {
   SessionSetupRow,
 } from "../../shared/types.js";
 
+export const isCreditOrQuotaError = (err: unknown): boolean => {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.toLowerCase();
+  return (
+    msg.includes("credit") ||
+    msg.includes("balance") ||
+    msg.includes("billing") ||
+    msg.includes("quota") ||
+    msg.includes("insufficient") ||
+    msg.includes("payment") ||
+    msg.includes("status code 402") ||
+    msg.includes("status code 403") ||
+    msg.includes("status code 429")
+  );
+};
+
+export const buildAnthropicErrorMessage = (err: unknown): string => {
+  const msg = err instanceof Error ? err.message.toLowerCase() : "";
+  if (msg.includes("401") || msg.includes("authentication") || msg.includes("invalid") || msg.includes("api key")) {
+    return "API Anthropic: chiave non valida. Verifica nelle impostazioni.";
+  }
+  if (msg.includes("429") || msg.includes("rate") || msg.includes("too many")) {
+    return "API Anthropic: limite di frequenza superato. Riprova tra qualche istante.";
+  }
+  return "API Anthropic: credito insufficiente o quota esaurita. Controlla il saldo su console.anthropic.com.";
+};
+
 type SessionCoachOptions = {
   db: Database.Database;
   apiKey?: string;
@@ -35,6 +62,7 @@ type SessionCoachOptions = {
     sessionId: number;
     analysis: SessionAnalysisRow;
   }) => void;
+  onError?: (message: string) => void;
 };
 
 export type SessionCoachEngine = {
@@ -175,6 +203,9 @@ export const createSessionCoachEngine = (
         await stream.finalMessage();
       } catch (err) {
         console.error("[SessionCoach] Claude API error:", err);
+        if (isCreditOrQuotaError(err)) {
+          options.onError?.(buildAnthropicErrorMessage(err));
+        }
         return null;
       }
 

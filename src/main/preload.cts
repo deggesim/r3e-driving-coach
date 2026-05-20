@@ -24,6 +24,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("status", listener);
   },
 
+  // Global application error alert (Main → Renderer) — credit/quota errors.
+  onAppError: (callback: (data: unknown) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on("app:error", listener);
+    return () => ipcRenderer.removeListener("app:error", listener);
+  },
+
   // Global input trigger (Main → Renderer) — fires when keyboard shortcut or
   // gamepad button is pressed, regardless of window focus.
   onInputTrigger: (callback: () => void) => {

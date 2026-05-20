@@ -104,7 +104,7 @@ const KeyComboDisplay = ({ combo }: { combo: string }) => {
   const parts = combo.split("+");
   return (
     <span className="d-inline-flex align-items-center gap-1">
-      {parts.map((part) => (
+      {parts.map((part, i) => (
         <span key={part} className="d-inline-flex align-items-center gap-1">
           <kbd
             style={{ fontSize: "0.8em", padding: "1px 5px", borderRadius: 3 }}

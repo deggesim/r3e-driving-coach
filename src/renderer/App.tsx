@@ -5,6 +5,7 @@
  */
 
 import { Suspense, use, useEffect, useState } from "react";
+import { Alert } from "react-bootstrap";
 import RealtimeAnalysis from "./components/RealtimeAnalysis";
 import SessionHistory from "./components/SessionHistory";
 import SettingsPanel from "./components/SettingsPanel";
@@ -49,6 +50,11 @@ const App = () => {
   } = useSettingsStore();
 
   const [tab, setTab] = useState<Tab>("current-session");
+  const [appError, setAppError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return window.electronAPI.onAppError(({ message }) => setAppError(message));
+  }, []);
 
   // Voice coach hook
   const {
@@ -81,6 +87,19 @@ const App = () => {
 
       {/* Title bar (frameless Electron drag area) */}
       <TitleBar tab={tab} onTabChange={setTab} />
+
+      {/* Global error alert — credit/quota errors from Azure TTS or Claude API */}
+      {appError && (
+        <Alert
+          variant="danger"
+          onClose={() => setAppError(null)}
+          dismissible
+          className="mb-0 rounded-0 border-start-0 border-end-0"
+          style={{ zIndex: 1000 }}
+        >
+          {appError}
+        </Alert>
+      )}
 
       {/* Main content */}
       <div className="main-content">
