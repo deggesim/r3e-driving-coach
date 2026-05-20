@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge, Button, Form } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -45,8 +45,18 @@ const AnalysisHeader = ({
   const setups = useSessionStore((s) => s.setups);
   const analyses = useSessionStore((s) => s.analyses);
 
-  const [leaderboardMode, setLeaderboardMode] = useState(true);
-  const [fixedSetup, setFixedSetup] = useState(true);
+  const [leaderboardMode, setLeaderboardMode] = useState(
+    session?.leaderboard_mode !== 0,
+  );
+  const [fixedSetup, setFixedSetup] = useState(
+    session?.fixed_setup !== 0,
+  );
+
+  useEffect(() => {
+    if (!session) return;
+    setLeaderboardMode(session.leaderboard_mode !== 0);
+    setFixedSetup(session.fixed_setup !== 0);
+  }, [session?.id]);
 
   const isR3E = session?.game === "r3e";
 
