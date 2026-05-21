@@ -20,7 +20,7 @@ import type { GameSource, SessionRow } from "../../shared/types";
 import { MOCK_DETAILS, MOCK_SESSIONS } from "../mocks/mockData";
 import { useSessionStore } from "../store/sessionStore";
 import { useSettingsStore } from "../store/settingsStore";
-import SessionDetail from "./SessionDetail";
+import SessionPanel from "./SessionPanel";
 
 const PAGE_SIZE = 10;
 const FETCH_SIZE = 500; // upper bound — load all, paginate/filter client-side
@@ -200,7 +200,8 @@ const SessionHistory = ({ onSwitchToLive }: Props) => {
 
   if (view === "detail") {
     return (
-      <SessionDetail
+      <SessionPanel
+        mode="historical"
         onBack={() => setView("list")}
         onReopened={() => {
           setView("list");
