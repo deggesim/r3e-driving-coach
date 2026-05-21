@@ -2,12 +2,13 @@ import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { marked } from "marked";
 import {
+  startTransition,
   use,
   useActionState,
+  useEffect,
   useMemo,
   useRef,
   useState,
-  useEffect,
 } from "react";
 import {
   Accordion,
@@ -147,7 +148,9 @@ const AnalysisList = ({ streamingVersion, startClosed = false }: Props) => {
   const handleDeleteConfirm = () => {
     const payload = pendingDelete;
     setPendingDelete(null);
-    deleteAction(payload);
+    startTransition(() => {
+      deleteAction(payload);
+    });
   };
 
   const handleSelect = (key: string | string[] | null | undefined) => {
