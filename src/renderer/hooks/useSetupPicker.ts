@@ -51,7 +51,10 @@ export const useSetupPicker = ({ session, setups, assignLapSetup, showFlash, exp
     setShowSetupSelection(false);
     try {
       if (explicit && session) {
-        // Closed session: create a new setup row linked to this session
+        if (setupById.has(row.id)) {
+          showFlash("success", "Setup già presente nella sessione.");
+          return;
+        }
         const named: SetupData = row.setup.name
           ? row.setup
           : { ...row.setup, name: row.setup.carFound || "Setup" };
@@ -62,7 +65,17 @@ export const useSetupPicker = ({ session, setups, assignLapSetup, showFlash, exp
         });
         showFlash("success", `Setup caricato: ${named.name}`);
       } else if (!explicit) {
-        await window.electronAPI.sessionReuseSetup({ setupId: row.id });
+        let targetSetupId = row.id;
+        if (!setupById.has(row.id)) {
+          // Setup from another session: copy it to the current session so the counter
+          // reflects it and future laps link to a row owned by this session.
+          const named: SetupData = row.setup.name
+            ? row.setup
+            : { ...row.setup, name: row.setup.carFound || "Setup" };
+          const result = await window.electronAPI.sessionLoadSetup({ setup: named });
+          targetSetupId = result.setupId;
+        }
+        await window.electronAPI.sessionReuseSetup({ setupId: targetSetupId });
         showFlash("success", "Setup attivo aggiornato.");
       }
     } catch (err) {
