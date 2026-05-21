@@ -1,7 +1,7 @@
 import { Alert } from "react-bootstrap";
-import { useSessionStore } from "../store/sessionStore";
 import { useFlash } from "../hooks/useFlash";
 import { useSetupPicker } from "../hooks/useSetupPicker";
+import { useSessionStore } from "../store/sessionStore";
 import AceSetupPicker from "./AceSetupPicker";
 import AnalysisHeader from "./AnalysisHeader";
 import AnalysisList from "./AnalysisList";
@@ -16,11 +16,9 @@ type Props = {
 
 const SessionDetail = ({ onBack, onReopened }: Props) => {
   const session = useSessionStore((s) => s.session);
-  const setups = useSessionStore((s) => s.setups);
   const analyses = useSessionStore((s) => s.analyses);
   const streaming = useSessionStore((s) => s.streaming);
   const loadCurrent = useSessionStore((s) => s.loadCurrent);
-  const assignLapSetup = useSessionStore((s) => s.assignLapSetup);
 
   const { flash, setFlash, showFlash } = useFlash();
   const {
@@ -37,7 +35,10 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
     handleLapReuseSetup,
   } = useSetupPicker({ showFlash, explicit: true });
 
-  const handleAnalyze = async (flags: { leaderboardMode: boolean; fixedSetup: boolean }): Promise<void> => {
+  const handleAnalyze = async (flags: {
+    leaderboardMode: boolean;
+    fixedSetup: boolean;
+  }): Promise<void> => {
     if (!session) return;
     const res = await window.electronAPI.sessionAnalyze({
       sessionId: session.id,
@@ -64,7 +65,11 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
       game: session.game,
     });
     if (!res.ok) {
-      showFlash("danger", (res as { ok: false; reason: string }).reason ?? "Errore nella riapertura");
+      showFlash(
+        "danger",
+        (res as { ok: false; reason: string }).reason ??
+          "Errore nella riapertura",
+      );
       return;
     }
     await loadCurrent();
@@ -74,7 +79,8 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
 
   const currentCar = session?.car_name ?? session?.car ?? "";
   const currentTrack = session?.track_name ?? session?.track ?? "";
-  const streamingVersion = streaming?.sessionId === session?.id ? streaming : null;
+  const streamingVersion =
+    streaming?.sessionId === session?.id ? streaming : null;
   const sessionActive = !!session && !session.ended_at;
 
   return (

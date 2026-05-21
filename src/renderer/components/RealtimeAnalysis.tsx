@@ -12,10 +12,10 @@
 
 import { use, useMemo } from "react";
 import { Alert } from "react-bootstrap";
-import { useIPCStore } from "../store/ipcStore";
-import { useSessionStore } from "../store/sessionStore";
 import { useFlash } from "../hooks/useFlash";
 import { useSetupPicker } from "../hooks/useSetupPicker";
+import { useIPCStore } from "../store/ipcStore";
+import { useSessionStore } from "../store/sessionStore";
 import AceSetupPicker from "./AceSetupPicker";
 import AnalysisHeader from "./AnalysisHeader";
 import AnalysisList from "./AnalysisList";
@@ -23,15 +23,17 @@ import LapsTable from "./LapsTable";
 import R3eSetupPicker from "./R3eSetupPicker";
 import SetupSelectionModal from "./SetupSelectionModal";
 
-const RealtimeAnalysis = ({ onSessionClosed }: { onSessionClosed?: () => void }) => {
+const RealtimeAnalysis = ({
+  onSessionClosed,
+}: {
+  onSessionClosed?: () => void;
+}) => {
   const status = useIPCStore((s) => s.status);
 
   const session = useSessionStore((s) => s.session);
-  const setups = useSessionStore((s) => s.setups);
   const analyses = useSessionStore((s) => s.analyses);
   const streaming = useSessionStore((s) => s.streaming);
   const loadCurrent = useSessionStore((s) => s.loadCurrent);
-  const assignLapSetup = useSessionStore((s) => s.assignLapSetup);
 
   const { flash, setFlash, showFlash } = useFlash();
   const {
