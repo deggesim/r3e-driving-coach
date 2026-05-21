@@ -48,15 +48,15 @@ const AnalysisHeader = ({
   const [leaderboardMode, setLeaderboardMode] = useState(
     session?.leaderboard_mode !== 0,
   );
-  const [fixedSetup, setFixedSetup] = useState(
-    session?.fixed_setup !== 0,
-  );
+  const [fixedSetup, setFixedSetup] = useState(session?.fixed_setup !== 0);
 
   useEffect(() => {
     if (!session) return;
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setLeaderboardMode(session.leaderboard_mode !== 0);
+    // eslint-disable-next-line @eslint-react/set-state-in-effect
     setFixedSetup(session.fixed_setup !== 0);
-  }, [session?.id]);
+  }, [session, session?.id]);
 
   const isR3E = session?.game === "r3e";
 
@@ -114,50 +114,51 @@ const AnalysisHeader = ({
           </div>
         )}
         <div className="d-flex gap-1 flex-wrap">
-        {isLive && !sessionActive && (
-          <Button size="sm" variant="success" onClick={onStart}>
-            <FontAwesomeIcon icon={faPlay} className="me-1" /> Nuova sessione
+          {isLive && !sessionActive && (
+            <Button size="sm" variant="success" onClick={onStart}>
+              <FontAwesomeIcon icon={faPlay} className="me-1" /> Nuova sessione
+            </Button>
+          )}
+          {isLive && sessionActive && (
+            <Button size="sm" variant="secondary" onClick={onEnd}>
+              <FontAwesomeIcon icon={faStop} className="me-1" /> Chiudi sessione
+            </Button>
+          )}
+          {session && (isLive ? sessionActive : true) && (
+            <Button size="sm" variant="primary" onClick={onOpenPicker}>
+              <FontAwesomeIcon icon={faGear} className="me-1" /> Carica setup
+              {setups.length > 0 && ` (${setups.length})`}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => onAnalyze({ leaderboardMode, fixedSetup })}
+            disabled={!session || (isLive && laps.length === 0)}
+          >
+            <FontAwesomeIcon icon={faChartLine} className="me-1" /> Esegui
+            analisi
           </Button>
-        )}
-        {isLive && sessionActive && (
-          <Button size="sm" variant="secondary" onClick={onEnd}>
-            <FontAwesomeIcon icon={faStop} className="me-1" /> Chiudi sessione
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={onExportPdf}
+            disabled={!session || analyses.length === 0}
+          >
+            <FontAwesomeIcon icon={faFilePdf} className="me-1" /> Esporta PDF
           </Button>
-        )}
-        {session && (isLive ? sessionActive : true) && (
-          <Button size="sm" variant="primary" onClick={onOpenPicker}>
-            <FontAwesomeIcon icon={faGear} className="me-1" /> Carica setup
-            {setups.length > 0 && ` (${setups.length})`}
-          </Button>
-        )}
-        <Button
-          size="sm"
-          variant="primary"
-          onClick={() => onAnalyze({ leaderboardMode, fixedSetup })}
-          disabled={!session || (isLive && laps.length === 0)}
-        >
-          <FontAwesomeIcon icon={faChartLine} className="me-1" /> Esegui analisi
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={onExportPdf}
-          disabled={!session || analyses.length === 0}
-        >
-          <FontAwesomeIcon icon={faFilePdf} className="me-1" /> Esporta PDF
-        </Button>
-        {!isLive && session && !sessionActive && onReopen && (
-          <Button size="sm" variant="success" onClick={onReopen}>
-            <FontAwesomeIcon icon={faRotateRight} className="me-1" />
-            Riapri sessione
-          </Button>
-        )}
-        {!isLive && onBack && (
-          <Button size="sm" variant="primary" onClick={onBack}>
-            <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
-            Indietro
-          </Button>
-        )}
+          {!isLive && session && !sessionActive && onReopen && (
+            <Button size="sm" variant="success" onClick={onReopen}>
+              <FontAwesomeIcon icon={faRotateRight} className="me-1" />
+              Riapri sessione
+            </Button>
+          )}
+          {!isLive && onBack && (
+            <Button size="sm" variant="primary" onClick={onBack}>
+              <FontAwesomeIcon icon={faArrowLeft} className="me-1" />
+              Indietro
+            </Button>
+          )}
         </div>
       </div>
     </div>
