@@ -46,7 +46,7 @@ const RealtimeAnalysis = ({ onSessionClosed }: { onSessionClosed?: () => void })
     handleSetupConfirm,
     handleReuseSetup,
     handleLapReuseSetup,
-  } = useSetupPicker({ session, setups, assignLapSetup, showFlash });
+  } = useSetupPicker({ showFlash });
 
   // Load current session data on mount. useMemo creates the Promise once per
   // component mount (empty deps), use() suspends until it resolves. The parent

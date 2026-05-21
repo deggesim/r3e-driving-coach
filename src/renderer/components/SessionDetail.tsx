@@ -35,7 +35,7 @@ const SessionDetail = ({ onBack, onReopened }: Props) => {
     handleSetupConfirm,
     handleReuseSetup,
     handleLapReuseSetup,
-  } = useSetupPicker({ session, setups, assignLapSetup, showFlash, explicit: true });
+  } = useSetupPicker({ showFlash, explicit: true });
 
   const handleAnalyze = async (flags: { leaderboardMode: boolean; fixedSetup: boolean }): Promise<void> => {
     if (!session) return;

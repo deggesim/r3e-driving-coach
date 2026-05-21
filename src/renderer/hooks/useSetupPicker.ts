@@ -1,16 +1,17 @@
 import { useMemo, useState } from "react";
-import type { LapRow, SessionRow, SessionSetupRow, SetupData } from "../../shared/types";
+import type { LapRow, SessionSetupRow, SetupData } from "../../shared/types";
+import { useSessionStore } from "../store/sessionStore";
 
 type Options = {
-  session: SessionRow | null;
-  setups: SessionSetupRow[];
-  assignLapSetup: (lapId: number, setupId: number) => Promise<void>;
   showFlash: (variant: string, text: string) => void;
   /** When true, passes sessionId+game explicitly to sessionLoadSetup (used in SessionDetail) */
   explicit?: boolean;
 };
 
-export const useSetupPicker = ({ session, setups, assignLapSetup, showFlash, explicit }: Options) => {
+export const useSetupPicker = ({ showFlash, explicit }: Options) => {
+  const session = useSessionStore((s) => s.session);
+  const setups = useSessionStore((s) => s.setups);
+  const assignLapSetup = useSessionStore((s) => s.assignLapSetup);
   const [showPicker, setShowPicker] = useState(false);
   const [showSetupSelection, setShowSetupSelection] = useState(false);
   const [pickerLap, setPickerLap] = useState<LapRow | null>(null);
