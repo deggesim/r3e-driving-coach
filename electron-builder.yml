@@ -50,9 +50,9 @@ nsis:
 # native build intermediates, and unnecessary platform binaries.
 # ---------------------------------------------------------------------------
 files:
-  - dist/main/**/*
-  - dist/renderer/**/*
-  - dist/shared/**/*
+  - out/main/**/*
+  - out/preload/**/*
+  - out/renderer/**/*
   - package.json
   # Runtime node_modules — exclude dev-only and build-time debris
   - node_modules/**/*
