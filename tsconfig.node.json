@@ -1,10 +1,14 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "outDir": "dist",
-    "jsx": "react-jsx"
+    "module": "ESNext",
+    "outDir": "out",
+    "types": ["electron-vite/node"]
   },
-  "include": ["src/main/**/*.ts", "src/main/**/*.cts", "src/shared/**/*.ts"]
+  "include": [
+    "electron.vite.config.ts",
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/shared/**/*.ts"
+  ]
 }
