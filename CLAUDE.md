@@ -16,7 +16,7 @@ Electron + React app serving as a **real-time voice coach** for sim racing. Supp
 npm install
 npm run rebuild:native
 
-# Dev mode (electron-vite — avvia main + preload + renderer con HMR)
+# Dev mode with HMR (electron-vite — starts main + preload + renderer concurrently)
 npm run dev
 
 # Test shared memory reader standalone (requires R3E running)
@@ -37,7 +37,7 @@ npm run build:electron
 
 Post-install native rebuild is required because `better-sqlite3` needs compilation against Electron's Node version. `koffi` (shared memory FFI) does **not** need rebuilding.
 
-**Note**: `npm run dev` usa electron-vite che compila main, preload e renderer in parallelo con HMR. In caso di errori TypeScript nel main, eseguire `npm run typecheck` per diagnosticare prima di avviare.
+**Note**: `npm run dev` uses electron-vite, which compiles main, preload, and renderer in parallel with HMR. If TypeScript errors occur in main, run `npm run typecheck` to diagnose before starting.
 
 ## Architecture
 
@@ -78,7 +78,7 @@ Gamepad button held (or keyboard shortcut via InputManager)
 ### Main process (`src/main/`)
 
 - **main.ts** — Electron entry point; wires IPC handlers, selects R3E/ACE reader based on `activeGame` config, manages session/lap lifecycle in SQLite
-- **preload** (`src/preload/index.ts`) — Context bridge exposing `window.electronAPI` to renderer. Compilato come CJS da electron-vite (richiesto da `sandbox: true`)
+- **preload** (`src/preload/index.ts`) — Context bridge exposing `window.electronAPI` to renderer. Compiled as CJS by electron-vite (required by `sandbox: true`)
 - **game-adapter.ts** — Projects R3EFrame → GameFrame (unified 7-field struct: lapDistance, tcActive, absActive, brakeTemps FL/FR/RL/RR). ACE reader emits GameFrame natively
 - **input-manager.ts** — Registers global keyboard shortcuts via Electron `globalShortcut`. Fires `onInputTrigger` push event to renderer when the configured key is pressed. Non-Windows stub returns no-ops
 - **lap-recorder.ts** — Attaches to reader, aggregates frames into 50m zones with driving metrics, handles 2-lap calibration phase
