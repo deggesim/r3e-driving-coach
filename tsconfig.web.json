@@ -4,7 +4,8 @@
     "module": "ESNext",
     "jsx": "react-jsx",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "outDir": "out"
+    "outDir": "out",
+    "types": []
   },
   "include": [
     "src/renderer/**/*.ts",

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+// Output forced to CJS by electron.vite.config.ts (preload requires CJS with sandbox:true)
 
 contextBridge.exposeInMainWorld("electronAPI", {
   // Main → Renderer (push channels)

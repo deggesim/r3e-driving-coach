@@ -16,11 +16,8 @@ Electron + React app serving as a **real-time voice coach** for sim racing. Supp
 npm install
 npm run rebuild:native
 
-# Development (Vite + Electron concurrently)
+# Dev mode (electron-vite — avvia main + preload + renderer con HMR)
 npm run dev
-
-# Renderer only — no Electron (fast UI iteration)
-npm run dev:vite
 
 # Test shared memory reader standalone (requires R3E running)
 npm run test:reader
