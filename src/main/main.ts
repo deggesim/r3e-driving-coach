@@ -9,6 +9,7 @@
  */
 
 import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { is } from "@electron-toolkit/utils";
 import { createInputManager, type InputManager } from "./input-manager.js";
 import fs from "fs";
 import path from "path";
@@ -85,7 +86,6 @@ import { createZoneTracker } from "./zone-tracker.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
-const IS_DEV = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 let r3eReaderInst: R3EReader | null = null;
@@ -103,7 +103,7 @@ const createWindow = (): void => {
     frame: false,
     resizable: true,
     webPreferences: {
-      preload: path.join(__dirname, "preload.cjs"),
+      preload: path.join(__dirname, "../preload/index.js"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -124,14 +124,17 @@ const createWindow = (): void => {
   );
 
   // Content Security Policy — blocks XSS from injected HTML (e.g. marked output)
-  const csp = IS_DEV
+  const devUrl = process.env["ELECTRON_RENDERER_URL"] ?? "http://localhost:5173";
+  const devOrigin = new URL(devUrl).origin;
+  const devHost = new URL(devUrl).host;
+  const csp = is.dev
     ? [
-        "default-src 'self' http://localhost:5173",
-        "script-src 'self' 'unsafe-eval' 'unsafe-inline' http://localhost:5173",
+        `default-src 'self' ${devOrigin}`,
+        `script-src 'self' 'unsafe-eval' 'unsafe-inline' ${devOrigin}`,
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: blob:",
         "media-src blob:",
-        "connect-src ws://localhost:5173 http://localhost:5173",
+        `connect-src ws://${devHost} ${devOrigin}`,
         "font-src 'self' data:",
       ].join("; ")
     : [
@@ -156,8 +159,8 @@ const createWindow = (): void => {
   // Block navigation to external URLs; redirect them to the system browser.
   // Prevents markdown links in analysis text from hijacking the app window.
   mainWindow.webContents.on("will-navigate", (event, url) => {
-    const allowedOrigins = IS_DEV
-      ? ["http://localhost:5173"]
+    const allowedOrigins = is.dev
+      ? [process.env["ELECTRON_RENDERER_URL"] ?? "http://localhost:5173"]
       : [`file://${path.join(__dirname, "../renderer")}`];
     if (!allowedOrigins.some((o) => url.startsWith(o))) {
       event.preventDefault();
@@ -171,8 +174,8 @@ const createWindow = (): void => {
     return { action: "deny" };
   });
 
-  if (IS_DEV) {
-    mainWindow.loadURL("http://localhost:5173");
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
     mainWindow.webContents.openDevTools();
   } else {
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
