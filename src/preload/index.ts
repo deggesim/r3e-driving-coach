@@ -1,11 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-/**
- * Preload script — exposes IPC channels to the renderer via contextBridge.
- * contextIsolation: true, nodeIntegration: false.
- * Must be compiled as CommonJS (.cts) because sandboxed preloads cannot use ESM.
- */
-
 contextBridge.exposeInMainWorld("electronAPI", {
   // Main → Renderer (push channels)
   onFrame: (callback: (data: unknown) => void) => {
@@ -24,22 +18,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("status", listener);
   },
 
-  // Global application error alert (Main → Renderer) — credit/quota errors.
   onAppError: (callback: (data: unknown) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
     ipcRenderer.on("app:error", listener);
     return () => ipcRenderer.removeListener("app:error", listener);
   },
 
-  // Global input trigger (Main → Renderer) — fires when keyboard shortcut or
-  // gamepad button is pressed, regardless of window focus.
   onInputTrigger: (callback: () => void) => {
     const listener = () => callback();
     ipcRenderer.on("input:trigger", listener);
     return () => ipcRenderer.removeListener("input:trigger", listener);
   },
 
-  // Voice coach push channels (Main → Renderer)
   onVoiceChunk: (callback: (data: unknown) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
     ipcRenderer.on("coach:voiceChunk", listener);
@@ -56,7 +46,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("coach:voiceAudio", listener);
   },
 
-  // Session push channels
   onSessionStarted: (callback: (data: unknown) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
     ipcRenderer.on("session:started", listener);
@@ -88,12 +77,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("session:analysisDone", listener);
   },
 
-  // Config
   configGet: (key: string) => ipcRenderer.invoke("config:get", key),
   configSet: (key: string, value: unknown) =>
     ipcRenderer.invoke("config:set", key, value),
 
-  // Session lifecycle
   sessionStart: () => ipcRenderer.invoke("session:start"),
   sessionEnd: () => ipcRenderer.invoke("session:end"),
   sessionAnalyze: (params?: { sessionId?: number; game?: string; leaderboardMode?: boolean; fixedSetup?: boolean }) =>
@@ -119,7 +106,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   sessionDeleteAnalysis: (params: { id: number; game: string }) =>
     ipcRenderer.invoke("session:deleteAnalysis", params),
 
-  // Lap telemetry frames (on demand)
   lapGetFrames: (params: { id: number; game: string }) =>
     ipcRenderer.invoke("lap:getFrames", params),
   lapAssignSetup: (params: { lapId: number; setupId: number | null; game: string }) =>
@@ -127,43 +113,29 @@ contextBridge.exposeInMainWorld("electronAPI", {
   lapDelete: (params: { id: number; game: string }) =>
     ipcRenderer.invoke("lap:delete", params),
 
-  // Track map geometry (cached per game/track/layout — global across cars)
-  trackMapGet: (params: {
-    game: string;
-    track: string;
-    layout: string;
-  }) => ipcRenderer.invoke("trackMap:get", params),
+  trackMapGet: (params: { game: string; track: string; layout: string }) =>
+    ipcRenderer.invoke("trackMap:get", params),
 
-  // Voice coach query
   voiceQuery: (question: string) =>
     ipcRenderer.invoke("coach:voiceQuery", question),
 
-  // Azure STT
-  sttTranscribe: (
-    audioBuffer: ArrayBuffer,
-    mimeType?: string,
-  ): Promise<string> =>
+  sttTranscribe: (audioBuffer: ArrayBuffer, mimeType?: string): Promise<string> =>
     ipcRenderer.invoke("stt:transcribe", audioBuffer, mimeType),
 
-  // Azure TTS
   ttsGetVoices: () => ipcRenderer.invoke("tts:getVoices"),
   ttsSynthesize: (text: string) => ipcRenderer.invoke("tts:synthesize", text),
   ttsTest: (voiceName: string) => ipcRenderer.invoke("tts:test", voiceName),
 
-  // Window controls
   windowClose: () => ipcRenderer.send("window:close"),
   windowMinimize: () => ipcRenderer.send("window:minimize"),
   windowMaximize: () => ipcRenderer.send("window:maximize"),
 
-  // Cleanup
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);
   },
 
-  // Telemetry log
   telemetryLogGetDir: () => ipcRenderer.invoke("telemetry:getLogDir"),
 
-  // ACE setup (file-based)
   aceListSetupCars: () => ipcRenderer.invoke("ace:listSetupCars"),
   aceListSetupTracks: (params: { car: string }) =>
     ipcRenderer.invoke("ace:listSetupTracks", params),
