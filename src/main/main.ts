@@ -13,7 +13,6 @@ import { is } from "@electron-toolkit/utils";
 import { createInputManager, type InputManager } from "./input-manager.js";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import { gunzipSync, gzipSync } from "zlib";
 import type {
   Alert,
@@ -84,8 +83,6 @@ import {
 } from "./coach/session-coach.js";
 import { createZoneTracker } from "./zone-tracker.js";
 
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-
 
 let mainWindow: BrowserWindow | null = null;
 let r3eReaderInst: R3EReader | null = null;
@@ -103,7 +100,7 @@ const createWindow = (): void => {
     frame: false,
     resizable: true,
     webPreferences: {
-      preload: path.join(__dirname, "../preload/index.js"),
+      preload: path.join(__dirname, "../preload/index.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,

@@ -7,7 +7,10 @@ export default defineConfig({
     build: {
       rollupOptions: {
         // Chiave "main" → output: out/main/main.js (allineato con "main" in package.json)
-        input: { main: resolve(__dirname, 'src/main/main.ts') }
+        input: { main: resolve(__dirname, 'src/main/main.ts') },
+        // electron must not be bundled: its CJS index.js uses __dirname to locate path.txt
+        // Native modules must not be bundled: bindings resolves .node files relative to __dirname
+        external: ['electron', /^electron\/.+/, 'better-sqlite3', 'koffi']
       }
     },
     resolve: {
@@ -17,7 +20,11 @@ export default defineConfig({
   preload: {
     build: {
       rollupOptions: {
-        input: { index: resolve(__dirname, 'src/preload/index.ts') }
+        input: { index: resolve(__dirname, 'src/preload/index.ts') },
+        // electron must not be bundled in preload either
+        external: ['electron', /^electron\/.+/],
+        // Preload with sandbox:true requires CJS (ESM not supported in sandboxed context)
+        output: { format: 'cjs' }
       }
     }
   },
