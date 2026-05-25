@@ -251,7 +251,7 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     // Lap boundary
     if (frame.completedLaps !== lastCompletedLaps && lastCompletedLaps !== -1) {
       console.log(
-        `[R3EReader] completedLaps changed: ${lastCompletedLaps} → ${frame.completedLaps}`,
+        `[R3EReader] completedLaps changed: ${lastCompletedLaps} -> ${frame.completedLaps}`,
       );
     }
     if (frame.completedLaps > lastCompletedLaps && lastCompletedLaps >= 0) {
@@ -269,7 +269,9 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         track: currentTrack,
         layout: currentLayout,
         layoutLength: currentLayoutLength,
-        valid: frame.currentLapValid && frame.sectorTimesCurrentSelf.every((s) => s > 0),
+        valid:
+          frame.currentLapValid &&
+          frame.sectorTimesCurrentSelf.every((s) => s > 0),
       };
       lapFrames = [];
       emitter.emit("lapComplete", lapData);
@@ -287,8 +289,14 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
     // disappear and OpenFileMappingA return NULL.
     if (++shmProbeCounter >= SHM_PROBE_INTERVAL) {
       shmProbeCounter = 0;
-      if (viewPtr) { kernel32!.UnmapViewOfFile(viewPtr); viewPtr = null; }
-      if (mapHandle) { kernel32!.CloseHandle(mapHandle); mapHandle = null; }
+      if (viewPtr) {
+        kernel32!.UnmapViewOfFile(viewPtr);
+        viewPtr = null;
+      }
+      if (mapHandle) {
+        kernel32!.CloseHandle(mapHandle);
+        mapHandle = null;
+      }
 
       const probe = kernel32!.OpenFileMappingA(FILE_MAP_READ, 0, SHM_NAME);
       if (isNullPtr(probe)) {
@@ -297,7 +305,13 @@ export const createR3EReader = (options: R3EReaderOptions = {}): R3EReader => {
         return;
       }
       mapHandle = probe;
-      const newView = kernel32!.MapViewOfFile(mapHandle, FILE_MAP_READ, 0, 0, 0);
+      const newView = kernel32!.MapViewOfFile(
+        mapHandle,
+        FILE_MAP_READ,
+        0,
+        0,
+        0,
+      );
       if (isNullPtr(newView)) {
         kernel32!.CloseHandle(mapHandle);
         mapHandle = null;
