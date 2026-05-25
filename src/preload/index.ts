@@ -84,7 +84,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   sessionStart: () => ipcRenderer.invoke("session:start"),
   sessionEnd: () => ipcRenderer.invoke("session:end"),
-  sessionAnalyze: (params?: { sessionId?: number; game?: string; leaderboardMode?: boolean; fixedSetup?: boolean }) =>
+  sessionUpdateFlags: (params: { sessionId?: number; game?: string; leaderboardMode: boolean; fixedSetup: boolean }) =>
+    ipcRenderer.invoke("session:updateFlags", params),
+  sessionAnalyze: (params?: { sessionId?: number; game?: string }) =>
     ipcRenderer.invoke("session:analyze", params ?? {}),
   sessionLoadSetup: (params: { setup: unknown; sessionId?: number; game?: string }) =>
     ipcRenderer.invoke("session:loadSetup", params),

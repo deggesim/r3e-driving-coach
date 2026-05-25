@@ -20,7 +20,7 @@ interface Props {
   currentTrack: string;
   onStart: () => void;
   onEnd: () => void;
-  onAnalyze: (flags: { leaderboardMode: boolean; fixedSetup: boolean }) => void;
+  onAnalyze: () => void;
   onExportPdf: () => void;
   onOpenPicker: () => void;
   onBack?: () => void;
@@ -56,7 +56,9 @@ const AnalysisHeader = ({
     setLeaderboardMode(session.leaderboard_mode !== 0);
     // eslint-disable-next-line @eslint-react/set-state-in-effect
     setFixedSetup(session.fixed_setup !== 0);
-  }, [session, session?.id]);
+  // Solo al cambio di sessione, non ad ogni aggiornamento dell'oggetto
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id]);
 
   const isR3E = session?.game === "r3e";
 
@@ -100,7 +102,17 @@ const AnalysisHeader = ({
               id="leaderboard-mode"
               label="Leaderboard"
               checked={leaderboardMode}
-              onChange={(e) => setLeaderboardMode(e.target.checked)}
+              onChange={(e) => {
+                const val = e.target.checked;
+                setLeaderboardMode(val);
+                if (session)
+                  void window.electronAPI.sessionUpdateFlags({
+                    sessionId: session.id,
+                    game: session.game,
+                    leaderboardMode: val,
+                    fixedSetup,
+                  });
+              }}
               className="text-muted"
             />
             <Form.Check
@@ -108,7 +120,17 @@ const AnalysisHeader = ({
               id="fixed-setup"
               label="Setup fisso"
               checked={fixedSetup}
-              onChange={(e) => setFixedSetup(e.target.checked)}
+              onChange={(e) => {
+                const val = e.target.checked;
+                setFixedSetup(val);
+                if (session)
+                  void window.electronAPI.sessionUpdateFlags({
+                    sessionId: session.id,
+                    game: session.game,
+                    leaderboardMode,
+                    fixedSetup: val,
+                  });
+              }}
               className="text-muted"
             />
           </div>
@@ -133,7 +155,7 @@ const AnalysisHeader = ({
           <Button
             size="sm"
             variant="primary"
-            onClick={() => onAnalyze({ leaderboardMode, fixedSetup })}
+            onClick={() => onAnalyze()}
             disabled={!session || (isLive && laps.length === 0)}
           >
             <FontAwesomeIcon icon={faChartLine} className="me-1" /> Esegui

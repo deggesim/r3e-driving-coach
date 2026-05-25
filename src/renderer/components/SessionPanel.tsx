@@ -89,15 +89,12 @@ const SessionPanel = ({ mode, onSessionClosed, onBack, onReopened }: Props) => {
     onReopened?.();
   };
 
-  const handleAnalyze = async (flags: {
-    leaderboardMode: boolean;
-    fixedSetup: boolean;
-  }): Promise<void> => {
+  const handleAnalyze = async (): Promise<void> => {
     if (!session) return;
     const res = await window.electronAPI.sessionAnalyze(
       mode === "historical"
-        ? { sessionId: session.id, game: session.game, ...flags }
-        : { ...flags },
+        ? { sessionId: session.id, game: session.game }
+        : undefined,
     );
     if (!res.ok) showFlash("danger", res.reason ?? "Errore durante l'analisi");
     else showFlash("info", "Analisi in corso…");

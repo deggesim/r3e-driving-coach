@@ -422,7 +422,8 @@ export type ElectronAPI = {
   // Session lifecycle
   sessionStart: () => Promise<SessionStartResult>;
   sessionEnd: () => Promise<void>;
-  sessionAnalyze: (params?: { sessionId?: number; game?: GameSource; leaderboardMode?: boolean; fixedSetup?: boolean }) => Promise<{ ok: boolean; reason?: string }>;
+  sessionUpdateFlags: (params: { sessionId?: number; game?: GameSource; leaderboardMode: boolean; fixedSetup: boolean }) => Promise<void>;
+  sessionAnalyze: (params?: { sessionId?: number; game?: GameSource }) => Promise<{ ok: boolean; reason?: string }>;
   sessionLoadSetup: (params: { setup: SetupData; sessionId?: number; game?: GameSource }) => Promise<{ setupId: number }>;
   sessionList: (params: SessionListParams) => Promise<SessionListResult>;
   sessionGetCurrent: () => Promise<SessionDetail | null>;

@@ -83,7 +83,6 @@ import {
 } from "./coach/session-coach.js";
 import { createZoneTracker } from "./zone-tracker.js";
 
-
 let mainWindow: BrowserWindow | null = null;
 let r3eReaderInst: R3EReader | null = null;
 let aceReaderInst: AceReader | null = null;
@@ -121,7 +120,8 @@ const createWindow = (): void => {
   );
 
   // Content Security Policy — blocks XSS from injected HTML (e.g. marked output)
-  const devUrl = process.env["ELECTRON_RENDERER_URL"] ?? "http://localhost:5173";
+  const devUrl =
+    process.env["ELECTRON_RENDERER_URL"] ?? "http://localhost:5173";
   const devOrigin = new URL(devUrl).origin;
   const devHost = new URL(devUrl).host;
   const csp = is.dev
@@ -144,14 +144,16 @@ const createWindow = (): void => {
         "font-src 'self' data:",
       ].join("; ");
 
-  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        "Content-Security-Policy": [csp],
-      },
-    });
-  });
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    (details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [csp],
+        },
+      });
+    },
+  );
 
   // Block navigation to external URLs; redirect them to the system browser.
   // Prevents markdown links in analysis text from hijacking the app window.
@@ -273,8 +275,7 @@ const enrichSession = (
       typeof row.analysis_count === "number" ? row.analysis_count : undefined,
     leaderboard_mode:
       typeof row.leaderboard_mode === "number" ? row.leaderboard_mode : 1,
-    fixed_setup:
-      typeof row.fixed_setup === "number" ? row.fixed_setup : 1,
+    fixed_setup: typeof row.fixed_setup === "number" ? row.fixed_setup : 1,
   };
 };
 
@@ -287,7 +288,11 @@ const setupPipeline = (): void => {
   const db = getDb(userDataPath);
 
   const getConfig = (key: string): string | undefined =>
-    (db.prepare("SELECT value FROM app_config WHERE key = ?").get(key) as { value: string } | undefined)?.value;
+    (
+      db.prepare("SELECT value FROM app_config WHERE key = ?").get(key) as
+        | { value: string }
+        | undefined
+    )?.value;
 
   // Register config handlers immediately — renderer may call configGet before
   // the rest of setupPipeline (readers, baseline, etc.) finishes initializing.
@@ -324,12 +329,21 @@ const setupPipeline = (): void => {
   let telemetryStream: ReturnType<typeof fs.createWriteStream> | null = null;
   let telemetryCurrentPath: string | null = null;
 
-  const openTelemetryFile = (game: GameSource, car: string, track: string, layout: string): void => {
+  const openTelemetryFile = (
+    game: GameSource,
+    car: string,
+    track: string,
+    layout: string,
+  ): void => {
     if (!telemetryEnabled || telemetryStream) return;
-    if (!fs.existsSync(telemetryLogDir)) fs.mkdirSync(telemetryLogDir, { recursive: true });
+    if (!fs.existsSync(telemetryLogDir))
+      fs.mkdirSync(telemetryLogDir, { recursive: true });
     const ts = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_");
-    const sanitize = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
-    let carLabel = car, trackLabel = track, layoutLabel = layout;
+    const sanitize = (s: string) =>
+      s.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 40);
+    let carLabel = car,
+      trackLabel = track,
+      layoutLabel = layout;
     if (game === "r3e") {
       carLabel = getCarName(Number(car)) || car;
       trackLabel = getTrackName(Number(track)) || track;
@@ -337,7 +351,9 @@ const setupPipeline = (): void => {
     }
     const filename = `${ts}-${game}-${sanitize(carLabel)}-${sanitize(trackLabel)}-${sanitize(layoutLabel)}.jsonl`;
     telemetryCurrentPath = path.join(telemetryLogDir, filename);
-    telemetryStream = fs.createWriteStream(telemetryCurrentPath, { flags: "w" });
+    telemetryStream = fs.createWriteStream(telemetryCurrentPath, {
+      flags: "w",
+    });
     console.log(`[Main] Telemetry log opened: ${telemetryCurrentPath}`);
   };
 
@@ -354,7 +370,7 @@ const setupPipeline = (): void => {
   };
   // ─────────────────────────────────────────────────────────────────────────────
 
-  console.log(`[Main] setupPipeline — dual-reader mode`);
+  console.log(`[Main] setupPipeline - dual-reader mode`);
 
   // Live reader state
   let currentCar = "";
@@ -443,8 +459,10 @@ const setupPipeline = (): void => {
     pushToRenderer("status", status);
   };
 
-  const getAnthropicApiKey = (): string | undefined => getConfig("anthropicApiKey");
-  const getAnthropicModel = (): string => getConfig("anthropicModel") ?? "claude-haiku-4-5-20251001";
+  const getAnthropicApiKey = (): string | undefined =>
+    getConfig("anthropicApiKey");
+  const getAnthropicModel = (): string =>
+    getConfig("anthropicModel") ?? "claude-haiku-4-5-20251001";
 
   const sessionCoach = createSessionCoachEngine({
     db,
@@ -653,7 +671,12 @@ const setupPipeline = (): void => {
 
     if (telemetryEnabled && activeGame === "r3e") {
       if (!telemetryStream && frame.carModelId > 0 && frame.trackId > 0) {
-        openTelemetryFile("r3e", String(frame.carModelId), String(frame.trackId), String(frame.layoutId));
+        openTelemetryFile(
+          "r3e",
+          String(frame.carModelId),
+          String(frame.trackId),
+          String(frame.layoutId),
+        );
       }
       writeFrame(frame);
     }
@@ -696,7 +719,12 @@ const setupPipeline = (): void => {
   aceReader.on("ace:fullFrame", (frame: Record<string, unknown>) => {
     if (telemetryEnabled && activeGame === "ace") {
       if (!telemetryStream && frame.car) {
-        openTelemetryFile("ace", frame.car as string, frame.track as string, frame.layout as string);
+        openTelemetryFile(
+          "ace",
+          frame.car as string,
+          frame.track as string,
+          frame.layout as string,
+        );
       }
       writeFrame(frame);
     }
@@ -718,7 +746,11 @@ const setupPipeline = (): void => {
     if (lapData.layoutLength > 0) currentLayoutLength = lapData.layoutLength;
 
     // Baseline/rule engine reset (per-car/track/layout)
-    if (lapData.car !== baseline.car || lapData.track !== baseline.track || lapData.layout !== baseline.layout) {
+    if (
+      lapData.car !== baseline.car ||
+      lapData.track !== baseline.track ||
+      lapData.layout !== baseline.layout
+    ) {
       baseline = createAdaptiveBaseline(
         lapData.car,
         lapData.track,
@@ -736,7 +768,9 @@ const setupPipeline = (): void => {
     // Auto-close session if car/track/layout differ from the current session's
     if (currentSessionId) {
       const sessionRow = db
-        .prepare(`SELECT car, track, layout FROM ${t("sessions", currentSessionGame)} WHERE id = ?`)
+        .prepare(
+          `SELECT car, track, layout FROM ${t("sessions", currentSessionGame)} WHERE id = ?`,
+        )
         .get(currentSessionId) as
         | { car: string; track: string; layout: string }
         | undefined;
@@ -806,15 +840,10 @@ const setupPipeline = (): void => {
       if (lap.valid) {
         const geometry = buildTrackMap(lap.frames, lap.layoutLength);
         if (geometry) {
-          const tmTrack  = activeGame === "r3e" ? Number(lap.track)  : lap.track;
-          const tmLayout = activeGame === "r3e" ? Number(lap.layout) : lap.layout;
-          saveTrackMap(
-            db,
-            activeGame,
-            tmTrack,
-            tmLayout,
-            geometry,
-          );
+          const tmTrack = activeGame === "r3e" ? Number(lap.track) : lap.track;
+          const tmLayout =
+            activeGame === "r3e" ? Number(lap.layout) : lap.layout;
+          saveTrackMap(db, activeGame, tmTrack, tmLayout, geometry);
           console.log(
             `[Main] trackMap saved — game=${activeGame} ` +
               `track=${lap.track} layout=${lap.layout} samples=${geometry.sampleCount}`,
@@ -908,7 +937,6 @@ const setupPipeline = (): void => {
       sessionLapSeq = 0;
       sessionAlerts.length = 0;
 
-
       const row = db
         .prepare(`SELECT * FROM ${t("sessions")} WHERE id = ?`)
         .get(currentSessionId) as Record<string, unknown>;
@@ -930,7 +958,14 @@ const setupPipeline = (): void => {
 
   ipcMain.handle(
     "session:loadSetup",
-    (_event, { setup, sessionId: sid, game: g }: { setup: SetupData; sessionId?: number; game?: GameSource }) => {
+    (
+      _event,
+      {
+        setup,
+        sessionId: sid,
+        game: g,
+      }: { setup: SetupData; sessionId?: number; game?: GameSource },
+    ) => {
       const targetId = sid ?? currentSessionId;
       const targetGame = g ?? currentSessionGame;
       if (!targetId) {
@@ -971,8 +1006,38 @@ const setupPipeline = (): void => {
   );
 
   ipcMain.handle(
+    "session:updateFlags",
+    (
+      _event,
+      params: {
+        sessionId?: number;
+        game?: GameSource;
+        leaderboardMode: boolean;
+        fixedSetup: boolean;
+      },
+    ) => {
+      const sessionId = params.sessionId ?? currentSessionId;
+      const game = params.game ?? currentSessionGame;
+      if (!sessionId) return;
+      db.prepare(
+        `UPDATE ${t("sessions", game)} SET leaderboard_mode = ?, fixed_setup = ? WHERE id = ?`,
+      ).run(
+        params.leaderboardMode ? 1 : 0,
+        params.fixedSetup ? 1 : 0,
+        sessionId,
+      );
+    },
+  );
+
+  ipcMain.handle(
     "session:analyze",
-    async (_event, params: { sessionId?: number; game?: GameSource; leaderboardMode?: boolean; fixedSetup?: boolean } = {}) => {
+    async (
+      _event,
+      params: {
+        sessionId?: number;
+        game?: GameSource;
+      } = {},
+    ) => {
       const sessionId = params.sessionId ?? currentSessionId;
       const game = params.game ?? currentSessionGame;
       if (!sessionId) {
@@ -985,13 +1050,19 @@ const setupPipeline = (): void => {
       sessionCoach.updateApiKey(apiKey);
       sessionCoach.updateCornerNames(buildCornerMap());
 
-      // Resolve names for prompt
+      // Resolve names and read persisted flags from DB
       const sRow = db
         .prepare(
-          `SELECT car, track, layout FROM ${t("sessions", game)} WHERE id = ?`,
+          `SELECT car, track, layout, leaderboard_mode, fixed_setup FROM ${t("sessions", game)} WHERE id = ?`,
         )
         .get(sessionId) as
-        | { car: string; track: string; layout: string }
+        | {
+            car: string;
+            track: string;
+            layout: string;
+            leaderboard_mode: number;
+            fixed_setup: number;
+          }
         | undefined;
       const resolved = sRow
         ? resolveNames(game, sRow.car, sRow.track, sRow.layout)
@@ -999,16 +1070,18 @@ const setupPipeline = (): void => {
 
       const analyzeKey = `${sessionId}:${game}`;
       if (analyzingInProgress.has(analyzeKey)) {
-        return { ok: false, reason: "Analisi già in corso per questa sessione." };
+        return {
+          ok: false,
+          reason: "Analisi già in corso per questa sessione.",
+        };
       }
 
       const alertsForSession =
         sessionId === currentSessionId ? [...sessionAlerts] : undefined;
-      const flags = { leaderboardMode: params.leaderboardMode, fixedSetup: params.fixedSetup };
-
-      db.prepare(
-        `UPDATE ${t("sessions", game)} SET leaderboard_mode = ?, fixed_setup = ? WHERE id = ?`,
-      ).run(params.leaderboardMode ? 1 : 0, params.fixedSetup ? 1 : 0, sessionId);
+      const flags = {
+        leaderboardMode: sRow ? sRow.leaderboard_mode !== 0 : true,
+        fixedSetup: sRow ? sRow.fixed_setup !== 0 : true,
+      };
 
       analyzingInProgress.add(analyzeKey);
       sessionCoach
@@ -1042,7 +1115,7 @@ const setupPipeline = (): void => {
         layout,
       }: { game: GameSource; track: string; layout: string },
     ) => {
-      const tmTrack  = game === "r3e" ? Number(track)  : track;
+      const tmTrack = game === "r3e" ? Number(track) : track;
       const tmLayout = game === "r3e" ? Number(layout) : layout;
       return getTrackMap(db, game, tmTrack, tmLayout);
     },
@@ -1050,9 +1123,19 @@ const setupPipeline = (): void => {
 
   ipcMain.handle(
     "lap:assignSetup",
-    (_event, { lapId, setupId, game }: { lapId: number; setupId: number | null; game: GameSource }) => {
+    (
+      _event,
+      {
+        lapId,
+        setupId,
+        game,
+      }: { lapId: number; setupId: number | null; game: GameSource },
+    ) => {
       const lapsTable = `laps_${game === "ace" ? "ace" : "r3e"}`;
-      db.prepare(`UPDATE ${lapsTable} SET setup_id = ? WHERE id = ?`).run(setupId ?? null, lapId);
+      db.prepare(`UPDATE ${lapsTable} SET setup_id = ? WHERE id = ?`).run(
+        setupId ?? null,
+        lapId,
+      );
     },
   );
 
@@ -1186,7 +1269,9 @@ const setupPipeline = (): void => {
   ipcMain.handle(
     "session:deleteAnalysis",
     (_event, { id, game }: { id: number; game: GameSource }) => {
-      db.prepare(`DELETE FROM ${t("session_analyses", game)} WHERE id = ?`).run(id);
+      db.prepare(`DELETE FROM ${t("session_analyses", game)} WHERE id = ?`).run(
+        id,
+      );
     },
   );
 
@@ -1230,7 +1315,9 @@ const setupPipeline = (): void => {
 
       // Validation 2: car/track/layout must match the current in-game values
       const sessionRow = db
-        .prepare(`SELECT car, track, layout FROM ${t("sessions", game)} WHERE id = ?`)
+        .prepare(
+          `SELECT car, track, layout FROM ${t("sessions", game)} WHERE id = ?`,
+        )
         .get(id) as { car: string; track: string; layout: string } | undefined;
       if (!sessionRow) {
         return { ok: false, reason: "Sessione non trovata." };
@@ -1241,7 +1328,12 @@ const setupPipeline = (): void => {
         sessionRow.track !== currentTrack ||
         (game === "r3e" && sessionRow.layout !== currentLayout)
       ) {
-        const names = resolveNames(game, sessionRow.car, sessionRow.track, sessionRow.layout);
+        const names = resolveNames(
+          game,
+          sessionRow.car,
+          sessionRow.track,
+          sessionRow.layout,
+        );
         return {
           ok: false,
           reason: `Auto o circuito non corrispondono alla sessione. La sessione richiede ${names.carName} a ${names.trackName}${names.layoutName && names.layoutName !== names.trackName ? ` — ${names.layoutName}` : ""}, ma il simulatore ha rilevato ${resolveNames(game, currentCar, currentTrack, currentLayout).carName}.`,
@@ -1266,7 +1358,9 @@ const setupPipeline = (): void => {
 
       // Resume sequential lap counter from existing laps in the session
       const lapCountRow = db
-        .prepare(`SELECT COUNT(*) AS cnt FROM ${t("laps", game)} WHERE session_id = ?`)
+        .prepare(
+          `SELECT COUNT(*) AS cnt FROM ${t("laps", game)} WHERE session_id = ?`,
+        )
         .get(id) as { cnt: number };
       sessionLapSeq = lapCountRow.cnt;
 
@@ -1284,7 +1378,9 @@ const setupPipeline = (): void => {
       const session = enrichSession(raw, game);
       pushToRenderer("session:started", session);
 
-      console.log(`[Main] session reopened id=${id} game=${game} setupId=${currentSetupId ?? "none"}`);
+      console.log(
+        `[Main] session reopened id=${id} game=${game} setupId=${currentSetupId ?? "none"}`,
+      );
       return { ok: true, sessionId: id, game };
     },
   );
@@ -1338,7 +1434,8 @@ const setupPipeline = (): void => {
   ipcMain.handle("tts:getVoices", async () => {
     const key = getConfig("azureSpeechKey");
     const region = getConfig("azureRegion");
-    if (!key || !region) throw new Error("Azure Speech Key e Region non configurati");
+    if (!key || !region)
+      throw new Error("Azure Speech Key e Region non configurati");
     return getAzureVoices(key, region);
   });
 
@@ -1346,7 +1443,8 @@ const setupPipeline = (): void => {
     const key = getConfig("azureSpeechKey");
     const region = getConfig("azureRegion");
     const voice = getConfig("azureVoiceName");
-    if (!key || !region || !voice) throw new Error("Azure TTS non completamente configurato");
+    if (!key || !region || !voice)
+      throw new Error("Azure TTS non completamente configurato");
     try {
       return await synthesizeAzure(text, key, region, voice);
     } catch (err) {
@@ -1358,7 +1456,8 @@ const setupPipeline = (): void => {
   ipcMain.handle("tts:test", async (_event, voiceName: string) => {
     const key = getConfig("azureSpeechKey");
     const region = getConfig("azureRegion");
-    if (!key || !region) throw new Error("Azure Speech Key e Region non configurati");
+    if (!key || !region)
+      throw new Error("Azure Speech Key e Region non configurati");
     const assistantName = getConfig("assistantName") ?? "Aria";
     const testPhrase = `Ciao, sono ${assistantName} e oggi sono il tuo assistente in pista.`;
     return synthesizeAzure(testPhrase, key, region, voiceName);
@@ -1369,7 +1468,8 @@ const setupPipeline = (): void => {
     async (_event, audioBuffer: ArrayBuffer, mimeType?: string) => {
       const key = getConfig("azureSpeechKey");
       const region = getConfig("azureRegion");
-      if (!key || !region) throw new Error("Azure Speech Key e Region non configurati");
+      if (!key || !region)
+        throw new Error("Azure Speech Key e Region non configurati");
       return transcribeAzure(Buffer.from(audioBuffer), key, region, mimeType);
     },
   );
@@ -1470,7 +1570,9 @@ const setupPipeline = (): void => {
       sessionCoach.updateApiKey(apiKey);
       sessionCoach.updateCornerNames(buildCornerMap());
       const sRow = db
-        .prepare(`SELECT car, track, layout FROM ${t("sessions", currentSessionGame)} WHERE id = ?`)
+        .prepare(
+          `SELECT car, track, layout FROM ${t("sessions", currentSessionGame)} WHERE id = ?`,
+        )
         .get(currentSessionId) as
         | { car: string; track: string; layout: string }
         | undefined;
@@ -1517,7 +1619,8 @@ const setupPipeline = (): void => {
       });
     } catch (err) {
       console.error("[VoiceCoach] Error:", err);
-      if (isCreditOrQuotaError(err)) pushAppError(buildAnthropicErrorMessage(err));
+      if (isCreditOrQuotaError(err))
+        pushAppError(buildAnthropicErrorMessage(err));
     }
     await speakText(fullAnswer);
   });
@@ -1526,7 +1629,8 @@ const setupPipeline = (): void => {
   // getAceSetupsBase reads the user-configurable path from the DB, falling back
   // to the default installation path when the config key is not set.
   const ACE_SETUPS_DEFAULT = "D:\\Salvataggi\\ACE\\Car Setups";
-  const getAceSetupsBase = (): string => getConfig("aceSetupsPath")?.trim() || ACE_SETUPS_DEFAULT;
+  const getAceSetupsBase = (): string =>
+    getConfig("aceSetupsPath")?.trim() || ACE_SETUPS_DEFAULT;
 
   ipcMain.handle(
     "ace:listSetupFiles",
@@ -1576,37 +1680,36 @@ const setupPipeline = (): void => {
     try {
       return fs
         .readdirSync(aceSetupsBase)
-        .filter((f: string) => fs.statSync(path.join(aceSetupsBase, f)).isDirectory())
+        .filter((f: string) =>
+          fs.statSync(path.join(aceSetupsBase, f)).isDirectory(),
+        )
         .sort();
     } catch {
       return [];
     }
   });
 
-  ipcMain.handle(
-    "ace:listSetupTracks",
-    (_event, { car }: { car: string }) => {
-      const aceSetupsBase = getAceSetupsBase();
-      const carDir = path.join(aceSetupsBase, car);
-      try {
-        return fs
-          .readdirSync(carDir)
-          .filter((f: string) => fs.statSync(path.join(carDir, f)).isDirectory())
-          .sort();
-      } catch {
-        return [];
-      }
-    },
-  );
+  ipcMain.handle("ace:listSetupTracks", (_event, { car }: { car: string }) => {
+    const aceSetupsBase = getAceSetupsBase();
+    const carDir = path.join(aceSetupsBase, car);
+    try {
+      return fs
+        .readdirSync(carDir)
+        .filter((f: string) => fs.statSync(path.join(carDir, f)).isDirectory())
+        .sort();
+    } catch {
+      return [];
+    }
+  });
 
   // Close any sessions left open by a previous crash or forced quit
   const crashCloseTs = new Date().toISOString();
-  db.prepare(
-    "UPDATE sessions_r3e SET ended_at = ? WHERE ended_at IS NULL",
-  ).run(crashCloseTs);
-  db.prepare(
-    "UPDATE sessions_ace SET ended_at = ? WHERE ended_at IS NULL",
-  ).run(crashCloseTs);
+  db.prepare("UPDATE sessions_r3e SET ended_at = ? WHERE ended_at IS NULL").run(
+    crashCloseTs,
+  );
+  db.prepare("UPDATE sessions_ace SET ended_at = ? WHERE ended_at IS NULL").run(
+    crashCloseTs,
+  );
 
   // Global input listener — works even when the app window is not focused.
   inputManager = createInputManager(() => {
