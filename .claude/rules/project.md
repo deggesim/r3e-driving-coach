@@ -1,11 +1,3 @@
-# Code Style
-
-- TypeScript strict mode. Prefer `type` over `interface` for unions/intersections.
-- Named exports everywhere. Relative imports only, no path aliases.
-- English for all comments and code.
-- **Arrow functions**: Always use arrow functions (`const fn = () => {}`) — never the `function` keyword, for any purpose (helpers, callbacks, module-level utilities).
-- **Functional programming style**: No `class` keyword. Prefer factory functions over classes. Use closures for stateful encapsulation. Stateful modules export a `createX()` factory that returns a plain object with typed methods. For event-based modules, expose `on` bound from an internal `EventEmitter` instance rather than subclassing it.
-
 ## Libraries & Tooling
 
 - **UI framework**: Bootstrap + react-bootstrap. Use react-bootstrap components (`Button`, `Form`, `Modal`, etc.) — do not write raw Bootstrap HTML classes manually when a component exists.
@@ -19,3 +11,7 @@
   import { faCircleCheck } from "@fortawesome/free-solid-svg-icons";
   ```
   Do not do `import * as icons from '@fortawesome/free-solid-svg-icons'` or import a collection object.
+
+## UI Theme
+
+The app uses a **dark theme** exclusively. All UI components must use the CSS custom properties defined in `:root` (`--bg`, `--bg2`, `--bg3`, `--border`, `--text`, `--text-dim`, `--accent`). Never use Bootstrap's default light-background components without overriding them with the dark theme variables. When adding new Bootstrap components (Modal, Accordion, Card, etc.), always add corresponding dark-theme CSS overrides in `global.css`.

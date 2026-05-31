@@ -284,23 +284,24 @@ R3E stores numeric IDs; ACE stores string identifiers (e.g. `"monza"`, `"ks_pors
 Prima di iniziare qualsiasi task di sviluppo, invocare la skill corrispondente tramite il tool `Skill`.
 
 **Legenda colonne:**
+
 - **Skill** — sequenza da invocare nell'ordine indicato (`→` = passo successivo)
 - **Agente** — sottoagente da spawnare per quel sottocompito specifico (`|` = alternativa, scegliere uno)
 - Gli agenti sono sempre sequenziali rispetto alle skill. Il parallelismo tra agenti si attiva solo con `superpowers:dispatching-parallel-agents` quando i sottocompiti sono davvero indipendenti.
 
-| Task | Skill (nell'ordine) | Agente (uno, in base al bisogno) |
-|------|---------------------|----------------------------------|
-| Nuova feature | 1. `superpowers:brainstorming` (concordare design) → 2. `feature-dev:feature-dev` (implementazione) | `feature-dev:code-architect` se serve progettare nuovi layer/file \| `feature-dev:code-explorer` se serve esplorare il codebase esistente |
-| Bug fix | `superpowers:systematic-debugging` | `voltagent-qa-sec:debugger` (crash/eccezioni) \| `voltagent-qa-sec:error-detective` (correlazione errori tra moduli) |
-| Code review | `superpowers:requesting-code-review` | `feature-dev:code-reviewer` |
-| Refactoring TypeScript / tipi avanzati | `typescript-advanced-types` | `voltagent-lang:typescript-pro` |
-| Componente React / hook / store Zustand | `react-vite-best-practices` | `voltagent-lang:react-specialist` |
-| Electron (IPC, sicurezza, packaging) | `electron-best-practices` | `voltagent-core-dev:electron-pro` |
-| SQLite / query / schema | `sqlite-database-expert` | `voltagent-data-ai:database-optimizer` |
-| Claude API / Anthropic SDK | `claude-api` | `voltagent-data-ai:ai-engineer` |
-| Fine branch / PR / commit | `superpowers:finishing-a-development-branch` | — |
-| Sottocompiti indipendenti in parallelo | `superpowers:dispatching-parallel-agents` | due o più agenti `Explore` simultanei (es. analisi R3E e ACE in parallelo) |
-| Verifica prima di completare | `superpowers:verification-before-completion` | — |
+| Task                                    | Skill (nell'ordine)                                                                                 | Agente (uno, in base al bisogno)                                                                                                          |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Nuova feature                           | 1. `superpowers:brainstorming` (concordare design) → 2. `feature-dev:feature-dev` (implementazione) | `feature-dev:code-architect` se serve progettare nuovi layer/file \| `feature-dev:code-explorer` se serve esplorare il codebase esistente |
+| Bug fix                                 | `superpowers:systematic-debugging`                                                                  | `voltagent-qa-sec:debugger` (crash/eccezioni) \| `voltagent-qa-sec:error-detective` (correlazione errori tra moduli)                      |
+| Code review                             | `superpowers:requesting-code-review`                                                                | `feature-dev:code-reviewer`                                                                                                               |
+| Refactoring TypeScript / tipi avanzati  | `typescript-advanced-types`                                                                         | `voltagent-lang:typescript-pro`                                                                                                           |
+| Componente React / hook / store Zustand | `react-vite-best-practices`                                                                         | `voltagent-lang:react-specialist`                                                                                                         |
+| Electron (IPC, sicurezza, packaging)    | `electron-best-practices`                                                                           | `voltagent-core-dev:electron-pro`                                                                                                         |
+| SQLite / query / schema                 | `sqlite-database-expert`                                                                            | `voltagent-data-ai:database-optimizer`                                                                                                    |
+| Claude API / Anthropic SDK              | `claude-api`                                                                                        | `voltagent-data-ai:ai-engineer`                                                                                                           |
+| Fine branch / PR / commit               | `superpowers:finishing-a-development-branch`                                                        | —                                                                                                                                         |
+| Sottocompiti indipendenti in parallelo  | `superpowers:dispatching-parallel-agents`                                                           | due o più agenti `Explore` simultanei (es. analisi R3E e ACE in parallelo)                                                                |
+| Verifica prima di completare            | `superpowers:verification-before-completion`                                                        | —                                                                                                                                         |
 
 **Regola multi-dominio**: se il task copre più aree (es. nuova feature React + IPC Electron), invocare prima `superpowers:brainstorming`, poi usare le skill di dominio durante l'implementazione (`react-vite-best-practices`, `electron-best-practices`).
 
@@ -313,11 +314,3 @@ If `npm run test:reader` shows all zeros or -1: struct offset mismatch. Check:
 1. `VersionMajor` at offset 0 must be `3` (updated to v3.x for R3E)
 2. If version OK but other fields wrong: `PlayerData` inline size differs from installed R3E version. Compare with `R3E.cs` from SecondMonitor connectors
 3. For ACE: verify `AC_LIVE = 2` in PhysicsEvo status field; if 0, ACE is not running
-
-## Code Style
-
-See [CODE_STYLE.md](CODE_STYLE.md).
-
-## UI Theme
-
-The app uses a **dark theme** exclusively. All UI components must use the CSS custom properties defined in `:root` (`--bg`, `--bg2`, `--bg3`, `--border`, `--text`, `--text-dim`, `--accent`). Never use Bootstrap's default light-background components without overriding them with the dark theme variables. When adding new Bootstrap components (Modal, Accordion, Card, etc.), always add corresponding dark-theme CSS overrides in `global.css`.
